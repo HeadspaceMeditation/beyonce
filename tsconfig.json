@@ -14,5 +14,5 @@
         "generated/*": ["./generated/*"]
       }
     },
-    "exclude": ["./dist"]
+    "exclude": ["./dist", "./src/test/*"]
   }
