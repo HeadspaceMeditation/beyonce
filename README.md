@@ -18,9 +18,13 @@ Beyonce makes this easy (and safe!) by automatically inferring the return types 
 
 ## Usage
 
+### 1. Install
+
 First install beyonce - `npm install @ginger.io/beyonce`
 
-Then you define your `partitions` and `models` in YAML:
+### 2. Define your models
+
+Define your `partitions` and `models` in YAML like so:
 
 ```YAML
 Partitions:
@@ -40,10 +44,24 @@ Models:
     title: string
 ```
 
-Then you run the codegen:
+You can specify non-primative types you need to import like so:
+
+```YAML
+Author:
+    ...
+    address: author/Address
+
+```
+
+Which will eventually codegen into `import { Address } from "author/address"`
+
+### 3. Codegen TypeScript classes for your models, partition keys and sort keys
+
 `npx beyonce --in src/models.yaml --out src/generated/models.ts`
 
-Then you can write type safe queries:
+### 4. Write type-safe queries
+
+Now you can write partition-aware, type safe queries with abandon:
 
 ```TypeScript
 import { DynamoDBService } from "@ginger.io/beyonce"
