@@ -20,7 +20,7 @@ Beyonce makes this easy (and safe!) by automatically inferring the return types 
 
 First install beyonce - `npm install @ginger.io/beyonce`
 
-First you define your `partitions` and `models` in YAML:
+Then you define your `partitions` and `models` in YAML:
 
 ```YAML
 Partitions:
