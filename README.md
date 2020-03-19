@@ -63,6 +63,8 @@ Which will eventually codegen into `import { Address } from "author/address"`
 
 Now you can write partition-aware, type safe queries with abandon:
 
+#### Create a DynamoDBService and import the generated models, partition keys and sort keys
+
 ```TypeScript
 import { DynamoDBService } from "@ginger.io/beyonce"
 import { DynamoDB } from "aws-sdk"
@@ -73,22 +75,33 @@ import {
   SK,
 } from "generated/models"
 
-// Setup your db client
 const tableName = "Library"
 const db = new DynamoDBService(tableName, new DynamoDB({ ... }))
+```
 
-// Insert an Author
+#### Put
+
+```TypeScript
 const authorModel: Author = { ... } // plain JS object, beyonce will auto-map the types for you
 await db.put({
   partition: [PK.Author, { authorId: "1" }],
   sort: [SK.Author, { authorId: "1" }]
  }, authorModel)
 
-// Get an Author:
+```
+
+#### Get
+
+```TypeScript
 const author = await db.get({
   partition: [PK.Author, { authorId: "1" }],
   sort: [SK.Author, { authorId: "1" }]
 })
+```
+
+#### Query
+
+```TypeScript
 
 // Get an Author + their books ( inferred type: (Author | Book)[] )
 const authorWithBooks = await db
@@ -101,6 +114,11 @@ const authorWithBooks = await db
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()
+```
+
+#### BatchGet
+
+```TypeScript
 
 // Batch get several items (type-inference is currently manual here)
 const batchResults = await db.batchGet<Author | Book>({
