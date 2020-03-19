@@ -19,9 +19,12 @@ AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developergu
 > ...most well-designed applications require only one table
 
 Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
-highly motivated to minimize the number of roundtrip db calls. You are probably not Amazon scale. And thus
-probably don't need to shove _everything_ into a single table. But you might want to
+highly motivated to minimize the number of roundtrip db calls.
+
+You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table. But you might want to
 keep a few sets of heterogenous models in the same table, under the same partition key.
+
+Beyonce makes that easy for you.
 
 ## Usage
 
