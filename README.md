@@ -1,20 +1,28 @@
 # Beyonce
 
-A type-safe DynamoDB query builder for TypeScript. Designed with single-table architecture in mind.
+A type-safe DynamoDB query builder for TypeScript. Beyonce's primary feature is making DynamoDB queries which return heterogeneous models both easy to
+work with and type-safe.
 
 ## Motivation
 
-AWS's [best practices](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html), encourage using a single DynamoDB table for each service:
+It's common in DynamoDB, to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
+This allows for retrieving related records using a single query instead of N.
 
-> As a general rule, you should maintain as few tables as possible in a DynamoDB application.
-> As emphasized earlier, most well-designed applications require only one table,
-> unless there is a specific reason for using multiple tables.
+Unfortunately, most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js)), don't support this
+use case as they follow the SQL convention sticking each model into a separte table.
 
-Despite this guidance, most existing libraries, including AWS's own [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js) assume 1 DynamoDB table per model.
+For example, we might want to fetch an `Author` + all their `Book`s in a single query. And we'd accomplish that by giving both models
+the same partition key - e.g. `author-${id}`.
 
-Furthermore, once you move to using a single table - querying becomes trickier as you wind up with sets of heterogeneous models that live under a single partition key. So you end up having to write a lot of mapping code to figure out which type of model you're dealing with in the result.
+AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html), take this to the extreme:
 
-Beyonce makes this easy (and safe!) by automatically inferring the return types of your queries.
+> ...you should maintain as few tables as possible in a DynamoDB application.
+> ...most well-designed applications require only one table,
+
+Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
+highly motivated to minimize the number of roundtrip db calls. You are probably not Amazon scale. And thus
+probably don't need to shove _everything_ into a single table. But you might want to
+keep a few sets of heterogenous models in the same table, under the same partition key.
 
 ## Usage
 
