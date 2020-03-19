@@ -71,6 +71,7 @@ import { DynamoDB } from "aws-sdk"
 import {
   Author,
   Book,
+  ModelType,
   PK,
   SK,
 } from "generated/models"
@@ -114,6 +115,22 @@ const authorWithBooks = await db
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()
+
+)
+```
+
+The return types of the above queries are automatically inferred as `Author | Book`. And when processing
+results you can easily determine which type of model you're dealing with via the `model` attribute beyonce
+codegens onto your models.
+
+```TypeScript
+authorWithBooks.forEach(authorOrBook => {
+  if (authorOrBook.model === ModelType.Author) {
+      // do something with an Author model
+  } else if (authorOrBook.model == ModelType.Book) {
+      // do something with a Book model
+  }
+}
 ```
 
 #### BatchGet
