@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+      "target": "es6",
+      "module": "commonjs",
+      "strict": true,
+      "outDir": ".",
+      "sourceMap": true,
+      "esModuleInterop": true,
+      "baseUrl": "./src",
+      "forceConsistentCasingInFileNames": true,
+      "declaration": true,
+      "paths": {
+        "main/*": ["./main/*"],
+        "generated/*": ["./generated/*"]
+      }
+    },
+    "exclude": ["cdk"]
+  }

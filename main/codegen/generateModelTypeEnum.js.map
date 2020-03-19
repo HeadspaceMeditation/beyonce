@@ -1,0 +1,1 @@
+{"version":3,"file":"generateModelTypeEnum.js","sourceRoot":"","sources":["../../src/main/codegen/generateModelTypeEnum.ts"],"names":[],"mappings":";;AAEA,SAAgB,qBAAqB,CAAC,MAAgB;IACpD,MAAM,OAAO,GAAG,MAAM,CAAC,GAAG,CAAC,CAAC,EAAE,IAAI,EAAE,EAAE,EAAE,CAAC,GAAG,IAAI,OAAO,IAAI,GAAG,CAAC,CAAA;IAC/D,OAAO;;UAEC,OAAO,CAAC,IAAI,CAAC,KAAK,CAAC;;KAExB,CAAA;AACL,CAAC;AAPD,sDAOC"}

@@ -1,0 +1,43 @@
+Partitions:
+  Item: ["item", "_.itemId"]
+  Tag: ["tag", "_.tagId"]
+  User: ["user", "_.userId"]
+  System: ["system", "_.systemId"]
+
+Models:
+  EncryptedItem:
+    partition: Item
+    sort: ["item", "_.itemId"]
+    id: string
+    encryptedData: main/crypto/EncryptedData
+
+  EncryptedItemKey:
+    partition: Item
+    sort: ["itemKey", "user", "_.userId"]
+    id: string
+    itemId: string
+    userId: string
+    encryptedData: main/crypto/EncryptedData
+    encryptedWith: main/crypto/EncryptionKeyType
+
+  Tag:
+    partition: Tag
+    sort: ["item", "_.itemId"]
+    itemId: string
+
+  User:
+    partition: User
+    sort: ["user", "_.userId"]
+    id: string
+
+  Device:
+    partition: User
+    sort: ["device", "_.deviceId"]
+    id: string
+    publicKey: main/crypto/PublicKey
+
+  System:
+    partition: System
+    sort: ["system", "_.systemId"]
+    id: string
+    publicKey: main/crypto/PublicKey
