@@ -16,8 +16,7 @@ the same partition key - e.g. `author-${id}`.
 
 AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html), take this to the extreme:
 
-> ...you should maintain as few tables as possible in a DynamoDB application.
-> ...most well-designed applications require only one table,
+> ...most well-designed applications require only one table
 
 Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
 highly motivated to minimize the number of roundtrip db calls. You are probably not Amazon scale. And thus
