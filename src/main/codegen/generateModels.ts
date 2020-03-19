@@ -27,8 +27,7 @@ export function generateModels(yamlData: string): string {
   const sortKeys = generateSortKeys(models)
 
   const imports = new Set([
-    `import { Key } from "main/dynamo/Key"`,
-    `import { Model } from "main/dynamo/Model"`
+    `import { Key, Model } from "@ginger.io/beyonce"`
   ])
   modelInterfaces.imports.forEach(_ => imports.add(_))
 

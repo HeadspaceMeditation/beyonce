@@ -1,4 +1,4 @@
-import { generateModels } from "main/codegen/generateModels"
+import { generateModels } from "../../main/codegen/generateModels"
 
 it("should generate a simple model", () => {
   const result = generateModels(`
@@ -13,8 +13,7 @@ Models:
     name: string
   `)
 
-  expect(result).toEqual(`import { Key } from "main/dynamo/Key"
-import { Model } from "main/dynamo/Model"
+  expect(result).toEqual(`import { Key, Model } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author"
@@ -58,8 +57,7 @@ it("should generate two models model", () => {
       name: string
     `)
 
-  expect(result).toEqual(`import { Key } from "main/dynamo/Key"
-import { Model } from "main/dynamo/Model"
+  expect(result).toEqual(`import { Key, Model } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author",
