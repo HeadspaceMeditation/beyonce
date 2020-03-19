@@ -5,7 +5,7 @@ work with and type-safe.
 
 ## Motivation
 
-It's common in DynamoDB, to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
+When using DynamoDB, you often want to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
 This allows for retrieving related records using a single query instead of N.
 
 Unfortunately, most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js)), don't support this
