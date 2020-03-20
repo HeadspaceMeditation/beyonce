@@ -82,6 +82,7 @@ import { DynamoDBService } from "@ginger.io/beyonce"
 import { DynamoDB } from "aws-sdk"
 import {
   Author,
+  author,
   Book,
   ModelType,
   LibraryTable,
@@ -99,11 +100,11 @@ const db = new DynamoDBService(
 #### Put
 
 ```TypeScript
-const authorModel: Author = {
+// Beyonce generates helper methods to create model objects for you
+const authorModel = author({
   id: "1",
-  name: "Jane Austin",
-  model: ModelType.Author
-}
+  name: "Jane Austin"
+})
 
 await db.put(
   {
