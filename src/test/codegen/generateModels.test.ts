@@ -27,6 +27,13 @@ export interface Author extends Model {
   name: string
 }
 
+export function author(fields: Omit<Author, "model">): Author {
+  return {
+    ...fields,
+    model: ModelType.Author
+  }
+}
+
 export const LibraryTable = {
   name: "Library",
 
@@ -81,6 +88,20 @@ export interface Book extends Model {
   model: ModelType.Book
   id: string
   name: string
+}
+
+export function author(fields: Omit<Author, "model">): Author {
+  return {
+    ...fields,
+    model: ModelType.Author
+  }
+}
+
+export function book(fields: Omit<Book, "model">): Book {
+  return {
+    ...fields,
+    model: ModelType.Book
+  }
 }
 
 export const LibraryTable = {
