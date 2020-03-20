@@ -1,7 +1,7 @@
 import { DynamoDB } from "aws-sdk"
 import * as LocalDynamo from "dynamodb-local"
-import { Key } from "main/dynamo/Key"
-import { Model } from "main/dynamo/Model"
+import { Key } from "../../main/dynamo/Key"
+import { Model } from "../../main/dynamo/Model"
 import { DynamoDBService } from "../../main/dynamo/DynamoDBService"
 const dynamoDBPort = 9000
 
