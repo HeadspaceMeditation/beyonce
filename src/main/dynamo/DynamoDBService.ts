@@ -26,8 +26,8 @@ export class DynamoDBService {
       .get({
         TableName: this.tableName,
         Key: {
-          pk: keys.partition.value,
-          sk: keys.sort.value
+          [keys.partition.name]: keys.partition.value,
+          [keys.sort.name]: keys.sort.value
         }
       })
       .promise()
@@ -39,10 +39,7 @@ export class DynamoDBService {
 
   /** BatchGet items */
   async batchGet<T extends Model>(params: {
-    keys: {
-      partition: Key<any>
-      sort: Key<T>
-    }[]
+    keys: PartitionAndSortKey<any, T>[]
   }): Promise<T[]> {
     const {
       Responses: responses,
@@ -52,8 +49,8 @@ export class DynamoDBService {
         RequestItems: {
           [this.tableName]: {
             Keys: params.keys.map(({ partition, sort }) => ({
-              pk: partition.value,
-              sk: sort.value
+              [partition.name]: partition.value,
+              [sort.name]: sort.value
             }))
           }
         }
@@ -86,8 +83,8 @@ export class DynamoDBService {
         TableName: this.tableName,
         Item: {
           ...fields,
-          pk: keys.partition.value,
-          sk: keys.sort.value
+          [keys.partition.name]: keys.partition.value,
+          [keys.sort.name]: keys.sort.value
         }
       })
       .promise()

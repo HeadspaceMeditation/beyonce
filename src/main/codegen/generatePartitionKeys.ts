@@ -37,7 +37,7 @@ function generatePartitionKey(
   const inputType = inputFields.map(_ => `${_}: string`).join(",")
   const modelType = modelNames.join(" | ")
   const keyComponents = parts.join(", ")
-  return `${partition}: key<{${inputType}}, ${modelType}>(_ => [${keyComponents}])`
+  return `${partition}: key<{${inputType}}, ${modelType}>("pk", _ => [${keyComponents}])`
 }
 
 function groupBy<T extends { [key: string]: any }, U extends keyof T>(

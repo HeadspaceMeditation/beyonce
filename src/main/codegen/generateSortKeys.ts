@@ -23,7 +23,7 @@ function codeGenKeyGetter(modelName: string, keyParts: string[]): string {
   })
 
   const inputType = inputFields.map(_ => `${_}: string`).join(",")
-  return `[ModelType.${modelName}]: key<{${inputType}}, ${modelName}>(_ => [${parts.join(
+  return `[ModelType.${modelName}]: key<{${inputType}}, ${modelName}>("sk", _ => [${parts.join(
     ", "
   )}])`
 }

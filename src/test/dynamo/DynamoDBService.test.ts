@@ -26,18 +26,18 @@ interface Song extends Model {
 }
 
 const PK = {
-  Musician: key<{ musicianId: string }, Musician | Song>(_ => [
+  Musician: key<{ musicianId: string }, Musician | Song>("pk", _ => [
     "musician",
     _.musicianId
   ])
 }
 
 const SK = {
-  Musician: key<{ musicianId: string }, Musician | Song>(_ => [
+  Musician: key<{ musicianId: string }, Musician | Song>("sk", _ => [
     "musician",
     _.musicianId
   ]),
-  Song: key<{ songId: string }, Song>(_ => ["song", _.songId])
+  Song: key<{ songId: string }, Song>("sk", _ => ["song", _.songId])
 }
 
 describe("DynamoDBService", () => {

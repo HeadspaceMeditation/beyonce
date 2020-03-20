@@ -1,8 +1,8 @@
 import { DynamoDB } from "aws-sdk"
-import { toJSON } from "./util"
 import { KeysOf } from "../typeUtils"
 import { Key } from "./Key"
 import { Model } from "./Model"
+import { toJSON } from "./util"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
@@ -65,10 +65,10 @@ export class QueryBuilder<T extends Model> {
     const filter = this.filterExp.join(" ")
     return {
       TableName: this.tableName,
-      KeyConditionExpression: "pk = :pk",
+      KeyConditionExpression: `${this.pk.name} = :partitionKey`,
       ExpressionAttributeValues: {
         ...this.filterValues,
-        ":pk": this.pk.value
+        ":partitionKey": this.pk.value
       },
       FilterExpression: filter !== "" ? filter : undefined
     }

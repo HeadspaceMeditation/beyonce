@@ -31,10 +31,10 @@ export const LibraryTable = {
   name: "Library",
 
   pk: {
-    Author: key<{ authorId: string }, Author>(_ => ["author", _.authorId])
+    Author: key<{ authorId: string }, Author>("pk", _ => ["author", _.authorId])
   },
   sk: {
-    [ModelType.Author]: key<{ authorId: string }, Author>(_ => [
+    [ModelType.Author]: key<{ authorId: string }, Author>("sk", _ => [
       "author",
       _.authorId
     ])
@@ -87,17 +87,20 @@ export const LibraryTable = {
   name: "Library",
 
   pk: {
-    Author: key<{ authorId: string }, Author | Book>(_ => [
+    Author: key<{ authorId: string }, Author | Book>("pk", _ => [
       "author",
       _.authorId
     ])
   },
   sk: {
-    [ModelType.Author]: key<{ authorId: string }, Author>(_ => [
+    [ModelType.Author]: key<{ authorId: string }, Author>("sk", _ => [
       "author",
       _.authorId
     ]),
-    [ModelType.Book]: key<{ bookId: string }, Book>(_ => ["book", _.bookId])
+    [ModelType.Book]: key<{ bookId: string }, Book>("sk", _ => [
+      "book",
+      _.bookId
+    ])
   }
 }
 `)
