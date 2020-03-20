@@ -21,10 +21,10 @@ AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developergu
 Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
 highly motivated to minimize the number of roundtrip db calls.
 
-You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table. But you might want to
-keep a few related models in the same table, under the same partition key.
+You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table.
 
-Beyonce makes that easy for you.
+But you might want to keep a few related models in the same table, under the same partition key and fetch
+those models in a type-safe way. Beyonce makes that easy.
 
 ## Usage
 
@@ -178,3 +178,4 @@ const batchResults = await db.batchGet<Author | Book>({
 1. Support the full range of Dynamo filter expressions
 2. Support for GSIs partitions
 3. Automatic type inference on `batchGet`
+4. Support multiple DynamoDB tables
