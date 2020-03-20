@@ -1,7 +1,7 @@
-import { Model, ModelSet } from "./types"
+import { Model, Table } from "./types"
 
 export function generateModelInterfaces(
-  models: ModelSet
+  models: Model[]
 ): { code: string[]; imports: string[] } {
   const code: string[] = []
   const imports: string[] = []

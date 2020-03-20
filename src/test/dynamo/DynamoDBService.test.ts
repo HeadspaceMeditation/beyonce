@@ -1,8 +1,8 @@
 import { DynamoDB } from "aws-sdk"
 import * as LocalDynamo from "dynamodb-local"
-import { Key } from "../../main/dynamo/Key"
-import { Model } from "../../main/dynamo/Model"
 import { DynamoDBService } from "../../main/dynamo/DynamoDBService"
+import { key } from "../../main/dynamo/Key"
+import { Model } from "../../main/dynamo/Model"
 const dynamoDBPort = 9000
 
 /** A simple data model to test with Musicians and their Songs */
@@ -26,28 +26,23 @@ interface Song extends Model {
 }
 
 const PK = {
-  Musician: new Key<Musician | Song, { musicianId: string }>(_ => [
+  Musician: key<{ musicianId: string }, Musician | Song>(_ => [
     "musician",
     _.musicianId
   ])
 }
 
 const SK = {
-  Musician: new Key<Musician, { musicianId: string }>(_ => [
+  Musician: key<{ musicianId: string }, Musician | Song>(_ => [
     "musician",
     _.musicianId
   ]),
-  Song: new Key<Song, { songId: string }>(_ => ["song", _.songId])
+  Song: key<{ songId: string }, Song>(_ => ["song", _.songId])
 }
 
 describe("DynamoDBService", () => {
-  beforeAll(async () => {
-    await LocalDynamo.launch(dynamoDBPort)
-  })
-
-  afterAll(async () => {
-    await LocalDynamo.stop(dynamoDBPort)
-  })
+  beforeAll(async () => LocalDynamo.launch(dynamoDBPort))
+  afterAll(async () => LocalDynamo.stop(dynamoDBPort))
 
   it("should put and retrieve an item using pk + sk", async () => {
     const db = await setup()
@@ -56,11 +51,14 @@ describe("DynamoDBService", () => {
       name: "Bob Marley",
       model: ModelType.MUSICIAN
     }
+
     await putMusician(db, musician)
+
     const result = await db.get({
-      partition: [PK.Musician, { musicianId: "1" }],
-      sort: [SK.Musician, { musicianId: "1" }]
+      partition: PK.Musician({ musicianId: "1" }),
+      sort: SK.Musician({ musicianId: "1" })
     })
+
     expect(result).toEqual(musician)
   })
 
@@ -74,7 +72,7 @@ describe("DynamoDBService", () => {
       putSong(db, song2)
     ])
 
-    const result = await db.query(PK.Musician, { musicianId: "1" }).exec()
+    const result = await db.query(PK.Musician({ musicianId: "1" })).exec()
     expect(result).toEqual([musician, song1, song2])
   })
 
@@ -89,7 +87,7 @@ describe("DynamoDBService", () => {
     ])
 
     const result = await db
-      .query(PK.Musician, { musicianId: "1" })
+      .query(PK.Musician({ musicianId: "1" }))
       .attributeNotExists("title")
       .or("title", "=", "Buffalo Soldier")
       .exec()
@@ -107,19 +105,19 @@ describe("DynamoDBService", () => {
       putSong(db, song2)
     ])
 
-    const results = await db.batchGet<Musician | Song>({
+    const results = await db.batchGet({
       keys: [
         {
-          partition: PK.Musician.key({ musicianId: "1" }),
-          sort: SK.Musician.key({ musicianId: "1" })
+          partition: PK.Musician({ musicianId: "1" }),
+          sort: SK.Musician({ musicianId: "1" })
         },
         {
-          partition: PK.Musician.key({ musicianId: "1" }),
-          sort: SK.Song.key({ songId: "2" })
+          partition: PK.Musician({ musicianId: "1" }),
+          sort: SK.Song({ songId: "2" })
         },
         {
-          partition: PK.Musician.key({ musicianId: "1" }),
-          sort: SK.Song.key({ songId: "3" })
+          partition: PK.Musician({ musicianId: "1" }),
+          sort: SK.Song({ songId: "3" })
         }
       ]
     })
@@ -196,8 +194,8 @@ function aMusicianWithTwoSongs(): [Musician, Song, Song] {
 function putMusician(db: DynamoDBService, m: Musician): Promise<void> {
   return db.put(
     {
-      partition: [PK.Musician, { musicianId: m.id }],
-      sort: [PK.Musician, { musicianId: m.id }]
+      partition: PK.Musician({ musicianId: m.id }),
+      sort: SK.Musician({ musicianId: m.id })
     },
     m
   )
@@ -206,8 +204,8 @@ function putMusician(db: DynamoDBService, m: Musician): Promise<void> {
 function putSong(db: DynamoDBService, s: Song): Promise<void> {
   return db.put(
     {
-      partition: [PK.Musician, { musicianId: s.musicianId }],
-      sort: [SK.Song, { songId: s.id }]
+      partition: PK.Musician({ musicianId: s.musicianId }),
+      sort: SK.Song({ songId: s.id })
     },
     s
   )

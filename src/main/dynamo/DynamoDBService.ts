@@ -4,11 +4,9 @@ import { Model } from "./Model"
 import { QueryBuilder } from "./QueryBuilder"
 import { toJSON } from "./util"
 
-type KeyInput<T extends Model, U> = [Key<T, U>, U]
-
-type PartitionAndSortKey<T extends Model, U, V extends Model, X> = {
-  partition: KeyInput<T, U>
-  sort: KeyInput<V, X>
+type PartitionAndSortKey<T extends Model, U extends Model> = {
+  partition: Key<T>
+  sort: Key<U>
 }
 
 /** A thin wrapper around the DynamoDB sdk client that
@@ -21,31 +19,29 @@ export class DynamoDBService {
   }
 
   /** Retrieve a single Item out of Dynamo */
-  async get<T extends Model, U, V extends Model, X>(
-    keys: PartitionAndSortKey<T, U, V, X>
-  ): Promise<V | undefined> {
-    const [pk, pkParts] = keys.partition
-    const [sk, skParts] = keys.sort
+  async get<T extends Model, U extends Model>(
+    keys: PartitionAndSortKey<T, U>
+  ): Promise<U | undefined> {
     const { Item: item } = await this.client
       .get({
         TableName: this.tableName,
         Key: {
-          pk: pk.key(pkParts),
-          sk: sk.key(skParts)
+          pk: keys.partition.value,
+          sk: keys.sort.value
         }
       })
       .promise()
 
     if (item !== undefined) {
-      return toJSON<V>(item)
+      return toJSON<U>(item)
     }
   }
 
   /** BatchGet items */
   async batchGet<T extends Model>(params: {
     keys: {
-      partition: string
-      sort: string
+      partition: Key<any>
+      sort: Key<T>
     }[]
   }): Promise<T[]> {
     const {
@@ -56,8 +52,8 @@ export class DynamoDBService {
         RequestItems: {
           [this.tableName]: {
             Keys: params.keys.map(({ partition, sort }) => ({
-              pk: partition,
-              sk: sort
+              pk: partition.value,
+              sk: sort.value
             }))
           }
         }
@@ -76,31 +72,22 @@ export class DynamoDBService {
     }
   }
 
-  query<T extends Model, U>(
-    partition: Key<T, U>,
-    keyParts: U
-  ): QueryBuilder<T> {
-    return new QueryBuilder<T>(
-      this.client,
-      this.tableName,
-      partition.key(keyParts)
-    )
+  query<T extends Model>(pk: Key<T>): QueryBuilder<T> {
+    return new QueryBuilder<T>(this.client, this.tableName, pk)
   }
 
   /** Write an item into Dynamo */
-  async put<T extends Model, U, V extends Model, X>(
-    keys: PartitionAndSortKey<T, U, V, X>,
-    fields: V
+  async put<T extends Model, U extends Model>(
+    keys: PartitionAndSortKey<T, U>,
+    fields: U
   ): Promise<void> {
-    const [pk, pkParts] = keys.partition
-    const [sk, skParts] = keys.sort
     await this.client
       .put({
         TableName: this.tableName,
         Item: {
           ...fields,
-          pk: pk.key(pkParts),
-          sk: sk.key(skParts)
+          pk: keys.partition.value,
+          sk: keys.sort.value
         }
       })
       .promise()

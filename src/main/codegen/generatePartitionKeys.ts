@@ -1,15 +1,14 @@
-import { ModelSet } from "./types"
+import { Model, Table } from "./types"
 
-export function generatePartitionKeys(
-  models: ModelSet,
-  partitionKeys: { [partition: string]: string[] }
-): string {
-  const modelsByPartition = groupBy(models, "partition")
+export function generatePartitionKeys(table: Table): string {
+  const modelsByPartition = groupBy(table.models, "partition")
+
   const partitions = modelsByPartition.map(([partition, models]) =>
-    generatePartitionKey(partition, models, partitionKeys)
+    generatePartitionKey(partition, models, table.partitions)
   )
+
   return `
-      export const PK = {
+      pk: {
         ${partitions.join("\n,")}
       }
     `
@@ -17,7 +16,7 @@ export function generatePartitionKeys(
 
 function generatePartitionKey(
   partition: string,
-  models: ModelSet,
+  models: Model[],
   partitionKeys: { [partition: string]: string[] }
 ): string {
   const modelNames = models.map(_ => _.name)
@@ -36,9 +35,9 @@ function generatePartitionKey(
   })
 
   const inputType = inputFields.map(_ => `${_}: string`).join(",")
-  return `${partition}: new Key<${modelNames.join(
-    " | "
-  )}, {${inputType}}>(_ => [${parts.join(", ")}])`
+  const modelType = modelNames.join(" | ")
+  const keyComponents = parts.join(", ")
+  return `${partition}: key<{${inputType}}, ${modelType}>(_ => [${keyComponents}])`
 }
 
 function groupBy<T extends { [key: string]: any }, U extends keyof T>(

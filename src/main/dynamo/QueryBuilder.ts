@@ -1,18 +1,20 @@
 import { DynamoDB } from "aws-sdk"
 import { toJSON } from "./util"
-import { KeysOf } from "main/typeUtils"
+import { KeysOf } from "../typeUtils"
+import { Key } from "./Key"
+import { Model } from "./Model"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T> {
+export class QueryBuilder<T extends Model> {
   private filterExp: string[] = []
   private filterValues: { [key: string]: any } = {}
 
   constructor(
     private db: DynamoDB.DocumentClient,
     private tableName: string,
-    private pk: string
+    private pk: Key<T>
   ) {}
 
   where(attribute: KeysOf<T>, operator: Operator, value: any): this {
@@ -66,7 +68,7 @@ export class QueryBuilder<T> {
       KeyConditionExpression: "pk = :pk",
       ExpressionAttributeValues: {
         ...this.filterValues,
-        ":pk": this.pk
+        ":pk": this.pk.value
       },
       FilterExpression: filter !== "" ? filter : undefined
     }

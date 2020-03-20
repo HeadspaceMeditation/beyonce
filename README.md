@@ -37,21 +37,23 @@ First install beyonce - `npm install @ginger.io/beyonce`
 Define your `partitions` and `models` in YAML like so:
 
 ```YAML
-Partitions:
-  Author: [author, _.authorId]
+Tables:
+  Library:
+    Partitions:
+      Author: [author, _.authorId]
 
-Models:
-  Author:
-    partition: Author
-    sort: [author, _.authorId]
-    id: string
-    name: string
+    Models:
+      Author:
+        partition: Author
+        sort: [author, _.authorId]
+        id: string
+        name: string
 
-  Book:
-    partition: Author
-    sort: [book, _.bookId]
-    id: string
-    title: string
+      Book:
+        partition: Author
+        sort: [book, _.bookId]
+        id: string
+        title: string
 ```
 
 You can specify non-primative types you need to import like so:
@@ -82,51 +84,59 @@ import {
   Author,
   Book,
   ModelType,
-  PK,
-  SK,
+  LibraryTable,
 } from "generated/models"
 
-const tableName = "Library"
-const db = new DynamoDBService(tableName, new DynamoDB({ ... }))
+const db = new DynamoDBService(
+  LibraryTable.name,
+  new DynamoDB({
+    endpoint: "...",
+    region: "..."
+  })
+)
 ```
 
 #### Put
 
 ```TypeScript
-const authorModel: Author = { ... } // plain JS object, beyonce will auto-map the types for you
-await db.put({
-  partition: [PK.Author, { authorId: "1" }],
-  sort: [SK.Author, { authorId: "1" }]
- }, authorModel)
+const authorModel: Author = {
+  id: "1",
+  name: "Jane Austin",
+  model: ModelType.Author
+}
 
+await db.put(
+  {
+    partition: LibraryTable.pk.Author({ authorId: "1" }),
+    sort: LibraryTable.sk.Author({ authorId: "1" })
+  },
+  authorModel
+)
 ```
 
 #### Get
 
 ```TypeScript
 const author = await db.get({
-  partition: [PK.Author, { authorId: "1" }],
-  sort: [SK.Author, { authorId: "1" }]
-})
+  partition: LibraryTable.pk.Author({ authorId: "1" }),
+  sort: LibraryTable.sk.Author({ authorId: "1" })
+}))
 ```
 
 #### Query
 
 ```TypeScript
-
 // Get an Author + their books ( inferred type: (Author | Book)[] )
 const authorWithBooks = await db
-  .query(PK.Author, { authorId: "1" })
+  .query(LibraryTable.pk.Author({ authorId: "1" }))
   .exec()
 
 // Get an Author + filter on their books (inferred type: (Author | Book)[] )
-const authorWithBooks = await db
-  .query(PK.Author, { authorId: "1" })
+const authorWithFilteredBooks = await db
+  .query(LibraryTable.pk.Author({ authorId: "1" }))
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()
-
-)
 ```
 
 The return types of the above queries are automatically inferred as `Author | Book`. And when processing
@@ -136,9 +146,9 @@ codegens onto your models.
 ```TypeScript
 authorWithBooks.forEach(authorOrBook => {
   if (authorOrBook.model === ModelType.Author) {
-      // do something with an Author model
+    // do something with an Author model
   } else if (authorOrBook.model == ModelType.Book) {
-      // do something with a Book model
+    // do something with a Book model
   }
 }
 ```
@@ -146,36 +156,33 @@ authorWithBooks.forEach(authorOrBook => {
 #### BatchGet
 
 ```TypeScript
+// Batch get several items (inferred type: (Author | Book)[])
+const batchResults = await db.batchGet({
+  keys: [
+    // Get 2 authors
+    {
+      partition: LibraryTable.pk.Author({ authorId: "1" }),
+      sort: LibraryTable.sk.Author({ authorId: "1" })
+    },
+    {
+      partition: LibraryTable.pk.Author({ authorId: "2" }),
+      sort: LibraryTable.sk.Author({ authorId: "2" })
+    },
 
-// Batch get several items (type-inference is currently manual here)
-const batchResults = await db.batchGet<Author | Book>({
-    keys: [
-        // Get 2 authors
-        {
-          partition: PK.Author.key({ authorId: "1" }),
-          sort: SK.Author.key({ authorId: "1" })
-        },
-        {
-          partition: PK.Author.key({ authorId: "2" }),
-          sort: SK.Author.key({ authorId: "2" })
-        },
-
-        // And a specific book from each
-        {
-          partition: PK.Author.key({ authorId: "1" }),
-          sort: SK.Book.key({ bookId: "1" })
-        },
-        {
-          partition: PK.Author.key({ authorId: "2" }),
-          sort: SK.Book.key({ bookId: "2" })
-        }
-      ]
-    })
+    // And a specific book from each
+    {
+      partition: LibraryTable.pk.Author({ authorId: "1" }),
+      sort: LibraryTable.sk.Book({ bookId: "1" })
+    },
+    {
+      partition: LibraryTable.pk.Author({ authorId: "2" }),
+      sort: LibraryTable.sk.Book({ bookId: "2" })
+    }
+  ]
+})
 ```
 
 ## Things beyonce should do, but doesn't (yet)
 
 1. Support the full range of Dynamo filter expressions
 2. Support for GSIs partitions
-3. Automatic type inference on `batchGet`
-4. Support multiple DynamoDB tables
