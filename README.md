@@ -8,7 +8,7 @@ work with and type-safe.
 When using DynamoDB, you often want to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
 This allows for retrieving related records using a single query instead of N.
 
-Unfortunately, most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js), don't support this
+Unfortunately most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js), don't support this
 use case as they follow the SQL convention sticking each model into a separte table.
 
 For example, we might want to fetch an `Author` + all their `Book`s in a single query. And we'd accomplish that by sticking both models
