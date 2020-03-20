@@ -5,6 +5,7 @@ import { generateModelInterfaces } from "./generateModelInterface"
 import { generateModelTypeEnum } from "./generateModelTypeEnum"
 import { generateTables } from "./generateTables"
 import { ModelDefinitions, Table } from "./types"
+import { generateModelHelpers } from "./generateModelHelpers"
 
 export function generateModels(yamlData: string): string {
   const config = parseYaml<ModelDefinitions>(yamlData)
@@ -21,12 +22,16 @@ export function generateModels(yamlData: string): string {
   const imports = new Set([`import { key, Model } from "@ginger.io/beyonce"`])
   modelInterfaces.imports.forEach(_ => imports.add(_))
 
+  const modelHelpers = generateModelHelpers(models)
+
   const code = `
       ${Array.from(imports).join("\n")}
 
       ${modelTypeEnum}
 
       ${modelInterfaces.code.join("\n\n")}
+
+      ${modelHelpers}
 
       ${tables}
     `
