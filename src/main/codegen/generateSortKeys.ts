@@ -1,9 +1,9 @@
-import { ModelSet } from "./types"
+import { Table } from "./types"
 
-export function generateSortKeys(models: ModelSet) {
-  const sks = models.map(({ name, sk }) => codeGenKeyGetter(name, sk))
+export function generateSortKeys(table: Table) {
+  const sks = table.models.map(({ name, sort }) => codeGenKeyGetter(name, sort))
   return `
-      export const SK = {
+      sk: {
         ${sks.join(",\n")}
       }
     `
@@ -23,7 +23,7 @@ function codeGenKeyGetter(modelName: string, keyParts: string[]): string {
   })
 
   const inputType = inputFields.map(_ => `${_}: string`).join(",")
-  return `[ModelType.${modelName}]: new Key<${modelName}, {${inputType}}>(_ => [${parts.join(
+  return `[ModelType.${modelName}]: key<{${inputType}}, ${modelName}>(_ => [${parts.join(
     ", "
   )}])`
 }

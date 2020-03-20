@@ -3,32 +3,22 @@ import * as path from "path"
 import * as prettier from "prettier"
 import { generateModelInterfaces } from "./generateModelInterface"
 import { generateModelTypeEnum } from "./generateModelTypeEnum"
-import { generatePartitionKeys } from "./generatePartitionKeys"
-import { generateSortKeys } from "./generateSortKeys"
-import { ModelDefinitions, ModelSet } from "./types"
+import { generateTables } from "./generateTables"
+import { ModelDefinitions, Table } from "./types"
 
 export function generateModels(yamlData: string): string {
-  const { Models, Partitions } = parseYaml<ModelDefinitions>(yamlData)
-  const partitionKeys = Partitions
-  const models: ModelSet = []
+  const config = parseYaml<ModelDefinitions>(yamlData)
+  const tableDefs = toTables(config)
 
-  Object.entries(Models).forEach(([name, { partition, sort, ...fields }]) =>
-    models.push({
-      name,
-      partition,
-      sk: sort,
-      fields
-    })
-  )
+  const models = tableDefs
+    .map(({ models }) => models)
+    .reduce((a, b) => a.concat(b))
 
   const modelInterfaces = generateModelInterfaces(models)
   const modelTypeEnum = generateModelTypeEnum(models)
-  const partitions = generatePartitionKeys(models, partitionKeys)
-  const sortKeys = generateSortKeys(models)
+  const tables = generateTables(tableDefs)
 
-  const imports = new Set([
-    `import { Key, Model } from "@ginger.io/beyonce"`
-  ])
+  const imports = new Set([`import { key, Model } from "@ginger.io/beyonce"`])
   modelInterfaces.imports.forEach(_ => imports.add(_))
 
   const code = `
@@ -38,15 +28,38 @@ export function generateModels(yamlData: string): string {
 
       ${modelInterfaces.code.join("\n\n")}
 
-      ${partitions}
-
-      ${sortKeys}
+      ${tables}
     `
 
   return prettier.format(code, {
     parser: "typescript",
     semi: false
   })
+}
+
+function toTables(config: ModelDefinitions): Table[] {
+  const tables: Table[] = []
+
+  Object.entries(config.Tables).forEach(([name, { Partitions, Models }]) => {
+    const table: Table = {
+      name,
+      partitions: Partitions,
+      models: []
+    }
+
+    Object.entries(Models).forEach(([name, { partition, sort, ...fields }]) => {
+      table.models.push({
+        name,
+        partition,
+        sort,
+        fields
+      })
+    })
+
+    tables.push(table)
+  })
+
+  return tables
 }
 
 function parseYaml<T>(yamlData: string): T {
