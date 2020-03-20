@@ -22,7 +22,7 @@ Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcin
 highly motivated to minimize the number of roundtrip db calls.
 
 You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table. But you might want to
-keep a few sets of heterogenous models in the same table, under the same partition key.
+keep a few related models in the same table, under the same partition key.
 
 Beyonce makes that easy for you.
 
