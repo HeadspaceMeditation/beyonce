@@ -1,8 +1,9 @@
 import { DynamoDB } from "aws-sdk"
+import { JayZ } from "@ginger.io/jay-z"
 import { KeysOf } from "../typeUtils"
 import { Key } from "./Key"
 import { Model } from "./Model"
-import { toJSON } from "./util"
+import { decryptOrPassThroughItem, toJSON } from "./util"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
@@ -14,7 +15,8 @@ export class QueryBuilder<T extends Model> {
   constructor(
     private db: DynamoDB.DocumentClient,
     private tableName: string,
-    private pk: Key<T>
+    private pk: Key<T>,
+    private jayz?: JayZ
   ) {}
 
   where(attribute: KeysOf<T>, operator: Operator, value: any): this {
@@ -49,7 +51,12 @@ export class QueryBuilder<T extends Model> {
     const { Items: items } = await this.db.query(this.build()).promise()
 
     if (items !== undefined) {
-      return items.map(_ => toJSON<T>(_))
+      const jsonItems = items.map(async _ => {
+        const item = await decryptOrPassThroughItem(this.jayz, _)
+        return toJSON<T>(item)
+      })
+
+      return Promise.all(jsonItems)
     } else {
       return []
     }

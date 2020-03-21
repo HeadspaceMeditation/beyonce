@@ -1,21 +1,36 @@
 import { DynamoDB } from "aws-sdk"
+import { JayZ } from "@ginger.io/jay-z"
 import { Key } from "./Key"
 import { Model } from "./Model"
 import { QueryBuilder } from "./QueryBuilder"
-import { toJSON } from "./util"
+import {
+  decryptOrPassThroughItem,
+  encryptOrPassThroughItem,
+  PartitionAndSortKey,
+  toJSON
+} from "./util"
 
-type PartitionAndSortKey<T extends Model, U extends Model> = {
-  partition: Key<T>
-  sort: Key<U>
+export type Options = {
+  jayz?: JayZ
 }
 
 /** A thin wrapper around the DynamoDB sdk client that
  * does auto mapping between JSON <=> DynamoDB Items
  */
-export class DynamoDBService {
+export class Beyonce {
   private client: DynamoDB.DocumentClient
-  constructor(private tableName: string, dynamo: DynamoDB = new DynamoDB()) {
+  private jayz?: JayZ
+
+  constructor(
+    private tableName: string,
+    dynamo: DynamoDB,
+    options: Options = {}
+  ) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
+
+    if (options.jayz !== undefined) {
+      this.jayz = options.jayz
+    }
   }
 
   /** Retrieve a single Item out of Dynamo */
@@ -33,7 +48,7 @@ export class DynamoDBService {
       .promise()
 
     if (item !== undefined) {
-      return toJSON<U>(item)
+      return toJSON<U>(await decryptOrPassThroughItem(this.jayz, item))
     }
   }
 
@@ -63,14 +78,19 @@ export class DynamoDBService {
 
     if (responses !== undefined) {
       const items = responses[this.tableName]
-      return items.map(_ => toJSON<T>(_))
+      const jsonItems = items.map(async _ => {
+        const item = await decryptOrPassThroughItem(this.jayz, _)
+        return toJSON<T>(item)
+      })
+
+      return Promise.all(jsonItems)
     } else {
       return []
     }
   }
 
   query<T extends Model>(pk: Key<T>): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.client, this.tableName, pk)
+    return new QueryBuilder<T>(this.client, this.tableName, pk, this.jayz)
   }
 
   /** Write an item into Dynamo */
@@ -78,14 +98,16 @@ export class DynamoDBService {
     keys: PartitionAndSortKey<T, U>,
     fields: U
   ): Promise<void> {
+    const item = await encryptOrPassThroughItem(this.jayz, keys, {
+      ...fields,
+      [keys.partition.name]: keys.partition.value,
+      [keys.sort.name]: keys.sort.value
+    })
+
     await this.client
       .put({
         TableName: this.tableName,
-        Item: {
-          ...fields,
-          [keys.partition.name]: keys.partition.value,
-          [keys.sort.name]: keys.sort.value
-        }
+        Item: item
       })
       .promise()
   }
