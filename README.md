@@ -1,7 +1,9 @@
 # Beyonce
 
-A type-safe DynamoDB query builder for TypeScript. Beyonce's primary feature is making DynamoDB queries which return heterogeneous models both easy to
-work with and type-safe.
+A type-safe DynamoDB query builder for TypeScript.
+
+Beyonce's primary feature is making DynamoDB queries which return heterogeneous models both easy to
+work with and type-safe. But Beyonce also works with [Jay-Z](https://github.com/ginger-io/jay-z) out of the box to support application-layer encryption
 
 ## Motivation
 
@@ -75,10 +77,10 @@ Which will eventually codegen into `import { Address } from "author/address"`
 
 Now you can write partition-aware, type safe queries with abandon:
 
-#### Create a DynamoDBService and import the generated models, partition keys and sort keys
+#### Get yourself a Beyonce and import the generated models, partition keys and sort keys
 
 ```TypeScript
-import { DynamoDBService } from "@ginger.io/beyonce"
+import { Beyonce } from "@ginger.io/beyonce"
 import { DynamoDB } from "aws-sdk"
 import {
   Author,
@@ -88,7 +90,7 @@ import {
   LibraryTable,
 } from "generated/models"
 
-const db = new DynamoDBService(
+const beyonce = new Beyonce(
   LibraryTable.name,
   new DynamoDB({
     endpoint: "...",
@@ -97,7 +99,32 @@ const db = new DynamoDBService(
 )
 ```
 
-#### Put
+And if you install [Jay-Z](https://github.com/ginger-io/jay-z), you can enable transparent application-layer encryption
+out of the box using KMS with just a few more lines of code:
+
+```TypeScript
+import { KMS } from "aws-sdk"
+import { KMSDataKeyProvider, JayZ } from "@ginger.io/jay-z"
+
+const kmsKeyId = "..." // the KMS key id or arn you want to use
+const keyProvider = new KMSDataKeyProvider(kmsKeyId, new KMS())
+const jayZ = new JayZ(keyProvider)
+
+const beyonce = new Beyonce(
+  LibraryTable.name,
+  new DynamoDB({
+    endpoint: "...",
+    region: "..."
+  }),
+  { jayz }
+)
+```
+
+What a power couple!
+
+## Queries
+
+### Put
 
 ```TypeScript
 // Beyonce generates helper methods to create model objects for you
@@ -106,7 +133,7 @@ const authorModel = author({
   name: "Jane Austin"
 })
 
-await db.put(
+await beyonce.put(
   {
     partition: LibraryTable.pk.Author({ authorId: "1" }),
     sort: LibraryTable.sk.Author({ authorId: "1" })
@@ -115,25 +142,25 @@ await db.put(
 )
 ```
 
-#### Get
+### Get
 
 ```TypeScript
-const author = await db.get({
+const author = await beyonce.get({
   partition: LibraryTable.pk.Author({ authorId: "1" }),
   sort: LibraryTable.sk.Author({ authorId: "1" })
 }))
 ```
 
-#### Query
+### Query
 
 ```TypeScript
 // Get an Author + their books ( inferred type: (Author | Book)[] )
-const authorWithBooks = await db
+const authorWithBooks = await beyonce
   .query(LibraryTable.pk.Author({ authorId: "1" }))
   .exec()
 
 // Get an Author + filter on their books (inferred type: (Author | Book)[] )
-const authorWithFilteredBooks = await db
+const authorWithFilteredBooks = await beyonce
   .query(LibraryTable.pk.Author({ authorId: "1" }))
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
@@ -154,11 +181,11 @@ authorWithBooks.forEach(authorOrBook => {
 }
 ```
 
-#### BatchGet
+### BatchGet
 
 ```TypeScript
 // Batch get several items (inferred type: (Author | Book)[])
-const batchResults = await db.batchGet({
+const batchResults = await beyonce.batchGet({
   keys: [
     // Get 2 authors
     {
