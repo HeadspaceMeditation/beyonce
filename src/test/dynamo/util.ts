@@ -4,6 +4,7 @@ import * as LocalDynamo from "dynamodb-local"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import { key } from "../../main/dynamo/Key"
 import { Model } from "../../main/dynamo/Model"
+import { JayZConfig } from "../../main/dynamo/JayZConfig"
 
 beforeAll(async () => LocalDynamo.launch(dynamoDBPort))
 afterAll(async () => LocalDynamo.stop(dynamoDBPort))
@@ -45,6 +46,19 @@ export const SK = {
   Song: key<{ songId: string }, Song>("sk", _ => ["song", _.songId])
 }
 
+export const GSIs = {
+  byModelAndId: {
+    name: "byModelAndId",
+    pk: key<{ model: string }, Musician | Song>("model", _ => [_.model]),
+    sk: key<{ id: string }, Musician | Song>("id", _ => [_.id])
+  },
+  byNameAndId: {
+    name: "byNameAndId",
+    pk: key<{ name: string }, Musician>("name", _ => [_.name]),
+    sk: key<{ id: string }, Musician>("id", _ => [_.id])
+  }
+}
+
 export async function setup(jayz?: JayZ): Promise<Beyonce> {
   const client = new DynamoDB({
     endpoint: `http://localhost:${dynamoDBPort}`,
@@ -62,6 +76,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
   await client
     .createTable({
       TableName: tableName,
+
       KeySchema: [
         { AttributeName: "pk", KeyType: "HASH" },
         { AttributeName: "sk", KeyType: "RANGE" }
@@ -69,13 +84,50 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
       AttributeDefinitions: [
         { AttributeName: "pk", AttributeType: "S" },
-        { AttributeName: "sk", AttributeType: "S" }
+        { AttributeName: "sk", AttributeType: "S" },
+        { AttributeName: "model", AttributeType: "S" },
+        { AttributeName: "name", AttributeType: "S" },
+        { AttributeName: "id", AttributeType: "S" }
       ],
+
+      GlobalSecondaryIndexes: [
+        {
+          IndexName: "byNameAndId",
+          KeySchema: [
+            { AttributeName: "name", KeyType: "HASH" },
+            { AttributeName: "id", KeyType: "RANGE" }
+          ],
+          Projection: {
+            ProjectionType: "ALL"
+          }
+        },
+        {
+          IndexName: "byModelAndId",
+          KeySchema: [
+            { AttributeName: "model", KeyType: "HASH" },
+            { AttributeName: "id", KeyType: "RANGE" }
+          ],
+          Projection: {
+            ProjectionType: "ALL"
+          }
+        }
+      ],
+
       BillingMode: "PAY_PER_REQUEST"
     })
     .promise()
 
-  return new Beyonce(tableName, client, { jayz })
+  const jayzConfig =
+    jayz !== undefined
+      ? {
+          client: jayz,
+          dontEncrypt: new Set(["pk", "sk", "model", "name", "id"])
+        }
+      : undefined
+
+  return new Beyonce(tableName, client, {
+    jayz: jayzConfig
+  })
 }
 
 export function aMusicianWithTwoSongs(): [Musician, Song, Song] {

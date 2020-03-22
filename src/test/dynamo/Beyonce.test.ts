@@ -1,15 +1,14 @@
+import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
 import {
   aMusicianWithTwoSongs,
-  ModelType,
-  Musician,
   PK,
   putMusician,
   putSong,
   setup,
-  SK
+  SK,
+  GSIs,
+  ModelType
 } from "./util"
-
-import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -29,39 +28,56 @@ describe("Beyonce", () => {
     await testBatchGet()
   })
 
+  // GSIs
+  it("should query GSI by model", async () => {
+    await testGSIByModel()
+  })
+
+  it("should query GSI by name", async () => {
+    await testGSIByName()
+  })
+
   // With JayZ encryption
-  it("should put and retrieve an item using pk + sk", async () => {
+  it("should put and retrieve an item using pk + sk with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
     const jayZ = new JayZ(keyProvider)
     await testPutAndRetrieveItem(jayZ)
   })
 
-  it("should put and retrieve multiple items using just pk", async () => {
+  it("should put and retrieve multiple items using just pk with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
     const jayZ = new JayZ(keyProvider)
     await testPutAndRetrieveMultipleItems(jayZ)
   })
 
-  it("should filter items when querying", async () => {
+  it("should filter items when querying with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
     const jayZ = new JayZ(keyProvider)
     await testQueryWithFilter(jayZ)
   })
 
-  it("should batchGet items", async () => {
+  it("should batchGet items with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
     const jayZ = new JayZ(keyProvider)
     await testBatchGet(jayZ)
+  })
+
+  it("should query GSI by model with jayZ", async () => {
+    const keyProvider = await StubDataKeyProvider.forLibsodium()
+    const jayZ = new JayZ(keyProvider)
+    await testGSIByModel(jayZ)
+  })
+
+  it("should query GSI by name with jayZ", async () => {
+    const keyProvider = await StubDataKeyProvider.forLibsodium()
+    const jayZ = new JayZ(keyProvider)
+    await testGSIByName(jayZ)
   })
 })
 
 async function testPutAndRetrieveItem(jayZ?: JayZ) {
   const db = await setup(jayZ)
-  const musician: Musician = {
-    id: "1",
-    name: "Bob Marley",
-    model: ModelType.MUSICIAN
-  }
+  const [musician, _, __] = aMusicianWithTwoSongs()
 
   await putMusician(db, musician)
 
@@ -144,4 +160,44 @@ async function testBatchGet(jayZ?: JayZ) {
   })
 
   expect(results).toEqual([musician, song1, song2])
+}
+
+async function testGSIByModel(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+
+  await Promise.all([
+    putMusician(db, musician),
+    putSong(db, song1),
+    putSong(db, song2)
+  ])
+
+  const result = await db
+    .queryGSI(
+      GSIs.byModelAndId.name,
+      GSIs.byModelAndId.pk({ model: ModelType.SONG })
+    )
+    .exec()
+
+  expect(result).toEqual([song1, song2])
+}
+
+async function testGSIByName(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+
+  await Promise.all([
+    putMusician(db, musician),
+    putSong(db, song1),
+    putSong(db, song2)
+  ])
+
+  const result = await db
+    .queryGSI(
+      GSIs.byNameAndId.name,
+      GSIs.byNameAndId.pk({ name: musician.name })
+    )
+    .exec()
+
+  expect(result).toEqual([musician])
 }

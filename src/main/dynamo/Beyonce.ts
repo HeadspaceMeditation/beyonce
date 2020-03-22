@@ -1,5 +1,5 @@
 import { DynamoDB } from "aws-sdk"
-import { JayZ } from "@ginger.io/jay-z"
+import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
 import { Model } from "./Model"
 import { QueryBuilder } from "./QueryBuilder"
@@ -11,7 +11,7 @@ import {
 } from "./util"
 
 export type Options = {
-  jayz?: JayZ
+  jayz?: JayZConfig
 }
 
 /** A thin wrapper around the DynamoDB sdk client that
@@ -19,7 +19,7 @@ export type Options = {
  */
 export class Beyonce {
   private client: DynamoDB.DocumentClient
-  private jayz?: JayZ
+  private jayz?: JayZConfig
 
   constructor(
     private tableName: string,
@@ -90,7 +90,24 @@ export class Beyonce {
   }
 
   query<T extends Model>(pk: Key<T>): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.client, this.tableName, pk, this.jayz)
+    const { tableName, jayz } = this
+    return new QueryBuilder<T>({
+      db: this.client,
+      tableName,
+      pk,
+      jayz: jayz
+    })
+  }
+
+  queryGSI<T extends Model>(gsiName: string, gsiPk: Key<T>): QueryBuilder<T> {
+    const { tableName, jayz } = this
+    return new QueryBuilder<T>({
+      db: this.client,
+      tableName,
+      gsiName,
+      gsiPk,
+      jayz
+    })
   }
 
   /** Write an item into Dynamo */
@@ -98,7 +115,7 @@ export class Beyonce {
     keys: PartitionAndSortKey<T, U>,
     fields: U
   ): Promise<void> {
-    const item = await encryptOrPassThroughItem(this.jayz, keys, {
+    const item = await encryptOrPassThroughItem(this.jayz, {
       ...fields,
       [keys.partition.name]: keys.partition.value,
       [keys.sort.name]: keys.sort.value
