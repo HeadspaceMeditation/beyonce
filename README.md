@@ -115,7 +115,7 @@ const beyonce = new Beyonce(
 // Beyonce generates helper methods to create model objects for you
 const authorModel = author({
   id: "1",
-  name: "Jane Austin"
+  name: "Jane Austen"
 })
 
 await beyonce.put(
