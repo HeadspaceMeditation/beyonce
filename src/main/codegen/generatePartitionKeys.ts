@@ -1,4 +1,5 @@
 import { Model, Table } from "./types"
+import { groupBy } from "./util"
 
 export function generatePartitionKeys(table: Table): string {
   const modelsByPartition = groupBy(table.models, "partition")
@@ -38,18 +39,4 @@ function generatePartitionKey(
   const modelType = modelNames.join(" | ")
   const keyComponents = parts.join(", ")
   return `${partition}: key<{${inputType}}, ${modelType}>("pk", _ => [${keyComponents}])`
-}
-
-function groupBy<T extends { [key: string]: any }, U extends keyof T>(
-  data: T[],
-  key: U
-): [string, T[]][] {
-  const groupedItems: { [key: string]: T[] } = {}
-
-  data.forEach(item => {
-    groupedItems[item[key]] = groupedItems[item[key]] || []
-    groupedItems[item[key]].push(item)
-  })
-
-  return Object.entries(groupedItems)
 }

@@ -1,4 +1,5 @@
 import { ItemWithEncryptedFields, JayZ } from "@ginger.io/jay-z"
+import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
 import { Model } from "./Model"
 
@@ -13,40 +14,36 @@ export function toJSON<T>(item: { [key: string]: any }): T {
   return item as T
 }
 
-export async function encryptOrPassThroughItem<
-  T extends Model,
-  U extends Model
->(
-  jayz: JayZ | undefined,
-  keys: PartitionAndSortKey<T, U>,
-  item: U & { [key: string]: string }
+export async function encryptOrPassThroughItem<T extends Model>(
+  jayz: JayZConfig | undefined,
+  item: T & { [key: string]: string }
 ): Promise<
   | ItemWithEncryptedFields<
-      U & {
+      T & {
         [key: string]: string
       },
       string
     >
-  | (U & { [key: string]: string })
+  | (T & { [key: string]: string })
 > {
   if (jayz !== undefined) {
     const fieldsToEncrypt = Object.keys(item).filter(
-      _ => _ !== keys.partition.name && _ !== keys.sort.name
+      _ => !jayz.dontEncrypt.has(_)
     )
-    return jayz.encryptItem(item, fieldsToEncrypt)
+    return jayz.client.encryptItem(item, fieldsToEncrypt)
   } else {
     return item
   }
 }
 
 export async function decryptOrPassThroughItem(
-  jayz: JayZ | undefined,
+  jayz: JayZConfig | undefined,
   item: {
     [key: string]: any
   }
 ): Promise<{ [key: string]: any }> {
   if (jayz !== undefined) {
-    return jayz.decryptItem(item as ItemWithEncryptedFields<any, any>)
+    return jayz.client.decryptItem(item as ItemWithEncryptedFields<any, any>)
   } else {
     return item
   }

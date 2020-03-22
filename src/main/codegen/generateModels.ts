@@ -45,24 +45,35 @@ export function generateModels(yamlData: string): string {
 function toTables(config: ModelDefinitions): Table[] {
   const tables: Table[] = []
 
-  Object.entries(config.Tables).forEach(([name, { Partitions, Models }]) => {
-    const table: Table = {
-      name,
-      partitions: Partitions,
-      models: []
-    }
-
-    Object.entries(Models).forEach(([name, { partition, sort, ...fields }]) => {
-      table.models.push({
+  Object.entries(config.Tables).forEach(
+    ([name, { Partitions, Models, GSIs }]) => {
+      const table: Table = {
         name,
-        partition,
-        sort,
-        fields
-      })
-    })
+        partitions: Partitions,
+        gsis: [],
+        models: []
+      }
 
-    tables.push(table)
-  })
+      if (GSIs !== undefined) {
+        Object.entries(GSIs).forEach(([name, { partition, sort }]) => {
+          table.gsis.push({ name, partition, sort })
+        })
+      }
+
+      Object.entries(Models).forEach(
+        ([name, { partition, sort, ...fields }]) => {
+          table.models.push({
+            name,
+            partition,
+            sort,
+            fields
+          })
+        }
+      )
+
+      tables.push(table)
+    }
+  )
 
   return tables
 }
