@@ -71,7 +71,7 @@ ${authorHelper}
 
 export const LibraryTable = {
   name: "Library",
-  encryptionBlacklist: ["pk", "sk", "model", "__jayz__metadata"],
+  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
 
   pk: {
     Author: key<{ authorId: string }, Author>("pk", _ => ["author", _.authorId])
@@ -124,7 +124,7 @@ ${bookHelper}
 
 export const LibraryTable = {
   name: "Library",
-  encryptionBlacklist: ["pk", "sk", "model", "__jayz__metadata"],
+  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
 
   ${authorAndBookPk},
   ${authorAndBookSk}
@@ -175,7 +175,7 @@ ${bookHelper}
 
 export const LibraryTable = {
   name: "Library",
-  encryptionBlacklist: ["pk", "sk", "model", "__jayz__metadata", "id"],
+  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata", "id"]),
 
   ${authorAndBookPk},
   ${authorAndBookSk},
@@ -233,7 +233,14 @@ ${bookHelper}
 
 export const LibraryTable = {
   name: "Library",
-  encryptionBlacklist: ["pk", "sk", "model", "__jayz__metadata", "name", "id"],
+  encryptionBlacklist: new Set([
+    "pk",
+    "sk",
+    "model",
+    "__jayz__metadata",
+    "name",
+    "id"
+  ]),
 
   ${authorAndBookPk},
   ${authorAndBookSk},

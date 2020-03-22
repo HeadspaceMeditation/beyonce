@@ -2,31 +2,18 @@
 
 A type-safe DynamoDB query builder for TypeScript.
 
-Beyonce's primary feature is making DynamoDB queries which return heterogeneous models both easy to
-work with and type-safe. But Beyonce also works with [Jay-Z](https://github.com/ginger-io/jay-z) out of the box to support application-layer encryption
+Beyonce's features include:
 
-## Motivation
+- **Low boilerplate**. Define your tables, partitions, indexes and models in YAML and Beyonce codegens TypeScript definitions for you.
 
-When using DynamoDB, you often want to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
-This allows for retrieving related records using a single query instead of N.
+- **Store heterogeneous models in the same table**. Unlike most DynamoDB libraries, Beyonce doesn't force you into a 1 model per table paradigm. It supports storing related models in the same table partition, which allows you to "precompute joins" and retrieve those models with a single roundtrip query to the db.
 
-Unfortunately most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js), don't support this
-use case as they follow the SQL convention sticking each model into a separte table.
+- **Type-safe API**. Beyonce's API is type-safe. It's aware of which models live under your partition and sort keys (even for global secondary indexes).
+  When you `get`, `batchGet` or `query`, the result types are automatically inferred. And when you apply filters on your
+  `query` the attribute names are automatically type-checked.
 
-For example, we might want to fetch an `Author` + all their `Book`s in a single query. And we'd accomplish that by sticking both models
-under the same partition key - e.g. `author-${id}`.
-
-AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html), take this to the extreme:
-
-> ...most well-designed applications require only one table
-
-Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
-highly motivated to minimize the number of roundtrip db calls.
-
-You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table.
-
-But you might want to keep a few related models in the same table, under the same partition key and fetch
-those models in a type-safe way. Beyonce makes that easy.
+- **Application-level encryption**. Beyonce _loves_ [Jay-Z](https://github.com/ginger-io/jay-z) and supports him out of the box. Combine them into
+  the power couple they deserve to be, and every non-key, non-index attribute on your models will be automatically encrypted _before_ you send it to Dynamo. This grants an additional layer of security beyond just enabling AWS's DynamoDB server-side-enryption option (which you should do too).
 
 ## Usage
 
@@ -36,7 +23,7 @@ First install beyonce - `npm install @ginger.io/beyonce`
 
 ### 2. Define your models
 
-Define your `partitions` and `models` in YAML like so:
+Define your `partitions` and `models` in YAML:
 
 ```YAML
 Tables:
@@ -46,19 +33,40 @@ Tables:
 
     Models:
       Author:
-        partition: Author
+        partition: Author # this matches the "Author" partition we defined above
         sort: [author, _.authorId]
         id: string
         name: string
 
       Book:
-        partition: Author
+        partition: Author # notice how Author and Book both live in the "Author" partition
         sort: [book, _.bookId]
         id: string
         title: string
 ```
 
-You can specify non-primative types you need to import like so:
+#### Global secondary indexes
+
+If your table(s) have GSI's you can specify them like this:
+
+```YAML
+Tables:
+  Library:
+    Partitions:
+      Author: [author, _.authorId]
+
+    GSIs:
+      byName: # this must match your GSI's name
+        partition: name # this field must exist on at least one of your models
+        sort: id # this field must exist on at least one of your models
+```
+
+**Note**: Beyonce currently assumes that your GSI indexes project _all_ model attributes, which will
+be reflected in the return types of your queries.
+
+#### External types
+
+You can specify external types you need to import like so:
 
 ```YAML
 Author:
@@ -67,7 +75,7 @@ Author:
 
 ```
 
-Which will eventually codegen into `import { Address } from "author/address"`
+Which transforms into `import { Address } from "author/address"`
 
 ### 3. Codegen TypeScript classes for your models, partition keys and sort keys
 
@@ -98,29 +106,6 @@ const beyonce = new Beyonce(
   })
 )
 ```
-
-And if you install [Jay-Z](https://github.com/ginger-io/jay-z), you can enable transparent application-layer encryption
-out of the box using KMS with just a few more lines of code:
-
-```TypeScript
-import { KMS } from "aws-sdk"
-import { KMSDataKeyProvider, JayZ } from "@ginger.io/jay-z"
-
-const kmsKeyId = "..." // the KMS key id or arn you want to use
-const keyProvider = new KMSDataKeyProvider(kmsKeyId, new KMS())
-const jayZ = new JayZ(keyProvider)
-
-const beyonce = new Beyonce(
-  LibraryTable.name,
-  new DynamoDB({
-    endpoint: "...",
-    region: "..."
-  }),
-  { jayz }
-)
-```
-
-What a power couple!
 
 ## Queries
 
@@ -181,6 +166,16 @@ authorWithBooks.forEach(authorOrBook => {
 }
 ```
 
+### QueryGSI
+
+```TypeScript
+const { byName } = LibraryTable.gsis
+const prideAndPrejudice = await beyonce
+  .queryGSI(byName.name, byName.pk({ name: "Jane Austen" }))
+  .where("title", "=", "Pride and Prejudice")
+  .exec()
+```
+
 ### BatchGet
 
 ```TypeScript
@@ -210,7 +205,58 @@ const batchResults = await beyonce.batchGet({
 })
 ```
 
+## Encryption
+
+Beyonce integrates with [Jay-Z](https://github.com/ginger-io/jay-z) to enable transparent application-layer encryption
+out of the box using KMS with just a few additional lines of code:
+
+```TypeScript
+import { KMS } from "aws-sdk"
+import { KMSDataKeyProvider, JayZ } from "@ginger.io/jay-z"
+
+// Given a dynamo client
+const dynamo =  new DynamoDB({endpoint: "...", region: "..."})
+
+// Get yourself a JayZ
+const kmsKeyId = "..." // the KMS key id or arn you want to use
+const keyProvider = new KMSDataKeyProvider(kmsKeyId, new KMS())
+const jayZ = new JayZ(keyProvider)
+
+// And give him to Beyonce (because she runs this relationship)
+const beyonce = new Beyonce(
+  LibraryTable.name,
+  dynamo,
+  {
+    jayz,
+    encryptionBlacklist: Library.table.encryptionBlacklist // codegened set of fields to skip encrypting
+  }
+)
+```
+
 ## Things beyonce should do, but doesn't (yet)
 
 1. Support the full range of Dynamo filter expressions
-2. Support for GSIs partitions
+2. Support partition and sort key names other than `pk` and `sk`
+
+## An aside on storing heterogenous models in the same table
+
+When using DynamoDB, you often want to "pre-compute" joins by sticking a set of heterogeneous models into the same table, under the same partition key.
+This allows for retrieving related records using a single query instead of N.
+
+Unfortunately most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js), don't support this
+use case as they follow the SQL convention sticking each model into a separte table.
+
+For example, we might want to fetch an `Author` + all their `Book`s in a single query. And we'd accomplish that by sticking both models
+under the same partition key - e.g. `author-${id}`.
+
+AWS's [guidelines](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html), take this to the extreme:
+
+> ...most well-designed applications require only one table
+
+Keep in mind that the _primary_ reason they recommened this is to _avoid_ forcing the application-layer to perform in-memory joins. Due to Amazon's scale, they are
+highly motivated to minimize the number of roundtrip db calls.
+
+You are probably not Amazon scale. And thus probably don't need to shove _everything_ into a single table.
+
+But you might want to keep a few related models in the same table, under the same partition key and fetch
+those models in a type-safe way. Beyonce makes that easy.

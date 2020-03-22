@@ -12,7 +12,7 @@ export function generateTables(tables: Table[]): string {
     return `
       export const ${table.name}Table = {
           name: "${table.name}",
-          encryptionBlacklist: ${JSON.stringify(encryptionBlacklist)},
+          encryptionBlacklist: new Set(${JSON.stringify(encryptionBlacklist)}),
           ${partitionKeys},
           ${sortKeys},
           ${gsis}

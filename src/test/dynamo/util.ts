@@ -121,7 +121,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
     jayz !== undefined
       ? {
           client: jayz,
-          dontEncrypt: new Set(["pk", "sk", "model", "name", "id"])
+          encryptionBlacklist: new Set(["pk", "sk", "model", "name", "id"])
         }
       : undefined
 

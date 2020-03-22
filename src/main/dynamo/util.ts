@@ -28,7 +28,7 @@ export async function encryptOrPassThroughItem<T extends Model>(
 > {
   if (jayz !== undefined) {
     const fieldsToEncrypt = Object.keys(item).filter(
-      _ => !jayz.dontEncrypt.has(_)
+      _ => !jayz.encryptionBlacklist.has(_)
     )
     return jayz.client.encryptItem(item, fieldsToEncrypt)
   } else {
