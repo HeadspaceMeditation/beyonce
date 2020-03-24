@@ -40,37 +40,37 @@ describe("Beyonce", () => {
   // With JayZ encryption
   it("should put and retrieve an item using pk + sk with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testPutAndRetrieveItem(jayZ)
   })
 
   it("should put and retrieve multiple items using just pk with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testPutAndRetrieveMultipleItems(jayZ)
   })
 
   it("should filter items when querying with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testQueryWithFilter(jayZ)
   })
 
   it("should batchGet items with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testBatchGet(jayZ)
   })
 
   it("should query GSI by model with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testGSIByModel(jayZ)
   })
 
   it("should query GSI by name with jayZ", async () => {
     const keyProvider = await StubDataKeyProvider.forLibsodium()
-    const jayZ = new JayZ(keyProvider)
+    const jayZ = new JayZ({ keyProvider })
     await testGSIByName(jayZ)
   })
 })

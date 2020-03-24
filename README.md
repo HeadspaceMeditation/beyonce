@@ -220,7 +220,7 @@ const dynamo =  new DynamoDB({endpoint: "...", region: "..."})
 // Get yourself a JayZ
 const kmsKeyId = "..." // the KMS key id or arn you want to use
 const keyProvider = new KMSDataKeyProvider(kmsKeyId, new KMS())
-const jayZ = new JayZ(keyProvider)
+const jayZ = new JayZ({ keyProvider })
 
 // And give him to Beyonce (because she runs this relationship)
 const beyonce = new Beyonce(

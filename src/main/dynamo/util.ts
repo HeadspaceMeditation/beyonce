@@ -1,4 +1,4 @@
-import { ItemWithEncryptedFields, JayZ } from "@ginger.io/jay-z"
+import { EncryptedJayZItem } from "@ginger.io/jay-z"
 import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
 import { Model } from "./Model"
@@ -18,7 +18,7 @@ export async function encryptOrPassThroughItem<T extends Model>(
   jayz: JayZConfig | undefined,
   item: T & { [key: string]: string }
 ): Promise<
-  | ItemWithEncryptedFields<
+  | EncryptedJayZItem<
       T & {
         [key: string]: string
       },
@@ -43,7 +43,7 @@ export async function decryptOrPassThroughItem(
   }
 ): Promise<{ [key: string]: any }> {
   if (jayz !== undefined) {
-    return jayz.client.decryptItem(item as ItemWithEncryptedFields<any, any>)
+    return jayz.client.decryptItem(item as EncryptedJayZItem<any, any>)
   } else {
     return item
   }
