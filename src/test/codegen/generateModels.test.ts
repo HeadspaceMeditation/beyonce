@@ -254,3 +254,26 @@ export const LibraryTable = {
 }
 `)
 })
+
+it("should import external TypeScript types from a package", () => {
+  const result = generateModels(`
+Tables:
+  Library:
+    Partitions:
+      Author: ["author", "_.authorId"]
+
+    Models:
+      Author:
+        partition: Author
+        sort: ["author", "_.authorId"]
+        id: string
+        name: BestNameEvah from @cool.io/some/sweet/package
+`)
+
+  const lines = result.split("\n").map(_ => _.trim())
+  expect(lines).toContainEqual(
+    `import { BestNameEvah } from \"@cool.io/some/sweet/package\"`
+  )
+
+  expect(lines).toContainEqual(`name: BestNameEvah`)
+})
