@@ -71,7 +71,7 @@ You can specify external types you need to import like so:
 ```YAML
 Author:
     ...
-    address: author/Address
+    address: Address from author/Address
 
 ```
 

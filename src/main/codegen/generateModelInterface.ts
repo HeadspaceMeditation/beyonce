@@ -1,4 +1,4 @@
-import { Model, Table } from "./types"
+import { Model } from "./types"
 
 export function generateModelInterfaces(
   models: Model[]
@@ -43,12 +43,12 @@ function generateField(
   name: string,
   typeName: string
 ): { code: string; imports: string[] } {
-  const parts = typeName.split("/")
+  const parts = typeName.split(" from ")
   if (parts.length > 1) {
-    const existingTypeName = parts[parts.length - 1]
+    const [existingTypeName, packageName] = parts
     return {
       code: `${name}: ${existingTypeName}`,
-      imports: [`import { ${existingTypeName} } from "${typeName}"`]
+      imports: [`import { ${existingTypeName} } from "${packageName}"`]
     }
   } else {
     return { code: `${name}: ${typeName}`, imports: [] }
