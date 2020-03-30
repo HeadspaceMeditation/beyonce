@@ -1,4 +1,4 @@
-import { Table } from "./types"
+import { Table, Fields } from "./types"
 import { intersection } from "./util"
 
 export function generateGSIs(table: Table): string {
@@ -10,11 +10,17 @@ export function generateGSIs(table: Table): string {
     model: []
   }
 
-  table.models.forEach(model => {
-    fieldToModels["model"].push(model.name)
+  const fieldsAllModelsHave: Fields = {
+    [table.partitionKeyName]: "string",
+    [table.sortKeyName]: "string",
+    model: "string"
+  }
 
-    for (const name in model.fields) {
-      fieldToType[name] = model.fields[name]
+  table.models.forEach(model => {
+    const fields = { ...fieldsAllModelsHave, ...model.fields }
+
+    for (const name in fields) {
+      fieldToType[name] = fields[name]
       fieldToModels[name] = fieldToModels[name] || []
       fieldToModels[name].push(model.name)
     }

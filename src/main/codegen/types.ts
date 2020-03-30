@@ -19,6 +19,8 @@ export type ModelDefinitions = {
 
 export type Table = {
   name: string
+  partitionKeyName: string
+  sortKeyName: string
   partitions: { [partition: string]: string[] }
   gsis: GSI[]
   models: Model[]

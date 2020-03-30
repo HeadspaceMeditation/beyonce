@@ -255,6 +255,50 @@ export const LibraryTable = {
 `)
 })
 
+it("should generate GSI with pk and sk swapped", () => {
+  const result = generateModels(`
+Tables:
+  Library:
+    Partitions:
+      Author: ["author", "_.authorId"]
+
+    GSIs:
+      skAsPk:
+          partition: sk
+          sort: pk
+
+    Models:
+      Author:
+        partition: Author
+        sort: ["author", "_.authorId"]
+        id: string
+        name: string
+
+      Book:
+        partition: Author
+        sort: ["book", "_.bookId"]
+        id: string
+        name: string
+`)
+
+  expect(result).toContain(`
+export const LibraryTable = {
+  name: "Library",
+  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
+
+  ${authorAndBookPk},
+  ${authorAndBookSk},
+  gsis: {
+    skAsPk: {
+      name: "skAsPk",
+      pk: key<{ sk: string }, Author | Book>("sk", _ => [_.sk]),
+      sk: key<{ pk: string }, Author | Book>("pk", _ => [_.pk])
+    }
+  }
+}
+`)
+})
+
 it("should import external TypeScript types from a package", () => {
   const result = generateModels(`
 Tables:
