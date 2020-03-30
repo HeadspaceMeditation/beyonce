@@ -49,6 +49,8 @@ function toTables(config: ModelDefinitions): Table[] {
     ([name, { Partitions, Models, GSIs }]) => {
       const table: Table = {
         name,
+        partitionKeyName: "pk",
+        sortKeyName: "sk",
         partitions: Partitions,
         gsis: [],
         models: []
