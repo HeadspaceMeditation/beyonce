@@ -219,25 +219,23 @@ const author2 = author({
   name: "Charles Dickens"
 })
 
-await beyonce.batchPutWithTransaction({
-  keys: [
-    {
-      keys: {
-        partition: LibraryTable.pk.Author({ authorId: author1.id }),
-        sort: LibraryTable.sk.Author({ authorId: author1.id })
-      },
-      item: author1
+await beyonce.batchPutWithTransaction([
+  {
+    keys: {
+      partition: LibraryTable.pk.Author({ authorId: author1.id }),
+      sort: LibraryTable.sk.Author({ authorId: author1.id })
     },
-    {
-      keys: {
-        partition: LibraryTable.pk.Author({ authorId: author2.id }),
-        sort: LibraryTable.sk.Author({ authorId: author2.id })
-      },
+    item: author1
+  },
+  {
+    keys: {
+      partition: LibraryTable.pk.Author({ authorId: author2.id }),
+      sort: LibraryTable.sk.Author({ authorId: author2.id })
+    },
 
-      item: author2
-    }
-  ]
-})
+    item: author2
+  }
+  ])
 ```
 
 ## Encryption
