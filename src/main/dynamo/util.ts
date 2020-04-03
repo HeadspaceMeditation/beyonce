@@ -8,16 +8,7 @@ export type PartitionAndSortKey<T extends Model, U extends Model> = {
   sort: Key<U>
 }
 
-export function toJSON<T>(item: { [key: string]: any }): T {
-  delete item.pk
-  delete item.sk
-  return item as T
-}
-
-export async function encryptOrPassThroughItem<T extends Model>(
-  jayz: JayZConfig | undefined,
-  item: T & { [key: string]: string }
-): Promise<
+export type MaybeEncryptedItems<T extends Model> =
   | EncryptedJayZItem<
       T & {
         [key: string]: string
@@ -25,10 +16,20 @@ export async function encryptOrPassThroughItem<T extends Model>(
       string
     >
   | (T & { [key: string]: string })
-> {
+
+export function toJSON<T>(item: { [key: string]: any }): T {
+  delete item.pk
+  delete item.sk
+  return item as T
+}
+
+export async function encryptOrPassThroughItems<T extends Model>(
+  jayz: JayZConfig | undefined,
+  item: T & { [key: string]: string }
+): Promise<MaybeEncryptedItems<T>> {
   if (jayz !== undefined) {
     const fieldsToEncrypt = Object.keys(item).filter(
-      _ => !jayz.encryptionBlacklist.has(_)
+      (_) => !jayz.encryptionBlacklist.has(_)
     )
     return jayz.client.encryptItem(item, fieldsToEncrypt)
   } else {
