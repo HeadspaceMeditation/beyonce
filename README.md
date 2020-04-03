@@ -205,6 +205,39 @@ const batchResults = await beyonce.batchGet({
 })
 ```
 
+### BatchPutWithTransaction
+
+```TypeScript
+// Batch put several items in a transaction
+const author1 = author({
+  id: "1",
+  name: "Jane Austen"
+})
+
+const author2 = author({
+  id: "2",
+  name: "Charles Dickens"
+})
+
+await beyonce.batchPutWithTransaction([
+  {
+    keys: {
+      partition: LibraryTable.pk.Author({ authorId: author1.id }),
+      sort: LibraryTable.sk.Author({ authorId: author1.id })
+    },
+    item: author1
+  },
+  {
+    keys: {
+      partition: LibraryTable.pk.Author({ authorId: author2.id }),
+      sort: LibraryTable.sk.Author({ authorId: author2.id })
+    },
+
+    item: author2
+  }
+  ])
+```
+
 ## Encryption
 
 Beyonce integrates with [Jay-Z](https://github.com/ginger-io/jay-z) to enable transparent application-layer encryption

@@ -5,9 +5,10 @@ import { Model } from "./Model"
 import { QueryBuilder } from "./QueryBuilder"
 import {
   decryptOrPassThroughItem,
-  encryptOrPassThroughItem,
+  encryptOrPassThroughItems,
   PartitionAndSortKey,
-  toJSON
+  toJSON,
+  MaybeEncryptedItems,
 } from "./util"
 
 export type Options = {
@@ -42,8 +43,8 @@ export class Beyonce {
         TableName: this.tableName,
         Key: {
           [keys.partition.name]: keys.partition.value,
-          [keys.sort.name]: keys.sort.value
-        }
+          [keys.sort.name]: keys.sort.value,
+        },
       })
       .promise()
 
@@ -58,17 +59,17 @@ export class Beyonce {
   }): Promise<T[]> {
     const {
       Responses: responses,
-      UnprocessedKeys: unprocessedKeys
+      UnprocessedKeys: unprocessedKeys,
     } = await this.client
       .batchGet({
         RequestItems: {
           [this.tableName]: {
             Keys: params.keys.map(({ partition, sort }) => ({
               [partition.name]: partition.value,
-              [sort.name]: sort.value
-            }))
-          }
-        }
+              [sort.name]: sort.value,
+            })),
+          },
+        },
       })
       .promise()
 
@@ -78,7 +79,7 @@ export class Beyonce {
 
     if (responses !== undefined) {
       const items = responses[this.tableName]
-      const jsonItems = items.map(async _ => {
+      const jsonItems = items.map(async (_) => {
         const item = await decryptOrPassThroughItem(this.jayz, _)
         return toJSON<T>(item)
       })
@@ -95,7 +96,7 @@ export class Beyonce {
       db: this.client,
       tableName,
       pk,
-      jayz: jayz
+      jayz: jayz,
     })
   }
 
@@ -106,7 +107,7 @@ export class Beyonce {
       tableName,
       gsiName,
       gsiPk,
-      jayz
+      jayz,
     })
   }
 
@@ -115,17 +116,45 @@ export class Beyonce {
     keys: PartitionAndSortKey<T, U>,
     fields: U
   ): Promise<void> {
-    const item = await encryptOrPassThroughItem(this.jayz, {
-      ...fields,
-      [keys.partition.name]: keys.partition.value,
-      [keys.sort.name]: keys.sort.value
-    })
+    const item = await this.maybeEncryptItems(keys, fields)
 
     await this.client
       .put({
         TableName: this.tableName,
-        Item: item
+        Item: item,
       })
       .promise()
+  }
+
+  /** Write multiple items into Dynamo using a transaction.
+   */
+  async batchPutWithTransaction<T extends Model, U extends Model>(
+    items: { keys: PartitionAndSortKey<T, U>; item: U }[]
+  ): Promise<void> {
+    const asyncEncryptedItems = items.map(async ({ keys, item }) => {
+      const maybeEncryptedItem = await this.maybeEncryptItems(keys, item)
+      return { Put: { TableName: this.tableName, Item: maybeEncryptedItem } }
+    })
+
+    const encryptedItems = await Promise.all(asyncEncryptedItems)
+
+    await this.client
+      .transactWrite({
+        TransactItems: encryptedItems,
+      })
+      .promise()
+  }
+
+  private async maybeEncryptItems<T extends Model, U extends Model>(
+    keys: PartitionAndSortKey<T, U>,
+    fields: U
+  ): Promise<MaybeEncryptedItems<U>> {
+    const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, {
+      ...fields,
+      [keys.partition.name]: keys.partition.value,
+      [keys.sort.name]: keys.sort.value,
+    })
+
+    return maybeEncryptedItems
   }
 }
