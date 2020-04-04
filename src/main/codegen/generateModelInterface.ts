@@ -6,15 +6,15 @@ export function generateModelInterfaces(
   const code: string[] = []
   const imports: string[] = []
 
-  models.forEach(m => {
+  models.forEach((m) => {
     const generatedInterface = generateModelInterface(m)
     code.push(generatedInterface.code)
-    generatedInterface.imports.forEach(_ => imports.push(_))
+    generatedInterface.imports.forEach((_) => imports.push(_))
   })
 
   return {
     code,
-    imports
+    imports,
   }
 }
 
@@ -27,11 +27,11 @@ function generateModelInterface(
   Object.entries(model.fields).forEach(([name, type]) => {
     const generatedField = generateField(name, type)
     fields.push(generatedField.code)
-    generatedField.imports.forEach(_ => imports.push(_))
+    generatedField.imports.forEach((_) => imports.push(_))
   })
 
   const code = `
-    export interface ${model.name} extends Model {
+    export interface ${model.name} {
         model: ModelType.${model.name}
         ${fields.join("\n")}
       }`
@@ -48,7 +48,7 @@ function generateField(
     const [existingTypeName, packageName] = parts
     return {
       code: `${name}: ${existingTypeName}`,
-      imports: [`import { ${existingTypeName} } from "${packageName}"`]
+      imports: [`import { ${existingTypeName} } from "${packageName}"`],
     }
   } else {
     return { code: `${name}: ${typeName}`, imports: [] }

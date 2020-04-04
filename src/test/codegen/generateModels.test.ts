@@ -1,12 +1,12 @@
 import { generateModels } from "../../main/codegen/generateModels"
 
-const authorInterface = `export interface Author extends Model {
+const authorInterface = `export interface Author {
   model: ModelType.Author
   id: string
   name: string
 }`
 
-const bookInterface = `export interface Book extends Model {
+const bookInterface = `export interface Book {
   model: ModelType.Book
   id: string
   name: string

@@ -3,7 +3,6 @@ import { DynamoDB } from "aws-sdk"
 import * as LocalDynamo from "dynamodb-local"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import { key } from "../../main/dynamo/Key"
-import { Model } from "../../main/dynamo/Model"
 import { JayZConfig } from "../../main/dynamo/JayZConfig"
 
 beforeAll(async () => LocalDynamo.launch(dynamoDBPort))
@@ -18,13 +17,13 @@ export enum ModelType {
   SONG = "song",
 }
 
-export interface Musician extends Model {
+export interface Musician {
   readonly model: ModelType.MUSICIAN
   readonly id: string
   readonly name: string
 }
 
-export interface Song extends Model {
+export interface Song {
   readonly model: ModelType.SONG
   readonly musicianId: string
   readonly id: string
