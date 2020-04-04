@@ -61,7 +61,7 @@ Tables:
         name: string
 `)
 
-  expect(result).toEqual(`import { key, Model } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author"
@@ -111,7 +111,7 @@ Tables:
         name: string
 `)
 
-  expect(result).toEqual(`import { key, Model } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author",
@@ -164,7 +164,7 @@ Tables:
         name: string
 `)
 
-  expect(result).toEqual(`import { key, Model } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author",
@@ -224,7 +224,7 @@ Tables:
         name: string
 `)
 
-  expect(result).toEqual(`import { key, Model } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
 
 export enum ModelType {
   Author = "Author",

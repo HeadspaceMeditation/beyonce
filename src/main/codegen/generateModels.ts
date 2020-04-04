@@ -21,7 +21,7 @@ export function generateModels(yamlData: string): string {
   const tables = generateTables(tableDefs)
   const taggedUnion = generateTaggedUnion(models)
 
-  const imports = new Set([`import { key, Model } from "@ginger.io/beyonce"`])
+  const imports = new Set([`import { key } from "@ginger.io/beyonce"`])
   modelInterfaces.imports.forEach((_) => imports.add(_))
 
   const modelHelpers = generateModelHelpers(models)
