@@ -6,6 +6,7 @@ import { generateModelTypeEnum } from "./generateModelTypeEnum"
 import { generateTables } from "./generateTables"
 import { ModelDefinitions, Table } from "./types"
 import { generateModelHelpers } from "./generateModelHelpers"
+import { generateTaggedUnion } from "./generateTaggedUnion"
 
 export function generateModels(yamlData: string): string {
   const config = parseYaml<ModelDefinitions>(yamlData)
@@ -18,9 +19,10 @@ export function generateModels(yamlData: string): string {
   const modelInterfaces = generateModelInterfaces(models)
   const modelTypeEnum = generateModelTypeEnum(models)
   const tables = generateTables(tableDefs)
+  const taggedUnion = generateTaggedUnion(models)
 
   const imports = new Set([`import { key, Model } from "@ginger.io/beyonce"`])
-  modelInterfaces.imports.forEach(_ => imports.add(_))
+  modelInterfaces.imports.forEach((_) => imports.add(_))
 
   const modelHelpers = generateModelHelpers(models)
 
@@ -33,12 +35,14 @@ export function generateModels(yamlData: string): string {
 
       ${modelHelpers}
 
+      ${taggedUnion}
+
       ${tables}
     `
 
   return prettier.format(code, {
     parser: "typescript",
-    semi: false
+    semi: false,
   })
 }
 
@@ -53,7 +57,7 @@ function toTables(config: ModelDefinitions): Table[] {
         sortKeyName: "sk",
         partitions: Partitions,
         gsis: [],
-        models: []
+        models: [],
       }
 
       if (GSIs !== undefined) {
@@ -68,7 +72,7 @@ function toTables(config: ModelDefinitions): Table[] {
             name,
             partition,
             sort,
-            fields
+            fields,
           })
         }
       )

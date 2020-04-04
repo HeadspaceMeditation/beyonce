@@ -44,6 +44,8 @@ const authorAndBookSk = `sk: {
     ])
   }`
 
+const authorAndBookUnion = `export type Model = Author | Book`
+
 it("should generate a simple model", () => {
   const result = generateModels(`
 Tables:
@@ -68,6 +70,8 @@ export enum ModelType {
 ${authorInterface}
 
 ${authorHelper}
+
+export type Model = Author
 
 export const LibraryTable = {
   name: "Library",
@@ -122,6 +126,8 @@ ${authorHelper}
 
 ${bookHelper}
 
+${authorAndBookUnion}
+
 export const LibraryTable = {
   name: "Library",
   encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
@@ -172,6 +178,8 @@ ${bookInterface}
 ${authorHelper}
 
 ${bookHelper}
+
+${authorAndBookUnion}
 
 export const LibraryTable = {
   name: "Library",
@@ -230,6 +238,8 @@ ${bookInterface}
 ${authorHelper}
 
 ${bookHelper}
+
+${authorAndBookUnion}
 
 export const LibraryTable = {
   name: "Library",
@@ -314,7 +324,7 @@ Tables:
         name: BestNameEvah from @cool.io/some/sweet/package
 `)
 
-  const lines = result.split("\n").map(_ => _.trim())
+  const lines = result.split("\n").map((_) => _.trim())
   expect(lines).toContainEqual(
     `import { BestNameEvah } from \"@cool.io/some/sweet/package\"`
   )

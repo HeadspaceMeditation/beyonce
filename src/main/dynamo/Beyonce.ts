@@ -1,7 +1,6 @@
 import { DynamoDB } from "aws-sdk"
 import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
-import { Model } from "./Model"
 import { QueryBuilder } from "./QueryBuilder"
 import {
   decryptOrPassThroughItem,
@@ -36,9 +35,7 @@ export class Beyonce {
   }
 
   /** Retrieve a single Item out of Dynamo */
-  async get<T extends Model, U extends Model>(
-    key: PartitionAndSortKey<T, U>
-  ): Promise<U | undefined> {
+  async get<T, U>(key: PartitionAndSortKey<T, U>): Promise<U | undefined> {
     const { Item: item } = await this.client
       .get({
         TableName: this.tableName,
@@ -55,7 +52,7 @@ export class Beyonce {
   }
 
   /** BatchGet items */
-  async batchGet<T extends Model>(params: {
+  async batchGet<T>(params: {
     keys: PartitionAndSortKey<any, T>[]
   }): Promise<T[]> {
     const {
@@ -91,7 +88,7 @@ export class Beyonce {
     }
   }
 
-  query<T extends Model>(pk: Key<T>): QueryBuilder<T> {
+  query<T>(pk: Key<T>): QueryBuilder<T> {
     const { tableName, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
@@ -101,7 +98,7 @@ export class Beyonce {
     })
   }
 
-  queryGSI<T extends Model>(gsiName: string, gsiPk: Key<T>): QueryBuilder<T> {
+  queryGSI<T>(gsiName: string, gsiPk: Key<T>): QueryBuilder<T> {
     const { tableName, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
@@ -113,7 +110,7 @@ export class Beyonce {
   }
 
   /** Write an item into Dynamo */
-  async put<T extends Model>(itemAndKey: ItemAndKey<T>): Promise<void> {
+  async put<T>(itemAndKey: ItemAndKey<T>): Promise<void> {
     const item = await this.maybeEncryptItems(itemAndKey)
 
     await this.client
@@ -126,9 +123,7 @@ export class Beyonce {
 
   /** Write multiple items into Dynamo using a transaction.
    */
-  async batchPutWithTransaction<T extends Model>(
-    items: ItemAndKey<T>[]
-  ): Promise<void> {
+  async batchPutWithTransaction<T>(items: ItemAndKey<T>[]): Promise<void> {
     const asyncEncryptedItems = items.map(async (itemAndKey) => {
       const maybeEncryptedItem = await this.maybeEncryptItems(itemAndKey)
       return { Put: { TableName: this.tableName, Item: maybeEncryptedItem } }
@@ -143,7 +138,7 @@ export class Beyonce {
       .promise()
   }
 
-  private async maybeEncryptItems<T extends Model>(
+  private async maybeEncryptItems<T>(
     itemAndKey: ItemAndKey<T>
   ): Promise<MaybeEncryptedItems<T>> {
     const { item, key } = itemAndKey
