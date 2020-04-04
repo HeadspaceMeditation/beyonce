@@ -113,9 +113,7 @@ export class Beyonce {
   }
 
   /** Write an item into Dynamo */
-  async put<T extends Model, U extends Model>(
-    itemAndKey: ItemAndKey<T, U>
-  ): Promise<void> {
+  async put<T extends Model>(itemAndKey: ItemAndKey<T>): Promise<void> {
     const item = await this.maybeEncryptItems(itemAndKey)
 
     await this.client
@@ -128,8 +126,8 @@ export class Beyonce {
 
   /** Write multiple items into Dynamo using a transaction.
    */
-  async batchPutWithTransaction<T extends Model, U extends Model>(
-    items: ItemAndKey<T, U>[]
+  async batchPutWithTransaction<T extends Model>(
+    items: ItemAndKey<T>[]
   ): Promise<void> {
     const asyncEncryptedItems = items.map(async (itemAndKey) => {
       const maybeEncryptedItem = await this.maybeEncryptItems(itemAndKey)
@@ -145,9 +143,9 @@ export class Beyonce {
       .promise()
   }
 
-  private async maybeEncryptItems<T extends Model, U extends Model>(
-    itemAndKey: ItemAndKey<T, U>
-  ): Promise<MaybeEncryptedItems<U>> {
+  private async maybeEncryptItems<T extends Model>(
+    itemAndKey: ItemAndKey<T>
+  ): Promise<MaybeEncryptedItems<T>> {
     const { item, key } = itemAndKey
     const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, {
       ...item,
