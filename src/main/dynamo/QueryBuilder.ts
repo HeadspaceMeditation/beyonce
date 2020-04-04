@@ -2,19 +2,18 @@ import { DynamoDB } from "aws-sdk"
 import { KeysOf } from "../typeUtils"
 import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
-import { Model } from "./Model"
 import { decryptOrPassThroughItem, toJSON } from "./util"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
-type TableQueryParams<T extends Model> = {
+type TableQueryParams<T> = {
   db: DynamoDB.DocumentClient
   tableName: string
   pk: Key<T>
   jayz?: JayZConfig
 }
 
-type GSIQueryParams<T extends Model> = {
+type GSIQueryParams<T> = {
   db: DynamoDB.DocumentClient
   tableName: string
   gsiName: string
@@ -23,7 +22,7 @@ type GSIQueryParams<T extends Model> = {
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T extends Model> {
+export class QueryBuilder<T extends Record<string, any>> {
   private filterExp: string[] = []
   private attributes = new Attributes()
   private variables = new Variables()
@@ -61,7 +60,7 @@ export class QueryBuilder<T extends Model> {
     const { Items: items } = await this.config.db.query(this.build()).promise()
 
     if (items !== undefined) {
-      const jsonItems = items.map(async _ => {
+      const jsonItems = items.map(async (_) => {
         const item = await decryptOrPassThroughItem(this.config.jayz, _)
         return toJSON<T>(item)
       })
@@ -108,7 +107,7 @@ export class QueryBuilder<T extends Model> {
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
         ExpressionAttributeNames: attributes,
         ExpressionAttributeValues: variables,
-        FilterExpression: filterExp
+        FilterExpression: filterExp,
       }
     } else {
       const pkPlaceholder = this.attributes.add(this.config.gsiPk.name)
@@ -123,13 +122,13 @@ export class QueryBuilder<T extends Model> {
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
         ExpressionAttributeNames: attributes,
         ExpressionAttributeValues: variables,
-        FilterExpression: filterExp
+        FilterExpression: filterExp,
       }
     }
   }
 }
 
-function isTableQuery<T extends Model>(
+function isTableQuery<T>(
   query: TableQueryParams<T> | GSIQueryParams<T>
 ): query is TableQueryParams<T> {
   return (query as any).pk !== undefined

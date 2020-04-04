@@ -1,19 +1,18 @@
 import { EncryptedJayZItem } from "@ginger.io/jay-z"
 import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
-import { Model } from "./Model"
 
-export type ItemAndKey<T extends Model> = {
+export type ItemAndKey<T> = {
   key: PartitionAndSortKey<any, T>
   item: T
 }
 
-export type PartitionAndSortKey<T extends Model, U extends Model> = {
+export type PartitionAndSortKey<T, U> = {
   partition: Key<T>
   sort: Key<U>
 }
 
-export type MaybeEncryptedItems<T extends Model> =
+export type MaybeEncryptedItems<T> =
   | EncryptedJayZItem<
       T & {
         [key: string]: string
@@ -28,7 +27,7 @@ export function toJSON<T>(item: { [key: string]: any }): T {
   return item as T
 }
 
-export async function encryptOrPassThroughItems<T extends Model>(
+export async function encryptOrPassThroughItems<T>(
   jayz: JayZConfig | undefined,
   item: T & { [key: string]: string }
 ): Promise<MaybeEncryptedItems<T>> {
