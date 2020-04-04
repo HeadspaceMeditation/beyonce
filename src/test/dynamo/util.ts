@@ -15,7 +15,7 @@ export const dynamoDBPort = 9000
 
 export enum ModelType {
   MUSICIAN = "musician",
-  SONG = "song"
+  SONG = "song",
 }
 
 export interface Musician extends Model {
@@ -32,37 +32,37 @@ export interface Song extends Model {
 }
 
 export const PK = {
-  Musician: key<{ musicianId: string }, Musician | Song>("pk", _ => [
+  Musician: key<{ musicianId: string }, Musician | Song>("pk", (_) => [
     "musician",
-    _.musicianId
-  ])
+    _.musicianId,
+  ]),
 }
 
 export const SK = {
-  Musician: key<{ musicianId: string }, Musician | Song>("sk", _ => [
+  Musician: key<{ musicianId: string }, Musician | Song>("sk", (_) => [
     "musician",
-    _.musicianId
+    _.musicianId,
   ]),
-  Song: key<{ songId: string }, Song>("sk", _ => ["song", _.songId])
+  Song: key<{ songId: string }, Song>("sk", (_) => ["song", _.songId]),
 }
 
 export const GSIs = {
   byModelAndId: {
     name: "byModelAndId",
-    pk: key<{ model: string }, Musician | Song>("model", _ => [_.model]),
-    sk: key<{ id: string }, Musician | Song>("id", _ => [_.id])
+    pk: key<{ model: string }, Musician | Song>("model", (_) => [_.model]),
+    sk: key<{ id: string }, Musician | Song>("id", (_) => [_.id]),
   },
   byNameAndId: {
     name: "byNameAndId",
-    pk: key<{ name: string }, Musician>("name", _ => [_.name]),
-    sk: key<{ id: string }, Musician>("id", _ => [_.id])
-  }
+    pk: key<{ name: string }, Musician>("name", (_) => [_.name]),
+    sk: key<{ id: string }, Musician>("id", (_) => [_.id]),
+  },
 }
 
 export async function setup(jayz?: JayZ): Promise<Beyonce> {
   const client = new DynamoDB({
     endpoint: `http://localhost:${dynamoDBPort}`,
-    region: "us-west-2" // silly, but still need to specify region for LocalDynamo
+    region: "us-west-2", // silly, but still need to specify region for LocalDynamo
   })
 
   // DynamoDB Local runs as an external http server, so we need to clear
@@ -79,7 +79,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
       KeySchema: [
         { AttributeName: "pk", KeyType: "HASH" },
-        { AttributeName: "sk", KeyType: "RANGE" }
+        { AttributeName: "sk", KeyType: "RANGE" },
       ],
 
       AttributeDefinitions: [
@@ -87,7 +87,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
         { AttributeName: "sk", AttributeType: "S" },
         { AttributeName: "model", AttributeType: "S" },
         { AttributeName: "name", AttributeType: "S" },
-        { AttributeName: "id", AttributeType: "S" }
+        { AttributeName: "id", AttributeType: "S" },
       ],
 
       GlobalSecondaryIndexes: [
@@ -95,25 +95,25 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
           IndexName: "byNameAndId",
           KeySchema: [
             { AttributeName: "name", KeyType: "HASH" },
-            { AttributeName: "id", KeyType: "RANGE" }
+            { AttributeName: "id", KeyType: "RANGE" },
           ],
           Projection: {
-            ProjectionType: "ALL"
-          }
+            ProjectionType: "ALL",
+          },
         },
         {
           IndexName: "byModelAndId",
           KeySchema: [
             { AttributeName: "model", KeyType: "HASH" },
-            { AttributeName: "id", KeyType: "RANGE" }
+            { AttributeName: "id", KeyType: "RANGE" },
           ],
           Projection: {
-            ProjectionType: "ALL"
-          }
-        }
+            ProjectionType: "ALL",
+          },
+        },
       ],
 
-      BillingMode: "PAY_PER_REQUEST"
+      BillingMode: "PAY_PER_REQUEST",
     })
     .promise()
 
@@ -121,12 +121,12 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
     jayz !== undefined
       ? {
           client: jayz,
-          encryptionBlacklist: new Set(["pk", "sk", "model", "name", "id"])
+          encryptionBlacklist: new Set(["pk", "sk", "model", "name", "id"]),
         }
       : undefined
 
   return new Beyonce(tableName, client, {
-    jayz: jayzConfig
+    jayz: jayzConfig,
   })
 }
 
@@ -134,40 +134,40 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   const musician: Musician = {
     id: "1",
     name: "Bob Marley",
-    model: ModelType.MUSICIAN
+    model: ModelType.MUSICIAN,
   }
   const song1: Song = {
     musicianId: "1",
     id: "2",
     title: "Buffalo Soldier",
-    model: ModelType.SONG
+    model: ModelType.SONG,
   }
 
   const song2: Song = {
     musicianId: "1",
     id: "3",
     title: "No Woman, No Cry",
-    model: ModelType.SONG
+    model: ModelType.SONG,
   }
   return [musician, song1, song2]
 }
 
 export function putMusician(db: Beyonce, m: Musician): Promise<void> {
-  return db.put(
-    {
+  return db.put({
+    key: {
       partition: PK.Musician({ musicianId: m.id }),
-      sort: SK.Musician({ musicianId: m.id })
+      sort: SK.Musician({ musicianId: m.id }),
     },
-    m
-  )
+    item: m,
+  })
 }
 
 export function putSong(db: Beyonce, s: Song): Promise<void> {
-  return db.put(
-    {
+  return db.put({
+    key: {
       partition: PK.Musician({ musicianId: s.musicianId }),
-      sort: SK.Song({ songId: s.id })
+      sort: SK.Song({ songId: s.id }),
     },
-    s
-  )
+    item: s,
+  })
 }

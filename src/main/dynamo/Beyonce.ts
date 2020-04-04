@@ -6,9 +6,10 @@ import { QueryBuilder } from "./QueryBuilder"
 import {
   decryptOrPassThroughItem,
   encryptOrPassThroughItems,
+  ItemAndKey,
+  MaybeEncryptedItems,
   PartitionAndSortKey,
   toJSON,
-  MaybeEncryptedItems,
 } from "./util"
 
 export type Options = {
@@ -36,14 +37,14 @@ export class Beyonce {
 
   /** Retrieve a single Item out of Dynamo */
   async get<T extends Model, U extends Model>(
-    keys: PartitionAndSortKey<T, U>
+    key: PartitionAndSortKey<T, U>
   ): Promise<U | undefined> {
     const { Item: item } = await this.client
       .get({
         TableName: this.tableName,
         Key: {
-          [keys.partition.name]: keys.partition.value,
-          [keys.sort.name]: keys.sort.value,
+          [key.partition.name]: key.partition.value,
+          [key.sort.name]: key.sort.value,
         },
       })
       .promise()
@@ -113,10 +114,9 @@ export class Beyonce {
 
   /** Write an item into Dynamo */
   async put<T extends Model, U extends Model>(
-    keys: PartitionAndSortKey<T, U>,
-    fields: U
+    itemAndKey: ItemAndKey<T, U>
   ): Promise<void> {
-    const item = await this.maybeEncryptItems(keys, fields)
+    const item = await this.maybeEncryptItems(itemAndKey)
 
     await this.client
       .put({
@@ -129,10 +129,10 @@ export class Beyonce {
   /** Write multiple items into Dynamo using a transaction.
    */
   async batchPutWithTransaction<T extends Model, U extends Model>(
-    items: { keys: PartitionAndSortKey<T, U>; item: U }[]
+    items: ItemAndKey<T, U>[]
   ): Promise<void> {
-    const asyncEncryptedItems = items.map(async ({ keys, item }) => {
-      const maybeEncryptedItem = await this.maybeEncryptItems(keys, item)
+    const asyncEncryptedItems = items.map(async (itemAndKey) => {
+      const maybeEncryptedItem = await this.maybeEncryptItems(itemAndKey)
       return { Put: { TableName: this.tableName, Item: maybeEncryptedItem } }
     })
 
@@ -146,13 +146,13 @@ export class Beyonce {
   }
 
   private async maybeEncryptItems<T extends Model, U extends Model>(
-    keys: PartitionAndSortKey<T, U>,
-    fields: U
+    itemAndKey: ItemAndKey<T, U>
   ): Promise<MaybeEncryptedItems<U>> {
+    const { item, key } = itemAndKey
     const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, {
-      ...fields,
-      [keys.partition.name]: keys.partition.value,
-      [keys.sort.name]: keys.sort.value,
+      ...item,
+      [key.partition.name]: key.partition.value,
+      [key.sort.name]: key.sort.value,
     })
 
     return maybeEncryptedItems

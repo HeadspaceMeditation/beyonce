@@ -3,6 +3,11 @@ import { JayZConfig } from "./JayZConfig"
 import { Key } from "./Key"
 import { Model } from "./Model"
 
+export type ItemAndKey<T extends Model, U extends Model> = {
+  key: PartitionAndSortKey<T, U>
+  item: U
+}
+
 export type PartitionAndSortKey<T extends Model, U extends Model> = {
   partition: Key<T>
   sort: Key<U>
