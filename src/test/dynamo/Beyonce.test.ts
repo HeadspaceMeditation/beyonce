@@ -203,7 +203,7 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
 
   await db.batchPutWithTransaction([
     {
-      keys: {
+      key: {
         partition: pk,
         sort: SK.Musician({ musicianId: musician.id }),
       },
@@ -211,14 +211,14 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
     },
 
     {
-      keys: {
+      key: {
         partition: pk,
         sort: SK.Song({ songId: song1.id }),
       },
       item: song1,
     },
     {
-      keys: {
+      key: {
         partition: pk,
         sort: SK.Song({ songId: song2.id }),
       },

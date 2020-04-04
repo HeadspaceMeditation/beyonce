@@ -118,13 +118,13 @@ const authorModel = author({
   name: "Jane Austen"
 })
 
-await beyonce.put(
-  {
+await beyonce.put({
+  key: {
     partition: LibraryTable.pk.Author({ authorId: "1" }),
     sort: LibraryTable.sk.Author({ authorId: "1" })
   },
-  authorModel
-)
+  item: authorModel
+})
 ```
 
 ### Get
@@ -221,14 +221,14 @@ const author2 = author({
 
 await beyonce.batchPutWithTransaction([
   {
-    keys: {
+    key: {
       partition: LibraryTable.pk.Author({ authorId: author1.id }),
       sort: LibraryTable.sk.Author({ authorId: author1.id })
     },
     item: author1
   },
   {
-    keys: {
+    key: {
       partition: LibraryTable.pk.Author({ authorId: author2.id }),
       sort: LibraryTable.sk.Author({ authorId: author2.id })
     },
