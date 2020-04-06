@@ -2,7 +2,7 @@ import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import * as LocalDynamo from "dynamodb-local"
 import { Beyonce } from "../../main/dynamo/Beyonce"
-import { Table } from "../../main/experimental/Table"
+import { Table } from "../../main/dynamo/Table"
 
 beforeAll(async () => LocalDynamo.launch(dynamoDBPort))
 afterAll(async () => LocalDynamo.stop(dynamoDBPort))

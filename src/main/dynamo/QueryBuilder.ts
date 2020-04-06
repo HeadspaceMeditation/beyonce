@@ -1,6 +1,6 @@
 import { DynamoDB } from "aws-sdk"
-import { PartitionKey } from "../experimental/keys"
-import { Table } from "../experimental/Table"
+import { PartitionKey } from "./keys"
+import { Table } from "./Table"
 import { KeysOf } from "../typeUtils"
 import { JayZConfig } from "./JayZConfig"
 import { decryptOrPassThroughItem, toJSON } from "./util"

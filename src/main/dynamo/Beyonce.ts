@@ -1,7 +1,6 @@
 import { DynamoDB } from "aws-sdk"
-import { PartitionAndSortKey, PartitionKey } from "../experimental/keys"
-import { Model } from "../experimental/Model"
-import { Table } from "../experimental/Table"
+import { PartitionAndSortKey, PartitionKey } from "./keys"
+import { Table } from "./Table"
 import { JayZConfig } from "./JayZConfig"
 import { QueryBuilder } from "./QueryBuilder"
 import {

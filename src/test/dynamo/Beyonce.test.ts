@@ -1,16 +1,14 @@
 import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
-import { setup } from "./util"
 import {
-  ModelType,
-  Musician,
-  MusicianModel,
-  MusicianPartition,
-  Song,
-  SongModel,
   aMusicianWithTwoSongs,
   byModelAndIdGSI,
   byNameAndIdGSI,
+  ModelType,
+  MusicianModel,
+  MusicianPartition,
+  SongModel,
 } from "./models"
+import { setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption

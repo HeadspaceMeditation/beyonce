@@ -1,21 +1,3 @@
-export function partitionAndSortKey<T, U extends keyof T, V extends keyof T>(
-  constructor: new (...args: any[]) => T,
-  partitionKeyName: string,
-  partitionKey: U,
-  sortKeyName: string,
-  sortKey: V
-): (
-  params: { [W in U]: string } & { [X in V]: string }
-) => PartitionAndSortKey<T> {
-  return (params) =>
-    new PartitionAndSortKey(
-      partitionKeyName,
-      params[partitionKey],
-      sortKeyName,
-      params[sortKey]
-    )
-}
-
 export class PartitionKey<T> {
   constructor(
     readonly partitionKeyName: string,

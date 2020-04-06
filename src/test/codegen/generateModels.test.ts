@@ -1,52 +1,5 @@
 import { generateModels } from "../../main/codegen/generateModels"
 
-const authorInterface = `export interface Author {
-  model: ModelType.Author
-  id: string
-  name: string
-}`
-
-const bookInterface = `export interface Book {
-  model: ModelType.Book
-  id: string
-  authorId: string
-  name: string
-}`
-
-const authorHelper = `export function author(fields: Omit<Author, "model">): Author {
-  return {
-    ...fields,
-    model: ModelType.Author
-  }
-}`
-
-const bookHelper = `export function book(fields: Omit<Book, "model">): Book {
-  return {
-    ...fields,
-    model: ModelType.Book
-  }
-}`
-
-const authorAndBookPk = `pk: {
-    Author: key<{ authorId: string }, Author | Book>("pk", _ => [
-      "author",
-      _.authorId
-    ])
-  }`
-
-const authorAndBookSk = `sk: {
-    [ModelType.Author]: key<{ authorId: string }, Author>("sk", _ => [
-      "author",
-      _.authorId
-    ]),
-    [ModelType.Book]: key<{ bookId: string }, Book>("sk", _ => [
-      "book",
-      _.bookId
-    ])
-  }`
-
-const authorAndBookUnion = `export type Model = Author | Book`
-
 it("should generate a simple model", () => {
   const result = generateModels(`
 Tables:

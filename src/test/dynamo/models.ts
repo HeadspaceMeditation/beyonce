@@ -1,4 +1,4 @@
-import { Table } from "../../main/experimental/Table"
+import { Table } from "../../main/dynamo/Table"
 
 export const table = new Table({
   name: "TestTable",

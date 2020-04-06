@@ -1,16 +1,5 @@
 import { EncryptedJayZItem } from "@ginger.io/jay-z"
 import { JayZConfig } from "./JayZConfig"
-import { Key } from "./Key"
-
-export type ItemAndKey<T> = {
-  key: PartitionAndSortKey<any, T>
-  item: T
-}
-
-export type PartitionAndSortKey<T, U> = {
-  partition: Key<T>
-  sort: Key<U>
-}
 
 export type MaybeEncryptedItems<T> =
   | EncryptedJayZItem<
