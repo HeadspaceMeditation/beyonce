@@ -20,13 +20,13 @@ function generatePartitionKey(
   models: Model[],
   partitionKeys: { [partition: string]: string[] }
 ): string {
-  const modelNames = models.map(_ => _.name)
+  const modelNames = models.map((_) => _.name)
   const keyParts = partitionKeys[partition]
 
   const inputFields: string[] = []
   const parts: string[] = []
 
-  keyParts.forEach(part => {
+  keyParts.forEach((part) => {
     if (part.startsWith("_.")) {
       inputFields.push(part.replace("_.", ""))
       parts.push(part)
@@ -35,7 +35,7 @@ function generatePartitionKey(
     }
   })
 
-  const inputType = inputFields.map(_ => `${_}: string`).join(",")
+  const inputType = inputFields.map((_) => `${_}: string`).join(",")
   const modelType = modelNames.join(" | ")
   const keyComponents = parts.join(", ")
   return `${partition}: key<{${inputType}}, ${modelType}>("pk", _ => [${keyComponents}])`

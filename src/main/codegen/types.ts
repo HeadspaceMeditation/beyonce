@@ -33,6 +33,7 @@ export type GSI = {
 }
 
 export type Model = {
+  tableName: string
   name: string
   partition: string
   sort: string[]

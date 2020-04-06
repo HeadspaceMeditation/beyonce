@@ -1,23 +1,24 @@
 import { DynamoDB } from "aws-sdk"
+import { PartitionKey } from "../experimental/keys"
+import { Table } from "../experimental/Table"
 import { KeysOf } from "../typeUtils"
 import { JayZConfig } from "./JayZConfig"
-import { Key } from "./Key"
 import { decryptOrPassThroughItem, toJSON } from "./util"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
 type TableQueryParams<T> = {
   db: DynamoDB.DocumentClient
-  tableName: string
-  pk: Key<T>
+  table: Table
+  pk: PartitionKey<T>
   jayz?: JayZConfig
 }
 
 type GSIQueryParams<T> = {
   db: DynamoDB.DocumentClient
-  tableName: string
+  table: Table
   gsiName: string
-  gsiPk: Key<T>
+  gsiPk: PartitionKey<T>
   jayz?: JayZConfig
 }
 
@@ -96,28 +97,30 @@ export class QueryBuilder<T extends Record<string, any>> {
     const variables = this.variables.getSubstitutions()
 
     if (isTableQuery(this.config)) {
-      const pkPlaceholder = this.attributes.add(this.config.pk.name)
+      const { table, pk } = this.config
+      const pkPlaceholder = this.attributes.add(table.partitionKeyName)
       const pkValuePlaceholder = this.variables.add(
-        this.config.pk.name,
-        this.config.pk.value
+        table.partitionKeyName,
+        pk.partitionKey
       )
 
       return {
-        TableName: this.config.tableName,
+        TableName: table.tableName,
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
         ExpressionAttributeNames: attributes,
         ExpressionAttributeValues: variables,
         FilterExpression: filterExp,
       }
     } else {
-      const pkPlaceholder = this.attributes.add(this.config.gsiPk.name)
+      const { table, gsiPk } = this.config
+      const pkPlaceholder = this.attributes.add(gsiPk.partitionKeyName)
       const pkValuePlaceholder = this.variables.add(
-        this.config.gsiPk.name,
-        this.config.gsiPk.value
+        gsiPk.partitionKeyName,
+        gsiPk.partitionKey
       )
 
       return {
-        TableName: this.config.tableName,
+        TableName: table.tableName,
         IndexName: this.config.gsiName,
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
         ExpressionAttributeNames: attributes,

@@ -24,7 +24,7 @@ export function generateModels(yamlData: string): string {
   const imports = new Set([`import { key } from "@ginger.io/beyonce"`])
   modelInterfaces.imports.forEach((_) => imports.add(_))
 
-  const modelHelpers = generateModelHelpers(models)
+  //  const modelHelpers = generateModelHelpers(models)
 
   const code = `
       ${Array.from(imports).join("\n")}
@@ -32,8 +32,6 @@ export function generateModels(yamlData: string): string {
       ${modelTypeEnum}
 
       ${modelInterfaces.code.join("\n\n")}
-
-      ${modelHelpers}
 
       ${taggedUnion}
 
@@ -69,6 +67,7 @@ function toTables(config: ModelDefinitions): Table[] {
       Object.entries(Models).forEach(
         ([name, { partition, sort, ...fields }]) => {
           table.models.push({
+            tableName: table.name,
             name,
             partition,
             sort,

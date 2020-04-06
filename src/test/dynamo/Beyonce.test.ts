@@ -1,14 +1,16 @@
 import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
+import { setup } from "./util"
 import {
-  aMusicianWithTwoSongs,
-  GSIs,
   ModelType,
-  PK,
-  putMusician,
-  putSong,
-  setup,
-  SK,
-} from "./util"
+  Musician,
+  MusicianModel,
+  MusicianPartition,
+  Song,
+  SongModel,
+  aMusicianWithTwoSongs,
+  byModelAndIdGSI,
+  byNameAndIdGSI,
+} from "./models"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -82,13 +84,9 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, _, __] = aMusicianWithTwoSongs()
 
-  await putMusician(db, musician)
+  await db.put(musician)
 
-  const result = await db.get({
-    partition: PK.Musician({ musicianId: "1" }),
-    sort: SK.Musician({ musicianId: "1" }),
-  })
-
+  const result = await db.get(MusicianModel.key({ id: musician.id }))
   expect(result).toEqual(musician)
 }
 
@@ -96,13 +94,9 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
-  await Promise.all([
-    putMusician(db, musician),
-    putSong(db, song1),
-    putSong(db, song2),
-  ])
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db.query(PK.Musician({ musicianId: "1" })).exec()
+  const result = await db.query(MusicianModel.key({ id: musician.id })).exec()
   expect(result).toEqual([musician, song1, song2])
 }
 
@@ -110,14 +104,10 @@ async function testQueryWithFilter(jayZ?: JayZ) {
   const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
-  await Promise.all([
-    putMusician(db, musician),
-    putSong(db, song1),
-    putSong(db, song2),
-  ])
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
-    .query(PK.Musician({ musicianId: "1" }))
+    .query(MusicianPartition.key({ id: musician.id }))
     .attributeNotExists("title")
     .or("title", "=", "Buffalo Soldier")
     .exec()
@@ -129,26 +119,13 @@ async function testBatchGet(jayZ?: JayZ) {
   const db = await setup(jayZ)
 
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await Promise.all([
-    putMusician(db, musician),
-    putSong(db, song1),
-    putSong(db, song2),
-  ])
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const results = await db.batchGet({
     keys: [
-      {
-        partition: PK.Musician({ musicianId: musician.id }),
-        sort: SK.Musician({ musicianId: musician.id }),
-      },
-      {
-        partition: PK.Musician({ musicianId: musician.id }),
-        sort: SK.Song({ songId: song1.id }),
-      },
-      {
-        partition: PK.Musician({ musicianId: musician.id }),
-        sort: SK.Song({ songId: song2.id }),
-      },
+      MusicianModel.key({ id: musician.id }),
+      SongModel.key({ musicianId: musician.id, id: song1.id }),
+      SongModel.key({ musicianId: musician.id, id: song2.id }),
     ],
   })
 
@@ -160,17 +137,10 @@ async function testGSIByModel(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
-  await Promise.all([
-    putMusician(db, musician),
-    putSong(db, song1),
-    putSong(db, song2),
-  ])
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
-    .queryGSI(
-      GSIs.byModelAndId.name,
-      GSIs.byModelAndId.pk({ model: ModelType.SONG })
-    )
+    .queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song))
     .exec()
 
   expect(result).toEqual([song1, song2])
@@ -180,17 +150,10 @@ async function testGSIByName(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
-  await Promise.all([
-    putMusician(db, musician),
-    putSong(db, song1),
-    putSong(db, song2),
-  ])
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
-    .queryGSI(
-      GSIs.byNameAndId.name,
-      GSIs.byNameAndId.pk({ name: musician.name })
-    )
+    .queryGSI(byNameAndIdGSI.name, byNameAndIdGSI.key(musician.name))
     .exec()
 
   expect(result).toEqual([musician])
@@ -199,35 +162,13 @@ async function testGSIByName(jayZ?: JayZ) {
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  const pk = PK.Musician({ musicianId: musician.id })
 
-  await db.batchPutWithTransaction([
-    {
-      key: {
-        partition: pk,
-        sort: SK.Musician({ musicianId: musician.id }),
-      },
-      item: musician,
-    },
+  await db.batchPutWithTransaction({ items: [musician, song1, song2] })
 
-    {
-      key: {
-        partition: pk,
-        sort: SK.Song({ songId: song1.id }),
-      },
-      item: song1,
-    },
-    {
-      key: {
-        partition: pk,
-        sort: SK.Song({ songId: song2.id }),
-      },
+  const results = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .exec()
 
-      item: song2,
-    },
-  ])
-
-  const results = await db.query(pk).exec()
   sortById(results)
   expect(results).toEqual([musician, song1, song2])
 }

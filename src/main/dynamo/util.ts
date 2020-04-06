@@ -22,14 +22,12 @@ export type MaybeEncryptedItems<T> =
   | (T & { [key: string]: string })
 
 export function toJSON<T>(item: { [key: string]: any }): T {
-  delete item.pk
-  delete item.sk
   return item as T
 }
 
-export async function encryptOrPassThroughItems<T>(
+export async function encryptOrPassThroughItems<T extends Record<string, any>>(
   jayz: JayZConfig | undefined,
-  item: T & { [key: string]: string }
+  item: T
 ): Promise<MaybeEncryptedItems<T>> {
   if (jayz !== undefined) {
     const fieldsToEncrypt = Object.keys(item).filter(
@@ -43,9 +41,7 @@ export async function encryptOrPassThroughItems<T>(
 
 export async function decryptOrPassThroughItem(
   jayz: JayZConfig | undefined,
-  item: {
-    [key: string]: any
-  }
+  item: Record<string, any>
 ): Promise<{ [key: string]: any }> {
   if (jayz !== undefined) {
     return jayz.client.decryptItem(item as EncryptedJayZItem<any, any>)
