@@ -5,9 +5,12 @@ export function generateModelDefinitions(models: Model[]) {
 }
 
 function generateModelDefinition(model: Model): string {
-  return `export const ${model.name}Model = ${model.tableName}
+  const [pkPrefix, pk] = model.keys.partitionKey
+  const [skPrefix, sk] = model.keys.sortKey
+
+  return `export const ${model.name}Model = ${model.tableName}Table
     .model<${model.name}>()
-    .partitionKey(${model.partition})
-    .sortKey(${model.sort})
+    .partitionKey(ModelType.${pkPrefix}, "${pk.replace("$", "")}")
+    .sortKey(ModelType.${skPrefix}, "${sk.replace("$", "")}")
   `
 }

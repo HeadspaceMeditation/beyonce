@@ -1,41 +1,54 @@
-export type Keys = { partition: string; sort: string[] }
-export type Fields = { [fieldName: string]: string }
-export type ModelDefinition = Keys & Fields
-
-export type GSIDefinition = {
-  partition: string
-  sort: string
+export type YAMLFile = {
+  Tables: {
+    [tableName: string]: TableDefinition
+  }
 }
 
-export type ModelDefinitions = {
-  Tables: {
-    [tableName: string]: {
-      Partitions: { [partition: string]: string[] }
-      GSIs?: { [indexName: string]: GSIDefinition }
-      Models: { [modelName: string]: ModelDefinition }
-    }
+export type TableDefinition = {
+  Partitions: {
+    [partitionName: string]: PartitionDefinition
   }
+
+  GSIs?: { [indexName: string]: GSIDefinition }
+}
+
+export type PartitionDefinition = {
+  [modelName: string]: ModelDefinition
+}
+
+export type ModelDefinition = Keys & Fields
+export type Keys = { partitionKey: [string, string]; sortKey: [string, string] }
+export type Fields = { [fieldName: string]: string }
+
+export type GSIDefinition = {
+  partitionKey: string
+  sortKey: string
 }
 
 export type Table = {
   name: string
   partitionKeyName: string
   sortKeyName: string
-  partitions: { [partition: string]: string[] }
+  partitions: Partition[]
   gsis: GSI[]
+}
+
+export type Partition = {
+  tableName: string
+  name: string
   models: Model[]
 }
 
 export type GSI = {
   name: string
-  partition: string
-  sort: string
+  partitionKey: string
+  sortKey: string
 }
 
 export type Model = {
   tableName: string
+  partitionName: string
   name: string
-  partition: string
-  sort: string[]
+  keys: Keys
   fields: Fields
 }
