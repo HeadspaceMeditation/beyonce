@@ -25,12 +25,12 @@ export interface Song {
 }
 
 export const MusicianModel = table
-  .model<Musician>()
+  .model<Musician>(ModelType.Musician)
   .partitionKey(ModelType.Musician, "id")
   .sortKey(ModelType.Musician, "id")
 
 export const SongModel = table
-  .model<Song>()
+  .model<Song>(ModelType.Song)
   .partitionKey(ModelType.Musician, "musicianId")
   .sortKey(ModelType.Song, "id")
 
@@ -50,21 +50,18 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   const musician = MusicianModel.create({
     id: "1",
     name: "Bob Marley",
-    model: ModelType.Musician,
   })
 
   const song1 = SongModel.create({
     musicianId: "1",
     id: "2",
     title: "Buffalo Soldier",
-    model: ModelType.Song,
   })
 
   const song2 = SongModel.create({
     musicianId: "1",
     id: "3",
     title: "No Woman, No Cry",
-    model: ModelType.Song,
   })
 
   return [musician, song1, song2]

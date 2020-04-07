@@ -1,7 +1,7 @@
-import { generateModels } from "../../main/codegen/generateModels"
+import { generateCode } from "../../main/codegen/generateCode"
 
 it("should generate a simple model", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
@@ -31,7 +31,7 @@ export interface Author {
   name: string
 }
 
-export const AuthorModel = LibraryTable.model<Author>()
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
   .partitionKey(ModelType.Author, "id")
   .sortKey(ModelType.Author, "id")
 
@@ -42,7 +42,7 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel])
 })
 
 it("should generate two models", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
@@ -87,11 +87,11 @@ export interface Book {
   name: string
 }
 
-export const AuthorModel = LibraryTable.model<Author>()
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
   .partitionKey(ModelType.Author, "id")
   .sortKey(ModelType.Author, "id")
 
-export const BookModel = LibraryTable.model<Book>()
+export const BookModel = LibraryTable.model<Book>(ModelType.Book)
   .partitionKey(ModelType.Author, "authorId")
   .sortKey(ModelType.Book, "id")
 
@@ -102,7 +102,7 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
 })
 
 it("should generate GSI for Beyonces model field", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
@@ -132,7 +132,7 @@ Tables:
 })
 
 it("should generate GSI with specified fields", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
@@ -163,7 +163,7 @@ Tables:
 })
 
 it("should generate GSI with pk and sk swapped", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
@@ -193,7 +193,7 @@ Tables:
 })
 
 it("should import external TypeScript types from a package", () => {
-  const result = generateModels(`
+  const result = generateCode(`
 Tables:
   Library:
     Partitions:
