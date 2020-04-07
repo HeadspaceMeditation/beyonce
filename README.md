@@ -135,14 +135,16 @@ Note: the key `prefix` ("Author" from our earlier example) will be automatically
 ### Query
 
 ```TypeScript
+import { AuthorPartition } from "generated/models"
+
 // Get an Author + their books ( inferred type: (Author | Book)[] )
 const authorWithBooks = await beyonce
-  .query(AuthorModel.key({ id: "1" }))
+  .query(AuthorPartition.key({ id: "1" }))
   .exec()
 
 // Get an Author + filter on their books (inferred type: (Author | Book)[] )
 const authorWithFilteredBooks = await beyonce
-  .query(AuthorModel.key({ id: "1" }))
+  .query(AuthorPartition.key({ id: "1" }))
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()

@@ -32,8 +32,8 @@ export interface Author {
 }
 
 export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
-  .partitionKey(ModelType.Author, "id")
-  .sortKey(ModelType.Author, "id")
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
 
 export type Model = Author
 
@@ -88,12 +88,12 @@ export interface Book {
 }
 
 export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
-  .partitionKey(ModelType.Author, "id")
-  .sortKey(ModelType.Author, "id")
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
 
 export const BookModel = LibraryTable.model<Book>(ModelType.Book)
-  .partitionKey(ModelType.Author, "authorId")
-  .sortKey(ModelType.Book, "id")
+  .partitionKey("Author", "authorId")
+  .sortKey("Book", "id")
 
 export type Model = Author | Book
 

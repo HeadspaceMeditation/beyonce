@@ -10,7 +10,7 @@ function generateModel(model: Model): string {
 
   return `export const ${model.name}Model = ${model.tableName}Table
     .model<${model.name}>(ModelType.${model.name})
-    .partitionKey(ModelType.${pkPrefix}, "${pk.replace("$", "")}")
-    .sortKey(ModelType.${skPrefix}, "${sk.replace("$", "")}")
+    .partitionKey("${pkPrefix}", "${pk.replace("$", "")}")
+    .sortKey("${skPrefix}", "${sk.replace("$", "")}")
   `
 }
