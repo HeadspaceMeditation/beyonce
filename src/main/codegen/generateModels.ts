@@ -4,40 +4,62 @@ import * as prettier from "prettier"
 import { generateModelInterfaces } from "./generateModelInterface"
 import { generateModelTypeEnum } from "./generateModelTypeEnum"
 import { generateTables } from "./generateTables"
-import { ModelDefinitions, Table } from "./types"
-import { generateModelHelpers } from "./generateModelHelpers"
+import {
+  Table,
+  YAMLFile,
+  ModelDefinition,
+  TableDefinition,
+  Partition,
+  Model,
+} from "./types"
+import { generatePartitions } from "./generatePartitions"
 import { generateTaggedUnion } from "./generateTaggedUnion"
+import { generateModelDefinitions } from "./generateModelDefinitions"
+import { generateGSIs } from "./generateGSIs"
 
 export function generateModels(yamlData: string): string {
-  const config = parseYaml<ModelDefinitions>(yamlData)
+  const config = parseYaml<YAMLFile>(yamlData)
   const tableDefs = toTables(config)
 
-  const models = tableDefs
-    .map(({ models }) => models)
-    .reduce((a, b) => a.concat(b))
+  const models: Model[] = []
+  const partitions: Partition[] = []
+
+  tableDefs.forEach((t) => {
+    t.partitions.forEach((p) => {
+      partitions.push(p)
+      p.models.forEach((m) => {
+        models.push(m)
+      })
+    })
+  })
 
   const modelInterfaces = generateModelInterfaces(models)
+  const modelDefinitions = generateModelDefinitions(models)
   const modelTypeEnum = generateModelTypeEnum(models)
   const tables = generateTables(tableDefs)
+  const partitionDefinitions = generatePartitions(partitions)
   const taggedUnion = generateTaggedUnion(models)
+  const gsis = generateGSIs(tableDefs)
 
-  const imports = new Set([`import { key } from "@ginger.io/beyonce"`])
+  const imports = new Set([`import { Table } from "@ginger.io/beyonce"`])
   modelInterfaces.imports.forEach((_) => imports.add(_))
-
-  const modelHelpers = generateModelHelpers(models)
 
   const code = `
       ${Array.from(imports).join("\n")}
+
+      ${tables}
 
       ${modelTypeEnum}
 
       ${modelInterfaces.code.join("\n\n")}
 
-      ${modelHelpers}
+      ${modelDefinitions.join("\n\n")}
 
       ${taggedUnion}
 
-      ${tables}
+      ${partitionDefinitions}
+
+      ${gsis}
     `
 
   return prettier.format(code, {
@@ -46,42 +68,56 @@ export function generateModels(yamlData: string): string {
   })
 }
 
-function toTables(config: ModelDefinitions): Table[] {
+function toTables(config: YAMLFile): Table[] {
   const tables: Table[] = []
 
-  Object.entries(config.Tables).forEach(
-    ([name, { Partitions, Models, GSIs }]) => {
-      const table: Table = {
-        name,
-        partitionKeyName: "pk",
-        sortKeyName: "sk",
-        partitions: Partitions,
-        gsis: [],
-        models: [],
-      }
+  Object.entries(config.Tables).forEach(([name, { Partitions, GSIs }]) => {
+    const table: Table = {
+      name,
+      partitionKeyName: "pk",
+      sortKeyName: "sk",
+      partitions: toPartitions(name, Partitions),
+      gsis: [],
+    }
 
-      if (GSIs !== undefined) {
-        Object.entries(GSIs).forEach(([name, { partition, sort }]) => {
-          table.gsis.push({ name, partition, sort })
-        })
-      }
+    if (GSIs !== undefined) {
+      Object.entries(GSIs).forEach(([name, { partitionKey, sortKey }]) => {
+        table.gsis.push({ name, partitionKey, sortKey })
+      })
+    }
 
-      Object.entries(Models).forEach(
-        ([name, { partition, sort, ...fields }]) => {
-          table.models.push({
-            name,
-            partition,
-            sort,
-            fields,
-          })
+    tables.push(table)
+  })
+
+  return tables
+}
+
+function toPartitions(
+  tableName: string,
+  partitionDefs: TableDefinition["Partitions"]
+): Partition[] {
+  const partitions = Object.entries(partitionDefs).map(
+    ([partitionName, partition]) => {
+      const models = Object.entries(partition).map(([modelName, model]) => {
+        const { partitionKey, sortKey, ...fields } = model
+        return {
+          tableName,
+          partitionName,
+          name: modelName,
+          keys: { partitionKey, sortKey },
+          fields,
         }
-      )
+      })
 
-      tables.push(table)
+      return {
+        tableName,
+        name: partitionName,
+        models,
+      }
     }
   )
 
-  return tables
+  return partitions
 }
 
 function parseYaml<T>(yamlData: string): T {

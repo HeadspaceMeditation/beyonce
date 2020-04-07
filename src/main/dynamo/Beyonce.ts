@@ -1,19 +1,22 @@
 import { DynamoDB } from "aws-sdk"
+import { PartitionAndSortKey, PartitionKey } from "./keys"
+import { Table } from "./Table"
 import { JayZConfig } from "./JayZConfig"
-import { Key } from "./Key"
 import { QueryBuilder } from "./QueryBuilder"
 import {
   decryptOrPassThroughItem,
   encryptOrPassThroughItems,
-  ItemAndKey,
   MaybeEncryptedItems,
-  PartitionAndSortKey,
   toJSON,
 } from "./util"
 
 export type Options = {
   jayz?: JayZConfig
 }
+
+export type ExtractKeyType<T> = T extends PartitionAndSortKey<infer U>
+  ? U
+  : never
 
 /** A thin wrapper around the DynamoDB sdk client that
  * does auto mapping between JSON <=> DynamoDB Items
@@ -22,11 +25,7 @@ export class Beyonce {
   private client: DynamoDB.DocumentClient
   private jayz?: JayZConfig
 
-  constructor(
-    private tableName: string,
-    dynamo: DynamoDB,
-    options: Options = {}
-  ) {
+  constructor(private table: Table, dynamo: DynamoDB, options: Options = {}) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
 
     if (options.jayz !== undefined) {
@@ -35,36 +34,36 @@ export class Beyonce {
   }
 
   /** Retrieve a single Item out of Dynamo */
-  async get<T, U>(key: PartitionAndSortKey<T, U>): Promise<U | undefined> {
+  async get<T>(key: PartitionAndSortKey<T>): Promise<T | undefined> {
     const { Item: item } = await this.client
       .get({
-        TableName: this.tableName,
+        TableName: this.table.tableName,
         Key: {
-          [key.partition.name]: key.partition.value,
-          [key.sort.name]: key.sort.value,
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey,
         },
       })
       .promise()
 
     if (item !== undefined) {
-      return toJSON<U>(await decryptOrPassThroughItem(this.jayz, item))
+      return toJSON<T>(await decryptOrPassThroughItem(this.jayz, item))
     }
   }
 
   /** BatchGet items */
-  async batchGet<T>(params: {
-    keys: PartitionAndSortKey<any, T>[]
-  }): Promise<T[]> {
+  async batchGet<T extends PartitionAndSortKey<any>>(params: {
+    keys: T[]
+  }): Promise<ExtractKeyType<T>[]> {
     const {
       Responses: responses,
       UnprocessedKeys: unprocessedKeys,
     } = await this.client
       .batchGet({
         RequestItems: {
-          [this.tableName]: {
-            Keys: params.keys.map(({ partition, sort }) => ({
-              [partition.name]: partition.value,
-              [sort.name]: sort.value,
+          [this.table.tableName]: {
+            Keys: params.keys.map(({ partitionKey, sortKey }) => ({
+              [this.table.partitionKeyName]: partitionKey,
+              [this.table.sortKeyName]: sortKey,
             })),
           },
         },
@@ -76,10 +75,10 @@ export class Beyonce {
     }
 
     if (responses !== undefined) {
-      const items = responses[this.tableName]
+      const items = responses[this.table.tableName]
       const jsonItems = items.map(async (_) => {
         const item = await decryptOrPassThroughItem(this.jayz, _)
-        return toJSON<T>(item)
+        return toJSON<ExtractKeyType<T>>(item)
       })
 
       return Promise.all(jsonItems)
@@ -88,21 +87,21 @@ export class Beyonce {
     }
   }
 
-  query<T>(pk: Key<T>): QueryBuilder<T> {
-    const { tableName, jayz } = this
+  query<T>(pk: PartitionKey<T>): QueryBuilder<T> {
+    const { table, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
-      tableName,
+      table,
       pk,
       jayz: jayz,
     })
   }
 
-  queryGSI<T>(gsiName: string, gsiPk: Key<T>): QueryBuilder<T> {
-    const { tableName, jayz } = this
+  queryGSI<T>(gsiName: string, gsiPk: PartitionKey<T>): QueryBuilder<T> {
+    const { table, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
-      tableName,
+      table,
       gsiName,
       gsiPk,
       jayz,
@@ -110,23 +109,27 @@ export class Beyonce {
   }
 
   /** Write an item into Dynamo */
-  async put<T>(itemAndKey: ItemAndKey<T>): Promise<void> {
-    const item = await this.maybeEncryptItems(itemAndKey)
+  async put<T extends Record<string, any>>(item: T): Promise<void> {
+    const maybeEncryptedItem = await this.maybeEncryptItems(item)
 
     await this.client
       .put({
-        TableName: this.tableName,
-        Item: item,
+        TableName: this.table.tableName,
+        Item: maybeEncryptedItem,
       })
       .promise()
   }
 
   /** Write multiple items into Dynamo using a transaction.
    */
-  async batchPutWithTransaction<T>(items: ItemAndKey<T>[]): Promise<void> {
-    const asyncEncryptedItems = items.map(async (itemAndKey) => {
-      const maybeEncryptedItem = await this.maybeEncryptItems(itemAndKey)
-      return { Put: { TableName: this.tableName, Item: maybeEncryptedItem } }
+  async batchPutWithTransaction<T extends Record<string, any>>(params: {
+    items: T[]
+  }): Promise<void> {
+    const asyncEncryptedItems = params.items.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItems(item)
+      return {
+        Put: { TableName: this.table.tableName, Item: maybeEncryptedItem },
+      }
     })
 
     const encryptedItems = await Promise.all(asyncEncryptedItems)
@@ -138,16 +141,10 @@ export class Beyonce {
       .promise()
   }
 
-  private async maybeEncryptItems<T>(
-    itemAndKey: ItemAndKey<T>
+  private async maybeEncryptItems<T extends Record<string, any>>(
+    item: T
   ): Promise<MaybeEncryptedItems<T>> {
-    const { item, key } = itemAndKey
-    const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, {
-      ...item,
-      [key.partition.name]: key.partition.value,
-      [key.sort.name]: key.sort.value,
-    })
-
+    const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, item)
     return maybeEncryptedItems
   }
 }

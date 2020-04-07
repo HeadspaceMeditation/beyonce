@@ -1,54 +1,43 @@
-import { Table, Fields } from "./types"
-import { intersection } from "./util"
+import { Fields, Table } from "./types"
 
-export function generateGSIs(table: Table): string {
-  const fieldToType: { [fieldName: string]: string } = {
-    model: "string"
-  }
+export function generateGSIs(tables: Table[]): string {
+  return tables.map(generateGSIsForTable).join("\n\n")
+}
 
+function generateGSIsForTable(table: Table): string {
   const fieldToModels: { [fieldName: string]: string[] } = {
-    model: []
+    model: [],
   }
 
   const fieldsAllModelsHave: Fields = {
     [table.partitionKeyName]: "string",
     [table.sortKeyName]: "string",
-    model: "string"
+    model: "string",
   }
 
-  table.models.forEach(model => {
-    const fields = { ...fieldsAllModelsHave, ...model.fields }
+  table.partitions.forEach((partition) => {
+    partition.models.forEach((model) => {
+      const fields = { ...fieldsAllModelsHave, ...model.fields }
 
-    for (const name in fields) {
-      fieldToType[name] = fields[name]
-      fieldToModels[name] = fieldToModels[name] || []
-      fieldToModels[name].push(model.name)
-    }
+      for (const name in fields) {
+        fieldToModels[name] = fieldToModels[name] || []
+        fieldToModels[name].push(model.name)
+      }
+    })
   })
 
-  const gsis = table.gsis.map(({ name, partition, sort }) => {
-    const partitionKeyType = fieldToType[partition]
-    const partitionModelsType = fieldToModels[partition].join(" | ")
+  const gsis = table.gsis.map(({ name, partitionKey }) => {
+    const pk = partitionKey.replace("$", "")
+    const models = fieldToModels[pk].map((_) => `${_}Model`).join(", ")
 
-    const sortKeyType = fieldToType[sort]
-    const sortModelType = intersection(
-      fieldToModels[partition],
-      fieldToModels[sort]
-    ).join(" | ")
-
-    return `
-        ${name}: {
-            name: "${name}",
-            pk: key<{${partition}:${partitionKeyType}}, ${partitionModelsType}>("${partition}", _ => [_.${partition}]),
-            sk: key<{${sort}:${sortKeyType}}, ${sortModelType}>("${sort}", _ => [_.${sort}])
-        }
+    return `const ${name}GSI = ${table.name}Table.gsi("${name}")
+      .models([${models}])
+      .partitionKey("${pk}")
     `
   })
 
   if (gsis.length > 0) {
-    return `gsis: {
-    ${gsis.join(",\n")}
-    }`
+    return gsis.join("\n\n")
   } else {
     return ""
   }

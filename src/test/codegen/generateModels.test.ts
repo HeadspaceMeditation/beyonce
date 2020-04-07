@@ -1,140 +1,103 @@
 import { generateModels } from "../../main/codegen/generateModels"
 
-const authorInterface = `export interface Author {
-  model: ModelType.Author
-  id: string
-  name: string
-}`
-
-const bookInterface = `export interface Book {
-  model: ModelType.Book
-  id: string
-  name: string
-}`
-
-const authorHelper = `export function author(fields: Omit<Author, "model">): Author {
-  return {
-    ...fields,
-    model: ModelType.Author
-  }
-}`
-
-const bookHelper = `export function book(fields: Omit<Book, "model">): Book {
-  return {
-    ...fields,
-    model: ModelType.Book
-  }
-}`
-
-const authorAndBookPk = `pk: {
-    Author: key<{ authorId: string }, Author | Book>("pk", _ => [
-      "author",
-      _.authorId
-    ])
-  }`
-
-const authorAndBookSk = `sk: {
-    [ModelType.Author]: key<{ authorId: string }, Author>("sk", _ => [
-      "author",
-      _.authorId
-    ]),
-    [ModelType.Book]: key<{ bookId: string }, Book>("sk", _ => [
-      "book",
-      _.bookId
-    ])
-  }`
-
-const authorAndBookUnion = `export type Model = Author | Book`
-
 it("should generate a simple model", () => {
   const result = generateModels(`
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
-
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: string
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
 `)
 
-  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk"
+})
 
 export enum ModelType {
   Author = "Author"
 }
 
-${authorInterface}
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+}
 
-${authorHelper}
+export const AuthorModel = LibraryTable.model<Author>()
+  .partitionKey(ModelType.Author, "id")
+  .sortKey(ModelType.Author, "id")
 
 export type Model = Author
 
-export const LibraryTable = {
-  name: "Library",
-  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
-
-  pk: {
-    Author: key<{ authorId: string }, Author>("pk", _ => ["author", _.authorId])
-  },
-  sk: {
-    [ModelType.Author]: key<{ authorId: string }, Author>("sk", _ => [
-      "author",
-      _.authorId
-    ])
-  }
-}
+export const AuthorsPartition = LibraryTable.partition([AuthorModel])
 `)
 })
 
-it("should generate two models model", () => {
+it("should generate two models", () => {
   const result = generateModels(`
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
 
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: string
-
-      Book:
-        partition: Author
-        sort: ["book", "_.bookId"]
-        id: string
-        name: string
+        Book:
+          partitionKey: [Author, $authorId]
+          sortKey: [Book, $id]
+          id: string
+          authorId: string
+          name: string
 `)
 
-  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk"
+})
 
 export enum ModelType {
   Author = "Author",
   Book = "Book"
 }
 
-${authorInterface}
-
-${bookInterface}
-
-${authorHelper}
-
-${bookHelper}
-
-${authorAndBookUnion}
-
-export const LibraryTable = {
-  name: "Library",
-  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
-
-  ${authorAndBookPk},
-  ${authorAndBookSk}
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
 }
+
+export interface Book {
+  model: ModelType.Book
+  id: string
+  authorId: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>()
+  .partitionKey(ModelType.Author, "id")
+  .sortKey(ModelType.Author, "id")
+
+export const BookModel = LibraryTable.model<Book>()
+  .partitionKey(ModelType.Author, "authorId")
+  .sortKey(ModelType.Book, "id")
+
+export type Model = Author | Book
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
 `)
 })
 
@@ -143,58 +106,28 @@ it("should generate GSI for Beyonces model field", () => {
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $id]
+          sortKey: [Book, $id]
+          id: string
+          name: string
 
     GSIs:
       modelById:
-          partition: model
-          sort: id
-
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: string
-
-      Book:
-        partition: Author
-        sort: ["book", "_.bookId"]
-        id: string
-        name: string
+        partitionKey: $model
+        sortKey: $id
 `)
 
-  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
-
-export enum ModelType {
-  Author = "Author",
-  Book = "Book"
-}
-
-${authorInterface}
-
-${bookInterface}
-
-${authorHelper}
-
-${bookHelper}
-
-${authorAndBookUnion}
-
-export const LibraryTable = {
-  name: "Library",
-  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata", "id"]),
-
-  ${authorAndBookPk},
-  ${authorAndBookSk},
-  gsis: {
-    modelById: {
-      name: "modelById",
-      pk: key<{ model: string }, Author | Book>("model", _ => [_.model]),
-      sk: key<{ id: string }, Author | Book>("id", _ => [_.id])
-    }
-  }
-}
+  expect(result).toContain(`const modelByIdGSI = LibraryTable.gsi("modelById")
+  .models([AuthorModel, BookModel])
+  .partitionKey("model")
 `)
 })
 
@@ -203,65 +136,29 @@ it("should generate GSI with specified fields", () => {
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $id]
+          sortKey: [Book, $id]
+          id: string
+          name: string
 
     GSIs:
-      modelById:
-          partition: name
-          sort: id
-
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: string
-
-      Book:
-        partition: Author
-        sort: ["book", "_.bookId"]
-        id: string
-        name: string
+      byNameAndId:
+        partitionKey: $name
+        sortKey: $id
 `)
 
-  expect(result).toEqual(`import { key } from "@ginger.io/beyonce"
-
-export enum ModelType {
-  Author = "Author",
-  Book = "Book"
-}
-
-${authorInterface}
-
-${bookInterface}
-
-${authorHelper}
-
-${bookHelper}
-
-${authorAndBookUnion}
-
-export const LibraryTable = {
-  name: "Library",
-  encryptionBlacklist: new Set([
-    "pk",
-    "sk",
-    "model",
-    "__jayz__metadata",
-    "name",
-    "id"
-  ]),
-
-  ${authorAndBookPk},
-  ${authorAndBookSk},
-  gsis: {
-    modelById: {
-      name: "modelById",
-      pk: key<{ name: string }, Author | Book>("name", _ => [_.name]),
-      sk: key<{ id: string }, Author | Book>("id", _ => [_.id])
-    }
-  }
-}
+  expect(result)
+    .toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
+  .models([AuthorModel, BookModel])
+  .partitionKey("name")
 `)
 })
 
@@ -270,43 +167,29 @@ it("should generate GSI with pk and sk swapped", () => {
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $id]
+          sortKey: [Book, $id]
+          id: string
+          name: string
 
     GSIs:
-      skAsPk:
-          partition: sk
-          sort: pk
-
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: string
-
-      Book:
-        partition: Author
-        sort: ["book", "_.bookId"]
-        id: string
-        name: string
+      byNameAndId:
+        partitionKey: $sk
+        sortKey: $pk
 `)
 
-  expect(result).toContain(`
-export const LibraryTable = {
-  name: "Library",
-  encryptionBlacklist: new Set(["pk", "sk", "model", "__jayz__metadata"]),
-
-  ${authorAndBookPk},
-  ${authorAndBookSk},
-  gsis: {
-    skAsPk: {
-      name: "skAsPk",
-      pk: key<{ sk: string }, Author | Book>("sk", _ => [_.sk]),
-      sk: key<{ pk: string }, Author | Book>("pk", _ => [_.pk])
-    }
-  }
-}
-`)
+  expect(result)
+    .toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
+  .models([AuthorModel, BookModel])
+  .partitionKey("sk")`)
 })
 
 it("should import external TypeScript types from a package", () => {
@@ -314,14 +197,12 @@ it("should import external TypeScript types from a package", () => {
 Tables:
   Library:
     Partitions:
-      Author: ["author", "_.authorId"]
-
-    Models:
-      Author:
-        partition: Author
-        sort: ["author", "_.authorId"]
-        id: string
-        name: BestNameEvah from @cool.io/some/sweet/package
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: BestNameEvah from @cool.io/some/sweet/package
 `)
 
   const lines = result.split("\n").map((_) => _.trim())
