@@ -23,27 +23,33 @@ First install beyonce - `npm install @ginger.io/beyonce`
 
 ### 2. Define your models
 
-Define your `partitions` and `models` in YAML:
+Define your `tables`, `partitions` and `models` in YAML:
 
 ```YAML
 Tables:
   Library:
-    Partitions:
-      Author: [author, _.authorId]
+    Partitions: # A "partition" is a set of models with the same partition key
+      Authors: # e.g. this one contains Authors + Books
 
-    Models:
-      Author:
-        partition: Author # this matches the "Author" partition we defined above
-        sort: [author, _.authorId]
-        id: string
-        name: string
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
 
-      Book:
-        partition: Author # notice how Author and Book both live in the "Author" partition
-        sort: [book, _.bookId]
-        id: string
-        title: string
+        Book:
+          partitionKey: [Author, $authorId]
+          sortKey: [Book, $id]
+          id: string
+          authorId: string
+          name: string
 ```
+
+#### A note on `partitionKey` and `sortKey` syntax
+
+Beyonce expects you to specify your partition and sort keys as tuple-2s, e.g. `[Author, $id]`. The first element is a "key prefix" and the 2nd must be a field on your model. For example we set the primary key of the `Author` model above to: `[Author, $id]`, would result in the key: `Author-$id`, where `$id` is the value of a specific Author's id.
+
+Using the example above, if we wanted to place `Books` under the same partition key, then we'd need to set the `Book` model's `partitionKey` to `[Author, $authorId]`.
 
 #### Global secondary indexes
 
@@ -53,12 +59,12 @@ If your table(s) have GSI's you can specify them like this:
 Tables:
   Library:
     Partitions:
-      Author: [author, _.authorId]
+      ...
 
     GSIs:
-      byName: # this must match your GSI's name
-        partition: name # this field must exist on at least one of your models
-        sort: id # this field must exist on at least one of your models
+      byName: # must match your GSI's name
+        partitionKey: $name # name field must exist on at least one model
+        sortKey: $id # same here
 ```
 
 **Note**: Beyonce currently assumes that your GSI indexes project _all_ model attributes, which will
@@ -85,26 +91,24 @@ Which transforms into `import { Address } from "author/address"`
 
 Now you can write partition-aware, type safe queries with abandon:
 
-#### Get yourself a Beyonce and import the generated models, partition keys and sort keys
+#### Get yourself a Beyonce
 
 ```TypeScript
 import { Beyonce } from "@ginger.io/beyonce"
 import { DynamoDB } from "aws-sdk"
-import {
-  Author,
-  author,
-  Book,
-  ModelType,
-  LibraryTable,
-} from "generated/models"
+import { LibraryTable } from "generated/models"
 
-const beyonce = new Beyonce(
-  LibraryTable.name,
-  new DynamoDB({
-    endpoint: "...",
-    region: "..."
-  })
-)
+const dynamo = new DynamoDB({ endpoint: "...", region: "..."})
+const beyonce = new Beyonce(LibraryTable, dynamo)
+```
+
+#### Then import the generated models
+
+```TypeScript
+import {
+  AuthorModel,
+  BookModel,
+} from "generated/models"
 ```
 
 ## Queries
@@ -112,41 +116,33 @@ const beyonce = new Beyonce(
 ### Put
 
 ```TypeScript
-// Beyonce generates helper methods to create model objects for you
-const authorModel = author({
+const author = AuthorModel.create({
   id: "1",
   name: "Jane Austen"
 })
 
-await beyonce.put({
-  key: {
-    partition: LibraryTable.pk.Author({ authorId: "1" }),
-    sort: LibraryTable.sk.Author({ authorId: "1" })
-  },
-  item: authorModel
-})
+await beyonce.put(author)
 ```
 
 ### Get
 
 ```TypeScript
-const author = await beyonce.get({
-  partition: LibraryTable.pk.Author({ authorId: "1" }),
-  sort: LibraryTable.sk.Author({ authorId: "1" })
-}))
+const author = await beyonce.get(AuthorModel.key({ id: "1" }))
 ```
+
+Note: the key `prefix` ("Author" from our earlier example) will be automatically appeneded.
 
 ### Query
 
 ```TypeScript
 // Get an Author + their books ( inferred type: (Author | Book)[] )
 const authorWithBooks = await beyonce
-  .query(LibraryTable.pk.Author({ authorId: "1" }))
+  .query(AuthorModel.key({ id: "1" }))
   .exec()
 
 // Get an Author + filter on their books (inferred type: (Author | Book)[] )
 const authorWithFilteredBooks = await beyonce
-  .query(LibraryTable.pk.Author({ authorId: "1" }))
+  .query(AuthorModel.key({ id: "1" }))
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()
@@ -157,6 +153,8 @@ results you can easily determine which type of model you're dealing with via the
 codegens onto your models.
 
 ```TypeScript
+import { ModelType } from "generated/models"
+
 authorWithBooks.forEach(authorOrBook => {
   if (authorOrBook.model === ModelType.Author) {
     // do something with an Author model
@@ -169,9 +167,9 @@ authorWithBooks.forEach(authorOrBook => {
 ### QueryGSI
 
 ```TypeScript
-const { byName } = LibraryTable.gsis
+import { byNameGSI } from "generated/models"
 const prideAndPrejudice = await beyonce
-  .queryGSI(byName.name, byName.pk({ name: "Jane Austen" }))
+  .queryGSI(byNameGSI.name, byNameGSI.key("Jane Austen"))
   .where("title", "=", "Pride and Prejudice")
   .exec()
 ```
@@ -183,24 +181,12 @@ const prideAndPrejudice = await beyonce
 const batchResults = await beyonce.batchGet({
   keys: [
     // Get 2 authors
-    {
-      partition: LibraryTable.pk.Author({ authorId: "1" }),
-      sort: LibraryTable.sk.Author({ authorId: "1" })
-    },
-    {
-      partition: LibraryTable.pk.Author({ authorId: "2" }),
-      sort: LibraryTable.sk.Author({ authorId: "2" })
-    },
+    AuthorModel.key({ id: "1" }),
+    AuthorModel.key({ id: "2" }),
 
     // And a specific book from each
-    {
-      partition: LibraryTable.pk.Author({ authorId: "1" }),
-      sort: LibraryTable.sk.Book({ bookId: "1" })
-    },
-    {
-      partition: LibraryTable.pk.Author({ authorId: "2" }),
-      sort: LibraryTable.sk.Book({ bookId: "2" })
-    }
+    Book.key({ authorId: "1", id: "1" })
+    Book.key({ authorId: "2" id: "2" })
   ]
 })
 ```
@@ -209,33 +195,17 @@ const batchResults = await beyonce.batchGet({
 
 ```TypeScript
 // Batch put several items in a transaction
-const author1 = author({
+const author1 = AuthorModel.create({
   id: "1",
   name: "Jane Austen"
 })
 
-const author2 = author({
+const author2 = AuthorModel.create({
   id: "2",
   name: "Charles Dickens"
 })
 
-await beyonce.batchPutWithTransaction([
-  {
-    key: {
-      partition: LibraryTable.pk.Author({ authorId: author1.id }),
-      sort: LibraryTable.sk.Author({ authorId: author1.id })
-    },
-    item: author1
-  },
-  {
-    key: {
-      partition: LibraryTable.pk.Author({ authorId: author2.id }),
-      sort: LibraryTable.sk.Author({ authorId: author2.id })
-    },
-
-    item: author2
-  }
-  ])
+await beyonce.batchPutWithTransaction({ items: [author1, author2] })
 ```
 
 ## Encryption
@@ -257,11 +227,11 @@ const jayZ = new JayZ({ keyProvider })
 
 // And give him to Beyonce (because she runs this relationship)
 const beyonce = new Beyonce(
-  LibraryTable.name,
+  LibraryTable,
   dynamo,
   {
     jayz,
-    encryptionBlacklist: Library.table.encryptionBlacklist // codegened set of fields to skip encrypting
+    encryptionBlacklist: LibraryTable.getEncryptionBlacklist()
   }
 )
 ```
