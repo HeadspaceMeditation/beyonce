@@ -3,7 +3,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { argv } from "yargs"
-import { generateModels } from "./generateModels"
+import { generateCode } from "./generateCode"
 
 if (argv.in !== undefined && argv.out !== undefined) {
   const inputFile = argv.in as string
@@ -19,7 +19,7 @@ if (argv.in !== undefined && argv.out !== undefined) {
 
 function generateFile(inputFile: string, outputFile: string) {
   const yaml = fs.readFileSync(inputFile, "utf8")
-  const code = generateModels(yaml)
+  const code = generateCode(yaml)
   fs.mkdirSync(path.dirname(outputFile), { recursive: true })
   fs.writeFileSync(outputFile, code)
 }

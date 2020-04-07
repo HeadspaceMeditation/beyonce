@@ -1,6 +1,7 @@
 import { GSIBuilder } from "./GSI"
 import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
+import { ModelType } from "./types"
 
 export class Table {
   readonly tableName: string
@@ -21,8 +22,8 @@ export class Table {
     this.addToEncryptionBlacklist(this.sortKeyName)
   }
 
-  model<T>(): PartitionKeyBuilder<T> {
-    return new PartitionKeyBuilder<T>(this)
+  model<T extends ModelType>(modelType: T["model"]): PartitionKeyBuilder<T> {
+    return new PartitionKeyBuilder(this, modelType)
   }
 
   partition<T extends Model<any, any, any>, U extends Model<any, any, any>>(

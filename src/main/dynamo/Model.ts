@@ -1,17 +1,15 @@
 import { PartitionAndSortKey, PartitionKey } from "./keys"
 import { Table } from "./Table"
+import { ModelType } from "./types"
 
-export class Model<
-  T extends Record<string, any>,
-  U extends keyof T,
-  V extends keyof T
-> {
+export class Model<T extends ModelType, U extends keyof T, V extends keyof T> {
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
     private partitionKeyField: U,
     private sortKeyPrefix: string,
-    private sortKeyField: V
+    private sortKeyField: V,
+    private modelTag: string
   ) {}
 
   key(
@@ -40,21 +38,27 @@ export class Model<
     )
   }
 
-  create(fields: T) {
+  create(fields: Omit<T, "model">) {
     const {
       partitionKeyPrefix,
       sortKeyPrefix,
       partitionKeyField,
       sortKeyField,
+      modelTag,
     } = this
 
-    const pk = this.buildKey(partitionKeyPrefix, fields[partitionKeyField])
-    const sk = this.buildKey(sortKeyPrefix, fields[sortKeyField])
+    const fieldsWithTag = { ...fields, model: modelTag } as T
+
+    const pk = this.buildKey(
+      partitionKeyPrefix,
+      fieldsWithTag[partitionKeyField]
+    )
+    const sk = this.buildKey(sortKeyPrefix, fieldsWithTag[sortKeyField])
 
     return {
       [this.table.partitionKeyName]: pk,
       [this.table.sortKeyName]: sk,
-      ...fields,
+      ...fieldsWithTag,
     }
   }
 
@@ -63,21 +67,27 @@ export class Model<
   }
 }
 
-export class PartitionKeyBuilder<T> {
-  constructor(private table: Table) {}
+export class PartitionKeyBuilder<T extends ModelType> {
+  constructor(private table: Table, private modelTag: string) {}
   partitionKey<U extends keyof T>(
     prefix: string,
     partitionKeyField: U
   ): SortKeyBuilder<T, U> {
-    return new SortKeyBuilder(this.table, prefix, partitionKeyField)
+    return new SortKeyBuilder(
+      this.table,
+      prefix,
+      partitionKeyField,
+      this.modelTag
+    )
   }
 }
 
-export class SortKeyBuilder<T, U extends keyof T> {
+export class SortKeyBuilder<T extends ModelType, U extends keyof T> {
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
-    private partitionKeyField: U
+    private partitionKeyField: U,
+    private modelTag: string
   ) {}
 
   sortKey<V extends keyof T>(prefix: string, sortKeyField: V): Model<T, U, V> {
@@ -86,7 +96,8 @@ export class SortKeyBuilder<T, U extends keyof T> {
       this.partitionKeyPrefix,
       this.partitionKeyField,
       prefix,
-      sortKeyField
+      sortKeyField,
+      this.modelTag
     )
   }
 }
