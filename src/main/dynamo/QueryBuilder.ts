@@ -2,8 +2,8 @@ import { DynamoDB } from "aws-sdk"
 import { PartitionKey } from "./keys"
 import { Table } from "./Table"
 import { KeysOf } from "../typeUtils"
-import { JayZConfig } from "./JayZConfig"
 import { decryptOrPassThroughItem, toJSON } from "./util"
+import { JayZ } from "@ginger.io/jay-z"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
@@ -11,7 +11,7 @@ type TableQueryParams<T> = {
   db: DynamoDB.DocumentClient
   table: Table
   pk: PartitionKey<T>
-  jayz?: JayZConfig
+  jayz?: JayZ
 }
 
 type GSIQueryParams<T> = {
@@ -19,7 +19,7 @@ type GSIQueryParams<T> = {
   table: Table
   gsiName: string
   gsiPk: PartitionKey<T>
-  jayz?: JayZConfig
+  jayz?: JayZ
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
@@ -58,18 +58,29 @@ export class QueryBuilder<T extends Record<string, any>> {
   }
 
   async exec(): Promise<T[]> {
-    const { Items: items } = await this.config.db.query(this.build()).promise()
+    const { db } = this.config
+    const items: DynamoDB.DocumentClient.ItemList = []
+    let pendingQuery:
+      | Promise<DynamoDB.DocumentClient.QueryOutput>
+      | undefined = this.config.db.query(this.build()).promise()
 
-    if (items !== undefined) {
-      const jsonItems = items.map(async (_) => {
-        const item = await decryptOrPassThroughItem(this.config.jayz, _)
-        return toJSON<T>(item)
-      })
+    while (pendingQuery !== undefined) {
+      const response: DynamoDB.DocumentClient.QueryOutput = await pendingQuery
+      items.push(...(response.Items || []))
 
-      return Promise.all(jsonItems)
-    } else {
-      return []
+      if (response.LastEvaluatedKey !== undefined) {
+        pendingQuery = db.query(this.build(response.LastEvaluatedKey)).promise()
+      } else {
+        pendingQuery = undefined
+      }
     }
+
+    const jsonItems = items.map(async (_) => {
+      const item = await decryptOrPassThroughItem(this.config.jayz, _)
+      return toJSON<T>(item)
+    })
+
+    return Promise.all(jsonItems)
   }
 
   private addCondition(params: {
@@ -90,7 +101,9 @@ export class QueryBuilder<T extends Record<string, any>> {
     this.filterExp.push(expression.join(" "))
   }
 
-  private build(): DynamoDB.DocumentClient.QueryInput {
+  private build(
+    lastEvaluatedKey?: DynamoDB.DocumentClient.Key | undefined
+  ): DynamoDB.DocumentClient.QueryInput {
     const filter = this.filterExp.join(" ")
     const filterExp = filter !== "" ? filter : undefined
     const attributes = this.attributes.getSubstitutions()
@@ -110,6 +123,7 @@ export class QueryBuilder<T extends Record<string, any>> {
         ExpressionAttributeNames: attributes,
         ExpressionAttributeValues: variables,
         FilterExpression: filterExp,
+        ExclusiveStartKey: lastEvaluatedKey,
       }
     } else {
       const { table, gsiPk } = this.config
@@ -126,6 +140,7 @@ export class QueryBuilder<T extends Record<string, any>> {
         ExpressionAttributeNames: attributes,
         ExpressionAttributeValues: variables,
         FilterExpression: filterExp,
+        ExclusiveStartKey: lastEvaluatedKey,
       }
     }
   }
