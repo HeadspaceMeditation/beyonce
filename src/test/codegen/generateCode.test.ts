@@ -128,6 +128,7 @@ Tables:
   expect(result).toContain(`const modelByIdGSI = LibraryTable.gsi("modelById")
   .models([AuthorModel, BookModel])
   .partitionKey("model")
+  .sortKey("id")
 `)
 })
 
@@ -189,7 +190,8 @@ Tables:
   expect(result)
     .toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
   .models([AuthorModel, BookModel])
-  .partitionKey("sk")`)
+  .partitionKey("sk")
+  .sortKey("pk")`)
 })
 
 it("should import external TypeScript types from a package", () => {

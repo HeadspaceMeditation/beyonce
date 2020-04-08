@@ -1,8 +1,8 @@
+import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { PartitionAndSortKey, PartitionKey } from "./keys"
-import { Table } from "./Table"
-import { JayZConfig } from "./JayZConfig"
 import { QueryBuilder } from "./QueryBuilder"
+import { Table } from "./Table"
 import {
   decryptOrPassThroughItem,
   encryptOrPassThroughItems,
@@ -11,7 +11,7 @@ import {
 } from "./util"
 
 export type Options = {
-  jayz?: JayZConfig
+  jayz?: JayZ
 }
 
 export type ExtractKeyType<T> = T extends PartitionAndSortKey<infer U>
@@ -23,7 +23,7 @@ export type ExtractKeyType<T> = T extends PartitionAndSortKey<infer U>
  */
 export class Beyonce {
   private client: DynamoDB.DocumentClient
-  private jayz?: JayZConfig
+  private jayz?: JayZ
 
   constructor(private table: Table, dynamo: DynamoDB, options: Options = {}) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
@@ -144,7 +144,12 @@ export class Beyonce {
   private async maybeEncryptItems<T extends Record<string, any>>(
     item: T
   ): Promise<MaybeEncryptedItems<T>> {
-    const maybeEncryptedItems = await encryptOrPassThroughItems(this.jayz, item)
-    return maybeEncryptedItems
+    const { jayz, table } = this
+
+    return await encryptOrPassThroughItems(
+      jayz,
+      item,
+      table.getEncryptionBlacklist()
+    )
   }
 }

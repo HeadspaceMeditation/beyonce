@@ -231,10 +231,7 @@ const jayZ = new JayZ({ keyProvider })
 const beyonce = new Beyonce(
   LibraryTable,
   dynamo,
-  {
-    jayz,
-    encryptionBlacklist: LibraryTable.getEncryptionBlacklist()
-  }
+  { jayz }
 )
 ```
 
