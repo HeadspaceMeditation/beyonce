@@ -235,6 +235,11 @@ const beyonce = new Beyonce(
 )
 ```
 
+### Important note on Querying with Jay-Z enabled
+
+Because Jay-Z performs encryption at the application level, DynamoDB query operations
+occur _before_ decryption. Put plainly, this means you _can't_ filter `.query` calls using any attribute that isn't a partition or sort key.
+
 ## Things beyonce should do, but doesn't (yet)
 
 1. Support the full range of Dynamo filter expressions
