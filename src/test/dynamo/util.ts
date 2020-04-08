@@ -2,7 +2,7 @@ import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import * as LocalDynamo from "dynamodb-local"
 import { Beyonce } from "../../main/dynamo/Beyonce"
-import { Table } from "../../main/dynamo/Table"
+import { table } from "./models"
 
 beforeAll(async () => LocalDynamo.launch(dynamoDBPort))
 afterAll(async () => LocalDynamo.stop(dynamoDBPort))
@@ -10,6 +10,7 @@ afterAll(async () => LocalDynamo.stop(dynamoDBPort))
 export const dynamoDBPort = 9000
 
 export async function setup(jayz?: JayZ): Promise<Beyonce> {
+  const { tableName } = table
   const client = new DynamoDB({
     endpoint: `http://localhost:${dynamoDBPort}`,
     region: "us-west-2", // silly, but still need to specify region for LocalDynamo
@@ -17,13 +18,6 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
   // DynamoDB Local runs as an external http server, so we need to clear
   // the table from previous test runs
-  const tableName = "TestTable"
-
-  const table = new Table({
-    name: tableName,
-    partitionKeyName: "pk",
-    sortKeyName: "sk",
-  })
 
   const { TableNames: tables } = await client.listTables().promise()
   if (tables !== undefined && tables.indexOf(tableName) !== -1) {
@@ -74,15 +68,5 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
     })
     .promise()
 
-  const jayzConfig =
-    jayz !== undefined
-      ? {
-          client: jayz,
-          encryptionBlacklist: new Set(["pk", "sk", "model", "name", "id"]),
-        }
-      : undefined
-
-  return new Beyonce(table, client, {
-    jayz: jayzConfig,
-  })
+  return new Beyonce(table, client, { jayz })
 }

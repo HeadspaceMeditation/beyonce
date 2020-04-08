@@ -26,13 +26,15 @@ function generateGSIsForTable(table: Table): string {
     })
   })
 
-  const gsis = table.gsis.map(({ name, partitionKey }) => {
+  const gsis = table.gsis.map(({ name, partitionKey, sortKey }) => {
     const pk = partitionKey.replace("$", "")
+    const sk = sortKey.replace("$", "")
     const models = fieldToModels[pk].map((_) => `${_}Model`).join(", ")
 
     return `const ${name}GSI = ${table.name}Table.gsi("${name}")
       .models([${models}])
       .partitionKey("${pk}")
+      .sortKey("${sk}")
     `
   })
 
