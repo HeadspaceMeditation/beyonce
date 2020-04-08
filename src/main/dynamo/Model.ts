@@ -56,9 +56,9 @@ export class Model<T extends ModelType, U extends keyof T, V extends keyof T> {
     const sk = this.buildKey(sortKeyPrefix, fieldsWithTag[sortKeyField])
 
     return {
+      ...fieldsWithTag,
       [this.table.partitionKeyName]: pk,
       [this.table.sortKeyName]: sk,
-      ...fieldsWithTag,
     }
   }
 
