@@ -7,8 +7,10 @@ import {
   MusicianModel,
   MusicianPartition,
   SongModel,
+  Song,
 } from "./models"
 import { setup } from "./util"
+import crypto from "crypto"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -22,6 +24,10 @@ describe("Beyonce", () => {
 
   it("should filter items when querying", async () => {
     await testQueryWithFilter()
+  })
+
+  it("should paginate query results", async () => {
+    await testQueryWithPaginatedResults()
   })
 
   it("should batchGet items", async () => {
@@ -50,6 +56,11 @@ describe("Beyonce", () => {
   it("should put and retrieve multiple items using just pk with jayZ", async () => {
     const jayZ = await aJayZ()
     await testPutAndRetrieveMultipleItems(jayZ)
+  })
+
+  it("should paginate query results with jayz", async () => {
+    const jayZ = await aJayZ()
+    await testQueryWithPaginatedResults(jayZ)
   })
 
   it("should filter items when querying with jayZ", async () => {
@@ -96,6 +107,28 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
 
   const result = await db.query(MusicianModel.key({ id: musician.id })).exec()
   expect(result).toEqual([musician, song1, song2])
+}
+
+async function testQueryWithPaginatedResults(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+
+  // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
+  // Thus the following items comprise at least 100kb * 25 = ~2.5MB of data
+  // i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
+  const base64MP3 = crypto.randomBytes(100_000).toString("ascii")
+  const songs: Song[] = [...Array(25).keys()].map((songId) =>
+    SongModel.create({
+      musicianId: "1",
+      id: songId.toString(),
+      title: `Song ${songId}`,
+      base64MP3,
+    })
+  )
+
+  await Promise.all(songs.map((song) => db.put(song)))
+
+  const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
+  expect(results.length).toEqual(songs.length)
 }
 
 async function testQueryWithFilter(jayZ?: JayZ) {

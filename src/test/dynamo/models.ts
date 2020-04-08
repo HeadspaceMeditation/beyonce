@@ -22,6 +22,7 @@ export interface Song {
   musicianId: string
   id: string
   title: string
+  base64MP3: string // used to test "large" objects, e.g. for paginated results
 }
 
 export const MusicianModel = table
@@ -58,12 +59,14 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
     musicianId: "1",
     id: "2",
     title: "Buffalo Soldier",
+    base64MP3: "fake-data",
   })
 
   const song2 = SongModel.create({
     musicianId: "1",
     id: "3",
     title: "No Woman, No Cry",
+    base64MP3: "fake-data",
   })
 
   return [musician, song1, song2]
