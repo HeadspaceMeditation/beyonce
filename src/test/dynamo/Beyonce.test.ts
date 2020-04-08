@@ -100,7 +100,7 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 }
 
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
-  const db = await setup()
+  const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
@@ -132,18 +132,17 @@ async function testQueryWithPaginatedResults(jayZ?: JayZ) {
 }
 
 async function testQueryWithFilter(jayZ?: JayZ) {
-  const db = await setup()
+  const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
 
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
     .query(MusicianPartition.key({ id: musician.id }))
-    .attributeNotExists("title")
-    .or("title", "=", "Buffalo Soldier")
+    .where("model", "=", ModelType.Song)
     .exec()
 
-  expect(result).toEqual([musician, song1])
+  expect(result).toEqual([song1, song2])
 }
 
 async function testBatchGet(jayZ?: JayZ) {
