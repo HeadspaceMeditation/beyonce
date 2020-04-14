@@ -20,7 +20,7 @@ function generateEncryptionBlacklist(table: Table): string {
   const encryptionBlacklistSet = new Set<string>()
 
   table.partitions
-    .flatMap(({ models }) => models)
+    .flatMap((_) => _.models)
     .forEach((model) => {
       const [, pk] = model.keys.partitionKey
       const [, sk] = model.keys.sortKey
