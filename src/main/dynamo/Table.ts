@@ -12,7 +12,8 @@ export class Table {
   constructor(config: {
     name: string
     partitionKeyName: string
-    sortKeyName: string
+    sortKeyName: string,
+    encryptionBlacklist?: string[]
   }) {
     this.tableName = config.name
     this.partitionKeyName = config.partitionKeyName
@@ -20,6 +21,9 @@ export class Table {
 
     this.addToEncryptionBlacklist(this.partitionKeyName)
     this.addToEncryptionBlacklist(this.sortKeyName)
+
+    const encryptionBlacklist = config.encryptionBlacklist || []
+    encryptionBlacklist.forEach(this.addToEncryptionBlacklist)
   }
 
   model<T extends ModelType>(modelType: T["model"]): PartitionKeyBuilder<T> {

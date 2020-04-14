@@ -18,7 +18,8 @@ Tables:
 export const LibraryTable = new Table({
   name: "Library",
   partitionKeyName: "pk",
-  sortKeyName: "sk"
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id"]
 })
 
 export enum ModelType {
@@ -66,7 +67,8 @@ Tables:
 export const LibraryTable = new Table({
   name: "Library",
   partitionKeyName: "pk",
-  sortKeyName: "sk"
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "authorId"]
 })
 
 export enum ModelType {
@@ -98,6 +100,116 @@ export const BookModel = LibraryTable.model<Book>(ModelType.Book)
 export type Model = Author | Book
 
 export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
+`)
+})
+
+it("should generate multiple tables with simple models", () => {
+  const result = generateCode(`
+Tables:
+  Library:
+    Partitions:
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $userId]
+          id: string
+          name: string
+          userId: string
+  AnotherLibrary:
+    Partitions:
+      AnotherAuthors:
+        AnotherAuthor:
+          partitionKey: [AnotherAuthor, $anotherId]
+          sortKey: [AnotherAuthor, $anotherUserId]
+          id: string
+          name: string
+          anotherUserId: string
+`)
+
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "userId"]
+})
+
+export const AnotherLibraryTable = new Table({
+  name: "AnotherLibrary",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["anotherId", "anotherUserId"]
+})
+
+export enum ModelType {
+  Author = "Author",
+  AnotherAuthor = "AnotherAuthor"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+  userId: string
+}
+
+export interface AnotherAuthor {
+  model: ModelType.AnotherAuthor
+  id: string
+  name: string
+  anotherUserId: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "userId")
+
+export const AnotherAuthorModel = AnotherLibraryTable.model<AnotherAuthor>(
+  ModelType.AnotherAuthor
+)
+  .partitionKey("AnotherAuthor", "anotherId")
+  .sortKey("AnotherAuthor", "anotherUserId")
+
+export type Model = Author | AnotherAuthor
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel])
+export const AnotherAuthorsPartition = AnotherLibraryTable.partition([
+  AnotherAuthorModel
+])
+`)
+})
+
+it("should generate table, add partition and sork key to encryption blacklist", () => {
+  const result = generateCode(`
+Tables:
+  Library:
+    Partitions:
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $id]
+          sortKey: [Book, $id]
+          id: string
+          name: string
+
+    GSIs:
+      modelById:
+        partitionKey: $model
+        sortKey: $id
+`)
+
+  expect(result).toContain(`export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "model"]
+})
 `)
 })
 
