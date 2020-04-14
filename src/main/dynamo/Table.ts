@@ -24,7 +24,7 @@ export class Table {
       "__jayz__metadata",
       this.partitionKeyName,
       this.sortKeyName,
-      ...config.encryptionBlacklist!])
+      ...config.encryptionBlacklist ?? []])
   }
 
   model<T extends ModelType>(modelType: T["model"]): PartitionKeyBuilder<T> {

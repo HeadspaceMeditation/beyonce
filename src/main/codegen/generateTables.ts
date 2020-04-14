@@ -1,4 +1,4 @@
-import { Table } from "./types"
+import { Model, Table } from "./types"
 
 export function generateTables(tables: Table[]): string {
   const tableCode = tables.map((table) => {
@@ -19,16 +19,16 @@ export function generateTables(tables: Table[]): string {
 function generateEncryptionBlacklist(table: Table): string {
   const encryptionBlacklistSet = new Set<string>()
 
-  const models = table.partitions.flatMap(({ models }) => models)
-
-  models.forEach((model) => {
-    const [, pk] = model.keys.partitionKey
-    const [, sk] = model.keys.sortKey
-    encryptionBlacklistSet.add(pk.replace("$", ""))
-    encryptionBlacklistSet.add(sk.replace("$", ""))
+  table.partitions.forEach(({ models }) => {
+    models.forEach(model => {
+      const [, pk] = model.keys.partitionKey
+      const [, sk] = model.keys.sortKey
+      encryptionBlacklistSet.add(pk.replace("$", ""))
+      encryptionBlacklistSet.add(sk.replace("$", ""))
+    })
   })
 
-  table.gsis.forEach(({ name, partitionKey, sortKey })=>{
+  table.gsis.forEach(({ name, partitionKey, sortKey }) => {
     encryptionBlacklistSet.add(partitionKey.replace("$", ""))
     encryptionBlacklistSet.add(sortKey.replace("$", ""))
   })
