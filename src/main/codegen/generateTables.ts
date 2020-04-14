@@ -2,7 +2,7 @@ import { Table } from "./types"
 
 export function generateTables(tables: Table[]): string {
   const tableCode = tables.map((table) => {
-    const encryptionBlacklist = generateEncryptionBlacklistParams(table)
+    const encryptionBlacklist = generateEncryptionBlacklist(table)
     return `
       export const ${table.name}Table = new Table({
           name: "${table.name}",
@@ -16,8 +16,8 @@ export function generateTables(tables: Table[]): string {
   return tableCode.join("\n\n")
 }
 
-function generateEncryptionBlacklistParams(table: Table): string {
-  const encryptionBlacklistSet = new Set()
+function generateEncryptionBlacklist(table: Table): string {
+  const encryptionBlacklistSet = new Set<string>()
 
   const models = table.partitions.flatMap(({ models }) => models)
 

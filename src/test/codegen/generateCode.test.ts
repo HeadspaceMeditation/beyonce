@@ -115,15 +115,15 @@ Tables:
           id: string
           name: string
           userId: string
-  AnotherLibrary:
+  Music:
     Partitions:
-      AnotherAuthors:
-        AnotherAuthor:
-          partitionKey: [AnotherAuthor, $anotherId]
-          sortKey: [AnotherAuthor, $anotherUserId]
+      Musicians:
+        Musician:
+          partitionKey: [Musician, $id]
+          sortKey: [Musician, $musicianId]
           id: string
           name: string
-          anotherUserId: string
+          musicianId: string
 `)
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
@@ -135,16 +135,16 @@ export const LibraryTable = new Table({
   encryptionBlacklist: ["id", "userId"]
 })
 
-export const AnotherLibraryTable = new Table({
-  name: "AnotherLibrary",
+export const MusicTable = new Table({
+  name: "Music",
   partitionKeyName: "pk",
   sortKeyName: "sk",
-  encryptionBlacklist: ["anotherId", "anotherUserId"]
+  encryptionBlacklist: ["id", "musicianId"]
 })
 
 export enum ModelType {
   Author = "Author",
-  AnotherAuthor = "AnotherAuthor"
+  Musician = "Musician"
 }
 
 export interface Author {
@@ -154,29 +154,25 @@ export interface Author {
   userId: string
 }
 
-export interface AnotherAuthor {
-  model: ModelType.AnotherAuthor
+export interface Musician {
+  model: ModelType.Musician
   id: string
   name: string
-  anotherUserId: string
+  musicianId: string
 }
 
 export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
   .partitionKey("Author", "id")
   .sortKey("Author", "userId")
 
-export const AnotherAuthorModel = AnotherLibraryTable.model<AnotherAuthor>(
-  ModelType.AnotherAuthor
-)
-  .partitionKey("AnotherAuthor", "anotherId")
-  .sortKey("AnotherAuthor", "anotherUserId")
+export const MusicianModel = MusicTable.model<Musician>(ModelType.Musician)
+  .partitionKey("Musician", "id")
+  .sortKey("Musician", "musicianId")
 
-export type Model = Author | AnotherAuthor
+export type Model = Author | Musician
 
 export const AuthorsPartition = LibraryTable.partition([AuthorModel])
-export const AnotherAuthorsPartition = AnotherLibraryTable.partition([
-  AnotherAuthorModel
-])
+export const MusiciansPartition = MusicTable.partition([MusicianModel])
 `)
 })
 

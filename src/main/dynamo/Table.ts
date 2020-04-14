@@ -7,7 +7,7 @@ export class Table {
   readonly tableName: string
   readonly partitionKeyName: string
   readonly sortKeyName: string
-  private encryptionBlacklist = new Set<string>(["model", "__jayz__metadata"])
+  private encryptionBlacklist: Set<string>
 
   constructor(config: {
     name: string
@@ -19,11 +19,12 @@ export class Table {
     this.partitionKeyName = config.partitionKeyName
     this.sortKeyName = config.sortKeyName
 
-    this.addToEncryptionBlacklist(this.partitionKeyName)
-    this.addToEncryptionBlacklist(this.sortKeyName)
-
-    const encryptionBlacklist = config.encryptionBlacklist || []
-    encryptionBlacklist.forEach(this.addToEncryptionBlacklist)
+    this.encryptionBlacklist = new Set([
+      "model",
+      "__jayz__metadata",
+      this.partitionKeyName,
+      this.sortKeyName,
+      ...config.encryptionBlacklist!])
   }
 
   model<T extends ModelType>(modelType: T["model"]): PartitionKeyBuilder<T> {
