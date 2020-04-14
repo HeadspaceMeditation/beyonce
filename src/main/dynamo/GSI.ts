@@ -3,13 +3,15 @@ import { Model } from "./Model"
 import { Table } from "./Table"
 import { ExtractFields } from "./types"
 
+type StringKey<T> = keyof ExtractFields<T> & string
+
 export class GSI<T extends Model<any, any, any>> {
   constructor(
     private table: Table,
     readonly name: string,
     private models: T[],
-    private partitionKeyName: keyof ExtractFields<T>,
-    private sortKeyName: keyof ExtractFields<T>
+    private partitionKeyName: StringKey<T>,
+    private sortKeyName: StringKey<T>
   ) {
     this.table.addToEncryptionBlacklist(this.partitionKeyName)
     this.table.addToEncryptionBlacklist(this.sortKeyName)
@@ -29,7 +31,7 @@ export class GSIBuilder {
 }
 
 class GSIKeyBuilder<T extends Model<any, any, any>> {
-  private partitionKeyName?: keyof ExtractFields<T>
+  private partitionKeyName?: StringKey<T>
 
   constructor(
     private table: Table,
@@ -37,12 +39,12 @@ class GSIKeyBuilder<T extends Model<any, any, any>> {
     private models: T[]
   ) {}
 
-  partitionKey(partitionKeyName: keyof ExtractFields<T>): this {
+  partitionKey(partitionKeyName: StringKey<T>): this {
     this.partitionKeyName = partitionKeyName
     return this
   }
 
-  sortKey(sortKeyName: keyof ExtractFields<T>): GSI<T> {
+  sortKey(sortKeyName: StringKey<T>): GSI<T> {
     return new GSI(
       this.table,
       this.name,

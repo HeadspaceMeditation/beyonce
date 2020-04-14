@@ -18,7 +18,8 @@ Tables:
 export const LibraryTable = new Table({
   name: "Library",
   partitionKeyName: "pk",
-  sortKeyName: "sk"
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id"]
 })
 
 export enum ModelType {
@@ -66,7 +67,8 @@ Tables:
 export const LibraryTable = new Table({
   name: "Library",
   partitionKeyName: "pk",
-  sortKeyName: "sk"
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "authorId"]
 })
 
 export enum ModelType {
@@ -98,6 +100,112 @@ export const BookModel = LibraryTable.model<Book>(ModelType.Book)
 export type Model = Author | Book
 
 export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
+`)
+})
+
+it("should generate multiple tables with simple models", () => {
+  const result = generateCode(`
+Tables:
+  Library:
+    Partitions:
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $userId]
+          id: string
+          name: string
+          userId: string
+  Music:
+    Partitions:
+      Musicians:
+        Musician:
+          partitionKey: [Musician, $id]
+          sortKey: [Musician, $musicianId]
+          id: string
+          name: string
+          musicianId: string
+`)
+
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "userId"]
+})
+
+export const MusicTable = new Table({
+  name: "Music",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "musicianId"]
+})
+
+export enum ModelType {
+  Author = "Author",
+  Musician = "Musician"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+  userId: string
+}
+
+export interface Musician {
+  model: ModelType.Musician
+  id: string
+  name: string
+  musicianId: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "userId")
+
+export const MusicianModel = MusicTable.model<Musician>(ModelType.Musician)
+  .partitionKey("Musician", "id")
+  .sortKey("Musician", "musicianId")
+
+export type Model = Author | Musician
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel])
+export const MusiciansPartition = MusicTable.partition([MusicianModel])
+`)
+})
+
+it("should generate table, add partition and sork key to encryption blacklist", () => {
+  const result = generateCode(`
+Tables:
+  Library:
+    Partitions:
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $id]
+          sortKey: [Book, $id]
+          id: string
+          name: string
+
+    GSIs:
+      modelById:
+        partitionKey: $model
+        sortKey: $id
+`)
+
+  expect(result).toContain(`export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "model"]
+})
 `)
 })
 
