@@ -17,7 +17,6 @@ export async function encryptOrPassThroughItems<T extends Record<string, any>>(
     const fieldsToEncrypt = Object.keys(item).filter(
       (_) => !encryptionBlacklist.has(_)
     )
-    const f = jayz.encryptItem(item, fieldsToEncrypt)
     return jayz.encryptItem(item, fieldsToEncrypt)
   } else {
     return item
