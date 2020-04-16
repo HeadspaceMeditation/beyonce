@@ -1,5 +1,4 @@
 import { Table } from "../../main/dynamo/Table"
-import { Model } from "../../main/dynamo/Model"
 
 export const table = new Table({
   name: "TestTable",
