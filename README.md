@@ -137,12 +137,12 @@ Note: the key `prefix` ("Author" from our earlier example) will be automatically
 ```TypeScript
 import { AuthorPartition } from "generated/models"
 
-// Get an Author + their books ( inferred type: (Author | Book)[] )
+// Get an Author + their books
 const authorWithBooks = await beyonce
   .query(AuthorPartition.key({ id: "1" }))
-  .exec()
+  .exec() // returns { author: Author[], book: Book[] }
 
-// Get an Author + filter on their books (inferred type: (Author | Book)[] )
+// Get an Author + filter on their books
 const authorWithFilteredBooks = await beyonce
   .query(AuthorPartition.key({ id: "1" }))
   .attributeNotExists("title") // type-safe fields
@@ -150,19 +150,19 @@ const authorWithFilteredBooks = await beyonce
   .exec()
 ```
 
-The return types of the above queries are automatically inferred as `Author | Book`. And when processing
-results you can easily determine which type of model you're dealing with via the `model` attribute beyonce
-codegens onto your models.
+The return types of the above queries are automatically inferred as `{ author: Author[], book: Book[] }`. When processing
+results, you can easily determine which type of model you're dealing with via the `model` attribute, which Beyoncé
+automatically adds to your models.
 
 ```TypeScript
 import { ModelType } from "generated/models"
 
-authorWithBooks.forEach(authorOrBook => {
-  if (authorOrBook.model === ModelType.Author) {
-    // do something with an Author model
-  } else if (authorOrBook.model == ModelType.Book) {
-    // do something with a Book model
-  }
+const authorOrBook: Author | Book  = ...
+
+if (authorOrBook.model === ModelType.Author) {
+  // do something with an Author model
+} else if (authorOrBook.model == ModelType.Book) {
+  // do something with a Book model
 }
 ```
 
@@ -179,7 +179,7 @@ const prideAndPrejudice = await beyonce
 ### BatchGet
 
 ```TypeScript
-// Batch get several items (inferred type: (Author | Book)[])
+// Batch get several items
 const batchResults = await beyonce.batchGet({
   keys: [
     // Get 2 authors
@@ -191,6 +191,9 @@ const batchResults = await beyonce.batchGet({
     Book.key({ authorId: "2" id: "2" })
   ]
 })
+
+// And the return type is:
+// { author: Author[], book: Book[] }
 ```
 
 ### BatchPutWithTransaction

@@ -106,7 +106,7 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db.query(MusicianModel.key({ id: musician.id })).exec()
-  expect(result).toEqual([musician, song1, song2])
+  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
 }
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
@@ -128,7 +128,7 @@ async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   await Promise.all(songs.map((song) => db.put(song)))
 
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
-  expect(results.length).toEqual(songs.length)
+  expect(results.song.length).toEqual(songs.length)
 }
 
 async function testQueryWithFilter(jayZ?: JayZ) {
@@ -142,7 +142,7 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .where("model", "=", ModelType.Song)
     .exec()
 
-  expect(result).toEqual([song1, song2])
+  expect(result).toEqual({ song: [song1, song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {
@@ -159,8 +159,11 @@ async function testBatchGet(jayZ?: JayZ) {
     ],
   })
 
-  sortById(results)
-  expect(results).toEqual([musician, song1, song2])
+  sortById(results.song)
+  expect(results).toEqual({
+    musician: [musician],
+    song: [song1, song2],
+  })
 }
 
 async function testGSIByModel(jayZ?: JayZ) {
@@ -173,7 +176,7 @@ async function testGSIByModel(jayZ?: JayZ) {
     .queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song))
     .exec()
 
-  expect(result).toEqual([song1, song2])
+  expect(result).toEqual({ song: [song1, song2] })
 }
 
 async function testGSIByName(jayZ?: JayZ) {
@@ -186,7 +189,7 @@ async function testGSIByName(jayZ?: JayZ) {
     .queryGSI(byNameAndIdGSI.name, byNameAndIdGSI.key(musician.name))
     .exec()
 
-  expect(result).toEqual([musician])
+  expect(result).toEqual({ musician: [musician] })
 }
 
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
@@ -199,8 +202,11 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
     .query(MusicianPartition.key({ id: musician.id }))
     .exec()
 
-  sortById(results)
-  expect(results).toEqual([musician, song1, song2])
+  sortById(results.song)
+  expect(results).toEqual({
+    musician: [musician],
+    song: [song1, song2],
+  })
 }
 
 function sortById<T extends { id: string }>(items: T[]): T[] {
