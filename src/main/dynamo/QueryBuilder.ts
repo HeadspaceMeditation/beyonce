@@ -1,9 +1,11 @@
+import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import { KeysOf } from "../typeUtils"
+import { groupModelsByType } from "./groupModelsByType"
 import { PartitionKey } from "./keys"
 import { Table } from "./Table"
-import { KeysOf } from "../typeUtils"
+import { GroupedModels, TaggedModel } from "./types"
 import { decryptOrPassThroughItem, toJSON } from "./util"
-import { JayZ } from "@ginger.io/jay-z"
 
 type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
@@ -23,7 +25,7 @@ type GSIQueryParams<T> = {
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T extends Record<string, any>> {
+export class QueryBuilder<T extends TaggedModel> {
   private filterExp: string[] = []
   private attributes = new Attributes()
   private variables = new Variables()
@@ -57,7 +59,7 @@ export class QueryBuilder<T extends Record<string, any>> {
     return this
   }
 
-  async exec(): Promise<T[]> {
+  async exec(): Promise<GroupedModels<T>> {
     const { db } = this.config
     const items: DynamoDB.DocumentClient.ItemList = []
     let pendingQuery:
@@ -75,12 +77,13 @@ export class QueryBuilder<T extends Record<string, any>> {
       }
     }
 
-    const jsonItems = items.map(async (_) => {
+    const jsonItemPromises = items.map(async (_) => {
       const item = await decryptOrPassThroughItem(this.config.jayz, _)
       return toJSON<T>(item)
     })
 
-    return Promise.all(jsonItems)
+    const jsonItems = await Promise.all(jsonItemPromises)
+    return groupModelsByType(jsonItems)
   }
 
   private addCondition(params: {

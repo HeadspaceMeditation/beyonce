@@ -1,4 +1,5 @@
 import { Table } from "../../main/dynamo/Table"
+import { Model } from "../../main/dynamo/Model"
 
 export const table = new Table({
   name: "TestTable",
@@ -70,4 +71,19 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   })
 
   return [musician, song1, song2]
+}
+
+type GroupedModels<T extends { model: string }> = {
+  [K in T["model"]]: T extends { model: K } ? T : never
+}
+
+const models = aMusicianWithTwoSongs()
+const result = groupByModel(models)
+result.musician
+result.song
+
+function groupByModel<K extends string, T extends { model: K }>(
+  items: T[]
+): GroupedModels<T> {
+  return {} as GroupedModels<T>
 }

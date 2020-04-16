@@ -1,7 +1,7 @@
 import { GSIBuilder } from "./GSI"
 import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
-import { ModelType } from "./types"
+import { TaggedModel } from "./types"
 
 export class Table {
   readonly tableName: string
@@ -12,7 +12,7 @@ export class Table {
   constructor(config: {
     name: string
     partitionKeyName: string
-    sortKeyName: string,
+    sortKeyName: string
     encryptionBlacklist?: string[]
   }) {
     this.tableName = config.name
@@ -24,10 +24,11 @@ export class Table {
       "__jayz__metadata",
       this.partitionKeyName,
       this.sortKeyName,
-      ...config.encryptionBlacklist ?? []])
+      ...(config.encryptionBlacklist ?? []),
+    ])
   }
 
-  model<T extends ModelType>(modelType: T["model"]): PartitionKeyBuilder<T> {
+  model<T extends TaggedModel>(modelType: T["model"]): PartitionKeyBuilder<T> {
     return new PartitionKeyBuilder(this, modelType)
   }
 

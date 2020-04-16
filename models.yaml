@@ -1,0 +1,16 @@
+Tables:
+  Library:
+    Partitions: # A "partition" is a set of models with the same partition key
+      Authors: # e.g. this one contains Authors + Books
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, $id]
+          id: string
+          name: string
+
+        Book:
+          partitionKey: [Author, $authorId]
+          sortKey: [Book, $id]
+          id: string
+          authorId: string
+          name: string
