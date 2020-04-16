@@ -1,8 +1,12 @@
 import { PartitionAndSortKey, PartitionKey } from "./keys"
 import { Table } from "./Table"
-import { ModelType } from "./types"
+import { TaggedModel } from "./types"
 
-export class Model<T extends ModelType, U extends keyof T, V extends keyof T> {
+export class Model<
+  T extends TaggedModel,
+  U extends keyof T,
+  V extends keyof T
+> {
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
@@ -67,7 +71,7 @@ export class Model<T extends ModelType, U extends keyof T, V extends keyof T> {
   }
 }
 
-export class PartitionKeyBuilder<T extends ModelType> {
+export class PartitionKeyBuilder<T extends TaggedModel> {
   constructor(private table: Table, private modelTag: string) {}
   partitionKey<U extends keyof T>(
     prefix: string,
@@ -82,7 +86,7 @@ export class PartitionKeyBuilder<T extends ModelType> {
   }
 }
 
-export class SortKeyBuilder<T extends ModelType, U extends keyof T> {
+export class SortKeyBuilder<T extends TaggedModel, U extends keyof T> {
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
