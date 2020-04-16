@@ -1,4 +1,4 @@
-import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
+import { JayZ, FixedDataKeyProvider } from "@ginger.io/jay-z"
 import crypto from "crypto"
 import {
   aMusicianWithTwoSongs,
@@ -49,42 +49,42 @@ describe("Beyonce", () => {
 
   // With JayZ encryption
   it("should put and retrieve an item using pk + sk with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testPutAndRetrieveItem(jayZ)
   })
 
   it("should put and retrieve multiple items using just pk with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testPutAndRetrieveMultipleItems(jayZ)
   })
 
   it("should paginate query results with jayz", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testQueryWithPaginatedResults(jayZ)
   })
 
   it("should filter items when querying with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testQueryWithFilter(jayZ)
   })
 
   it("should batchGet items with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testBatchGet(jayZ)
   })
 
   it("should query GSI by model with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testGSIByModel(jayZ)
   })
 
   it("should query GSI by name with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testGSIByName(jayZ)
   })
 
   it("should write multiple items at once with jayZ", async () => {
-    const jayZ = await aJayZ()
+    const jayZ = await createJayZ()
     await testBatchWriteWithTransaction(jayZ)
   })
 })
@@ -215,7 +215,7 @@ function sortById<T extends { id: string }>(items: T[]): T[] {
   })
 }
 
-async function aJayZ(): Promise<JayZ> {
-  const keyProvider = await StubDataKeyProvider.forLibsodium()
+async function createJayZ(): Promise<JayZ> {
+  const keyProvider = await FixedDataKeyProvider.forLibsodium()
   return new JayZ({ keyProvider })
 }
