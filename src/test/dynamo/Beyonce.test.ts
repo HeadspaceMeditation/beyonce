@@ -1,4 +1,5 @@
 import { JayZ, StubDataKeyProvider } from "@ginger.io/jay-z"
+import crypto from "crypto"
 import {
   aMusicianWithTwoSongs,
   byModelAndIdGSI,
@@ -6,11 +7,10 @@ import {
   ModelType,
   MusicianModel,
   MusicianPartition,
-  SongModel,
   Song,
+  SongModel,
 } from "./models"
 import { setup } from "./util"
-import crypto from "crypto"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -115,13 +115,13 @@ async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
   // Thus the following items comprise at least 100kb * 25 = ~2.5MB of data
   // i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
-  const base64MP3 = crypto.randomBytes(100_000).toString("ascii")
+  const mp3 = crypto.randomBytes(100_000)
   const songs: Song[] = [...Array(25).keys()].map((songId) =>
     SongModel.create({
       musicianId: "1",
       id: songId.toString(),
       title: `Song ${songId}`,
-      base64MP3,
+      mp3,
     })
   )
 
