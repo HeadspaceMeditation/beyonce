@@ -1,13 +1,11 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
-import { KeysOf } from "../typeUtils"
+import { ExpressionBuilder } from "./ExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { PartitionKey } from "./keys"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 import { decryptOrPassThroughItem, toJSON } from "./util"
-
-type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
 type TableQueryParams<T> = {
   db: DynamoDB.DocumentClient
@@ -25,64 +23,12 @@ type GSIQueryParams<T> = {
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T extends TaggedModel> {
-  private filterExp: string[] = []
-  private attributes = new Attributes()
-  private variables = new Variables()
+export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   private scanIndexForward: boolean = true
   private limit?: number
 
-  constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {}
-
-  where(attribute: KeysOf<T>, operator: Operator, value: any): this {
-    this.addCondition({ attribute, operator, value })
-    return this
-  }
-
-  or(attribute: KeysOf<T>, operator: Operator, value: any): this {
-    this.addCondition({ attribute, operator, value, booleanOperator: "OR" })
-    return this
-  }
-
-  and(attribute: KeysOf<T>, operator: Operator, value: any): this {
-    this.addCondition({ attribute, operator, value, booleanOperator: "AND" })
-    return this
-  }
-
-  attributeExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`attribute_exists(${placeholder})`)
-    return this
-  }
-
-  attributeNotExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`attribute_not_exists(${placeholder})`)
-    return this
-  }
-
-  orAttributeExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`OR attribute_exists(${placeholder})`)
-    return this
-  }
-
-  orAttributeNotExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`OR attribute_not_exists(${placeholder})`)
-    return this
-  }
-
-  andAttributeExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`AND attribute_exists(${placeholder})`)
-    return this
-  }
-
-  andAttributeNotExists(name: KeysOf<T>): this {
-    const placeholder = this.attributes.add(name)
-    this.filterExp.push(`AND attribute_not_exists(${placeholder})`)
-    return this
+  constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {
+    super()
   }
 
   reverse(): this {
@@ -100,14 +46,16 @@ export class QueryBuilder<T extends TaggedModel> {
     const items: DynamoDB.DocumentClient.ItemList = []
     let pendingQuery:
       | Promise<DynamoDB.DocumentClient.QueryOutput>
-      | undefined = this.config.db.query(this.build()).promise()
+      | undefined = this.config.db.query(this.buildQuery()).promise()
 
     while (pendingQuery !== undefined) {
       const response: DynamoDB.DocumentClient.QueryOutput = await pendingQuery
       items.push(...(response.Items || []))
 
       if (response.LastEvaluatedKey !== undefined && this.limit === undefined) {
-        pendingQuery = db.query(this.build(response.LastEvaluatedKey)).promise()
+        pendingQuery = db
+          .query(this.buildQuery(response.LastEvaluatedKey))
+          .promise()
       } else {
         pendingQuery = undefined
       }
@@ -122,45 +70,25 @@ export class QueryBuilder<T extends TaggedModel> {
     return groupModelsByType(jsonItems)
   }
 
-  private addCondition(params: {
-    attribute: string
-    value: any
-    operator: Operator
-    booleanOperator?: "OR" | "AND"
-  }): void {
-    const attributePlaceholder = this.attributes.add(params.attribute)
-    const valuePlaceholder = this.variables.add(params.attribute, params.value)
-    const expression = []
-
-    if (params.booleanOperator !== undefined) {
-      expression.push(params.booleanOperator)
-    }
-
-    expression.push(attributePlaceholder, params.operator, valuePlaceholder)
-    this.filterExp.push(expression.join(" "))
-  }
-
-  private build(
+  private buildQuery(
     lastEvaluatedKey?: DynamoDB.DocumentClient.Key | undefined
   ): DynamoDB.DocumentClient.QueryInput {
-    const filter = this.filterExp.join(" ")
-    const filterExp = filter !== "" ? filter : undefined
-    const attributes = this.attributes.getSubstitutions()
-    const variables = this.variables.getSubstitutions()
-
     if (isTableQuery(this.config)) {
       const { table, pk } = this.config
-      const pkPlaceholder = this.attributes.add(table.partitionKeyName)
-      const pkValuePlaceholder = this.variables.add(
+      const pkPlaceholder = this.addAttributeName(table.partitionKeyName)
+      const pkValuePlaceholder = this.addAttributeValue(
         table.partitionKeyName,
         pk.partitionKey
       )
 
+      const { expression, attributeNames, attributeValues } = this.build()
+      const filterExp = expression !== "" ? expression : undefined
+
       return {
         TableName: table.tableName,
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
-        ExpressionAttributeNames: attributes,
-        ExpressionAttributeValues: variables,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
         ScanIndexForward: this.scanIndexForward,
@@ -168,18 +96,21 @@ export class QueryBuilder<T extends TaggedModel> {
       }
     } else {
       const { table, gsiPk } = this.config
-      const pkPlaceholder = this.attributes.add(gsiPk.partitionKeyName)
-      const pkValuePlaceholder = this.variables.add(
+      const pkPlaceholder = this.addAttributeName(gsiPk.partitionKeyName)
+      const pkValuePlaceholder = this.addAttributeValue(
         gsiPk.partitionKeyName,
         gsiPk.partitionKey
       )
+
+      const { expression, attributeNames, attributeValues } = this.build()
+      const filterExp = expression !== "" ? expression : undefined
 
       return {
         TableName: table.tableName,
         IndexName: this.config.gsiName,
         KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
-        ExpressionAttributeNames: attributes,
-        ExpressionAttributeValues: variables,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
         ScanIndexForward: this.scanIndexForward,
@@ -193,32 +124,4 @@ function isTableQuery<T>(
   query: TableQueryParams<T> | GSIQueryParams<T>
 ): query is TableQueryParams<T> {
   return (query as any).pk !== undefined
-}
-
-class Attributes {
-  private substitutions: { [key: string]: string } = {}
-
-  add(attribute: string): string {
-    const placeholder = `#${attribute}`
-    this.substitutions[placeholder] = attribute
-    return placeholder
-  }
-
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
-  }
-}
-
-class Variables {
-  private substitutions: { [key: string]: string } = {}
-
-  add(name: string, value: any): string {
-    const placeholder = `:${name}`
-    this.substitutions[placeholder] = value
-    return placeholder
-  }
-
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
-  }
 }
