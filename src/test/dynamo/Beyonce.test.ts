@@ -47,6 +47,10 @@ describe("Beyonce", () => {
     await testBatchWriteWithTransaction()
   })
 
+  it("should query with multiple attribute filters", async () => {
+    await testQueryWithCombinedAttributeFilters()
+  })
+
   // With JayZ encryption
   it("should put and retrieve an item using pk + sk with jayZ", async () => {
     const jayZ = await createJayZ()
@@ -86,6 +90,11 @@ describe("Beyonce", () => {
   it("should write multiple items at once with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchWriteWithTransaction(jayZ)
+  })
+
+  it("should query with multiple attribute filters with JayZ", async () => {
+    const jayZ = await createJayZ()
+    await testQueryWithCombinedAttributeFilters(jayZ)
   })
 })
 
@@ -143,6 +152,23 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .exec()
 
   expect(result).toEqual({ song: [song1, song2] })
+}
+
+async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const result = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .attributeExists("model")
+    .andAttributeExists("musicianId")
+    .orAttributeNotExists("musicianId")
+    .orAttributeExists("mp3")
+    .orAttributeNotExists("mp3")
+    .exec()
+
+  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {

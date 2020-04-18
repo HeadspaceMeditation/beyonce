@@ -59,6 +59,30 @@ export class QueryBuilder<T extends TaggedModel> {
     return this
   }
 
+  orAttributeExists(name: KeysOf<T>): this {
+    const placeholder = this.attributes.add(name)
+    this.filterExp.push(`OR attribute_exists(${placeholder})`)
+    return this
+  }
+
+  orAttributeNotExists(name: KeysOf<T>): this {
+    const placeholder = this.attributes.add(name)
+    this.filterExp.push(`OR attribute_not_exists(${placeholder})`)
+    return this
+  }
+
+  andAttributeExists(name: KeysOf<T>): this {
+    const placeholder = this.attributes.add(name)
+    this.filterExp.push(`AND attribute_exists(${placeholder})`)
+    return this
+  }
+
+  andAttributeNotExists(name: KeysOf<T>): this {
+    const placeholder = this.attributes.add(name)
+    this.filterExp.push(`AND attribute_not_exists(${placeholder})`)
+    return this
+  }
+
   async exec(): Promise<GroupedModels<T>> {
     const { db } = this.config
     const items: DynamoDB.DocumentClient.ItemList = []
