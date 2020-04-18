@@ -29,6 +29,8 @@ export class QueryBuilder<T extends TaggedModel> {
   private filterExp: string[] = []
   private attributes = new Attributes()
   private variables = new Variables()
+  private scanIndexForward: boolean = true
+  private limit?: number
 
   constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {}
 
@@ -83,6 +85,16 @@ export class QueryBuilder<T extends TaggedModel> {
     return this
   }
 
+  reverse(): this {
+    this.scanIndexForward = false
+    return this
+  }
+
+  maxRecordsToProcess(n: number): this {
+    this.limit = n
+    return this
+  }
+
   async exec(): Promise<GroupedModels<T>> {
     const { db } = this.config
     const items: DynamoDB.DocumentClient.ItemList = []
@@ -94,7 +106,7 @@ export class QueryBuilder<T extends TaggedModel> {
       const response: DynamoDB.DocumentClient.QueryOutput = await pendingQuery
       items.push(...(response.Items || []))
 
-      if (response.LastEvaluatedKey !== undefined) {
+      if (response.LastEvaluatedKey !== undefined && this.limit === undefined) {
         pendingQuery = db.query(this.build(response.LastEvaluatedKey)).promise()
       } else {
         pendingQuery = undefined
@@ -151,6 +163,8 @@ export class QueryBuilder<T extends TaggedModel> {
         ExpressionAttributeValues: variables,
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
+        ScanIndexForward: this.scanIndexForward,
+        Limit: this.limit,
       }
     } else {
       const { table, gsiPk } = this.config
@@ -168,6 +182,8 @@ export class QueryBuilder<T extends TaggedModel> {
         ExpressionAttributeValues: variables,
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
+        ScanIndexForward: this.scanIndexForward,
+        Limit: this.limit,
       }
     }
   }

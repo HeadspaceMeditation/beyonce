@@ -51,6 +51,14 @@ describe("Beyonce", () => {
     await testQueryWithCombinedAttributeFilters()
   })
 
+  it("should set maxRecordsToProcess", async () => {
+    await testQueryWithLimit()
+  })
+
+  it("should find the highest sort key", async () => {
+    await testQueryWithReverseAndLimit()
+  })
+
   // With JayZ encryption
   it("should put and retrieve an item using pk + sk with jayZ", async () => {
     const jayZ = await createJayZ()
@@ -95,6 +103,16 @@ describe("Beyonce", () => {
   it("should query with multiple attribute filters with JayZ", async () => {
     const jayZ = await createJayZ()
     await testQueryWithCombinedAttributeFilters(jayZ)
+  })
+
+  it("should set maxRecordsToProcess with JayZ", async () => {
+    const jayZ = await createJayZ()
+    await testQueryWithLimit(jayZ)
+  })
+
+  it("should find the highest sort key with JayZ", async () => {
+    const jayZ = await createJayZ()
+    await testQueryWithReverseAndLimit(jayZ)
   })
 })
 
@@ -169,6 +187,33 @@ async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
     .exec()
 
   expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+}
+
+async function testQueryWithLimit(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const result = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .maxRecordsToProcess(1)
+    .exec()
+
+  expect(result).toEqual({ musician: [musician] })
+}
+
+async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [_, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(song1), db.put(song2)])
+
+  const result = await db
+    .query(MusicianPartition.key({ id: song1.musicianId }))
+    .maxRecordsToProcess(1)
+    .reverse()
+    .exec()
+
+  expect(result).toEqual({ song: [song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {
