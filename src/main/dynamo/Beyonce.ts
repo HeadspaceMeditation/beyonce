@@ -1,7 +1,11 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { groupModelsByType } from "./groupModelsByType"
-import { PartitionAndSortKey, PartitionKey } from "./keys"
+import {
+  PartitionAndSortKey,
+  PartitionKey,
+  PartitionKeyAndSortKeyPrefix,
+} from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
@@ -88,26 +92,28 @@ export class Beyonce {
     }
   }
 
-  query<T extends TaggedModel>(pk: PartitionKey<T>): QueryBuilder<T> {
+  query<T extends TaggedModel>(
+    key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
+  ): QueryBuilder<T> {
     const { table, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
       table,
-      pk,
+      key,
       jayz: jayz,
     })
   }
 
   queryGSI<T extends TaggedModel>(
     gsiName: string,
-    gsiPk: PartitionKey<T>
+    gsiKey: PartitionKey<T>
   ): QueryBuilder<T> {
     const { table, jayz } = this
     return new QueryBuilder<T>({
       db: this.client,
       table,
       gsiName,
-      gsiPk,
+      gsiKey,
       jayz,
     })
   }

@@ -2,7 +2,7 @@ import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
-import { PartitionKey } from "./keys"
+import { PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 import { decryptOrPassThroughItem, toJSON } from "./util"
@@ -10,7 +10,7 @@ import { decryptOrPassThroughItem, toJSON } from "./util"
 type TableQueryParams<T> = {
   db: DynamoDB.DocumentClient
   table: Table
-  pk: PartitionKey<T>
+  key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
   jayz?: JayZ
 }
 
@@ -18,7 +18,7 @@ type GSIQueryParams<T> = {
   db: DynamoDB.DocumentClient
   table: Table
   gsiName: string
-  gsiPk: PartitionKey<T>
+  gsiKey: PartitionKey<T>
   jayz?: JayZ
 }
 
@@ -74,19 +74,14 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
     lastEvaluatedKey?: DynamoDB.DocumentClient.Key | undefined
   ): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
-      const { table, pk } = this.config
-      const pkPlaceholder = this.addAttributeName(table.partitionKeyName)
-      const pkValuePlaceholder = this.addAttributeValue(
-        table.partitionKeyName,
-        pk.partitionKey
-      )
-
+      const { table } = this.config
+      const keyCondition = this.buildKeyConditionForTable(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
       return {
         TableName: table.tableName,
-        KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
+        KeyConditionExpression: keyCondition,
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
@@ -95,20 +90,15 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         Limit: this.limit,
       }
     } else {
-      const { table, gsiPk } = this.config
-      const pkPlaceholder = this.addAttributeName(gsiPk.partitionKeyName)
-      const pkValuePlaceholder = this.addAttributeValue(
-        gsiPk.partitionKeyName,
-        gsiPk.partitionKey
-      )
-
+      const { table } = this.config
+      const keyCondition = this.buildKeyConditionForGSI(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
       return {
         TableName: table.tableName,
         IndexName: this.config.gsiName,
-        KeyConditionExpression: `${pkPlaceholder} = ${pkValuePlaceholder}`,
+        KeyConditionExpression: keyCondition,
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
@@ -118,10 +108,51 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
       }
     }
   }
+
+  private buildKeyConditionForTable(config: TableQueryParams<T>): string {
+    const { key } = config
+    const pkPlaceholder = this.addAttributeName(key.partitionKeyName)
+    const pkValuePlaceholder = this.addAttributeValue(
+      key.partitionKeyName,
+      key.partitionKey
+    )
+    const keyConditionExpression = [`${pkPlaceholder} = ${pkValuePlaceholder}`]
+
+    if (isPartitionKeyWithSortKeyPrefix(key)) {
+      const { sortKeyName, sortKeyPrefix } = key
+      const skPlaceholder = this.addAttributeName(sortKeyName)
+      const skValuePlaceholder = this.addAttributeValue(
+        sortKeyName,
+        sortKeyPrefix
+      )
+      keyConditionExpression.push(
+        `begins_with(${skPlaceholder}, ${skValuePlaceholder})`
+      )
+    }
+
+    return keyConditionExpression.join(" AND ")
+  }
+
+  private buildKeyConditionForGSI(config: GSIQueryParams<T>): string {
+    const { gsiKey } = config
+    const pkPlaceholder = this.addAttributeName(gsiKey.partitionKeyName)
+    const pkValuePlaceholder = this.addAttributeValue(
+      gsiKey.partitionKeyName,
+      gsiKey.partitionKey
+    )
+
+    return `${pkPlaceholder} = ${pkValuePlaceholder}`
+  }
 }
 
 function isTableQuery<T>(
   query: TableQueryParams<T> | GSIQueryParams<T>
 ): query is TableQueryParams<T> {
-  return (query as any).pk !== undefined
+  return (query as any).key !== undefined
+}
+
+function isPartitionKeyWithSortKeyPrefix<T>(
+  key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
+): key is PartitionKeyAndSortKeyPrefix<T> {
+  return (key as any).sortKeyPrefix !== undefined
 }

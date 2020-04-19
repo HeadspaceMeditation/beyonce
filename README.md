@@ -134,36 +134,49 @@ Note: the key `prefix` ("Author" from our earlier example) will be automatically
 
 ### Query
 
+Beyoncé supports type-safe `query` operations that either return a single model type or all model types that live under a given partition key.
+
+#### Querying for a specific model type
+
+You can `query` for a single type of model like so:
+
+```TypeScript
+import { BookModel } from "generated/models"
+
+// Get all Books for an Author
+const results = await beyonce
+  .query(BookModel.partitionKey({ authorId: "1" }))
+  .exec() // returns { Book: Book[] }
+```
+
+To reduce the amount of data retrieved by DynamoDB, Beyoncé automatically applies a `KeyConditionExpression` that uses the `sortKey` prefix provided in your model definitions. For example, if the YAML definition for the `Book` model contains `sortKey:[Book, $id]` -- then the generated `KeyConditionExpression` will contain a clause like `#partitionKey = :partitionKey AND begins_with(#sortKey, :Book)`.
+
+#### Query for all models in a partition
+
+You can also query for all models that live in a partition, like so:
+
 ```TypeScript
 import { AuthorPartition } from "generated/models"
 
 // Get an Author + their books
-const authorWithBooks = await beyonce
+const results = await beyonce
   .query(AuthorPartition.key({ id: "1" }))
-  .exec() // returns { author: Author[], book: Book[] }
+  .exec() // returns { Author: Author[], Book: Book[] }
+```
 
+Note that, in this case the generated `KeyconditionExpression` will not include a clause for the sort key since DynamoDB does not support OR-ing key conditions.
+
+#### Filtering Queries
+
+You can filter results from a query like so:
+
+```TypeScript
 // Get an Author + filter on their books
 const authorWithFilteredBooks = await beyonce
   .query(AuthorPartition.key({ id: "1" }))
   .attributeNotExists("title") // type-safe fields
   .or("title", "=", "Brave New World") // type safe fields + operators
   .exec()
-```
-
-The return types of the above queries are automatically inferred as `{ author: Author[], book: Book[] }`. When processing
-results, you can easily determine which type of model you're dealing with via the `model` attribute, which Beyoncé
-automatically adds to your models.
-
-```TypeScript
-import { ModelType } from "generated/models"
-
-const authorOrBook: Author | Book  = ...
-
-if (authorOrBook.model === ModelType.Author) {
-  // do something with an Author model
-} else if (authorOrBook.model == ModelType.Book) {
-  // do something with a Book model
-}
 ```
 
 ### QueryGSI

@@ -5,6 +5,15 @@ export class PartitionKey<T> {
   ) {}
 }
 
+export class PartitionKeyAndSortKeyPrefix<T> {
+  constructor(
+    readonly partitionKeyName: string,
+    readonly partitionKey: string,
+    readonly sortKeyName: string,
+    readonly sortKeyPrefix: string
+  ) {}
+}
+
 export class PartitionAndSortKey<T> {
   constructor(
     readonly partitionKeyName: string,
