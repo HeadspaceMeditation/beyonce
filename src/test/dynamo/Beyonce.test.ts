@@ -212,12 +212,12 @@ async function testQueryWithLimit(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db
+  const { value } = await db
     .query(MusicianPartition.key({ id: musician.id }))
-    .maxRecordsToProcess(1)
-    .exec()
+    .pages({ size: 1 })
+    .next()
 
-  expect(result).toEqual({ musician: [musician] })
+  expect(value).toEqual({ musician: [musician] })
 }
 
 async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
@@ -225,13 +225,13 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
   const [_, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(song1), db.put(song2)])
 
-  const result = await db
+  const { value } = await db
     .query(MusicianPartition.key({ id: song1.musicianId }))
-    .maxRecordsToProcess(1)
     .reverse()
-    .exec()
+    .pages({ size: 1 })
+    .next()
 
-  expect(result).toEqual({ song: [song2] })
+  expect(value).toEqual({ song: [song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {

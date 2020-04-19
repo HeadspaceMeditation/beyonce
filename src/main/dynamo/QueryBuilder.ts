@@ -22,10 +22,14 @@ type GSIQueryParams<T> = {
   jayz?: JayZ
 }
 
+export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
+  GroupedModels<T>,
+  GroupedModels<T>
+>
+
 /** Builds and executes parameters for a DynamoDB Query operation */
 export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   private scanIndexForward: boolean = true
-  private limit?: number
 
   constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {
     super()
@@ -36,42 +40,54 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
     return this
   }
 
-  maxRecordsToProcess(n: number): this {
-    this.limit = n
-    return this
+  async *pages(params: { size?: number }): PaginatedQueryResults<T> {
+    for await (const page of this.doQuery(params.size)) {
+      yield groupModelsByType(page)
+    }
+
+    return groupModelsByType<T>([])
   }
 
   async exec(): Promise<GroupedModels<T>> {
+    const results: T[] = []
+    for await (const page of this.doQuery()) {
+      results.push(...page)
+    }
+
+    return groupModelsByType(results)
+  }
+
+  private async *doQuery(maxPageSize?: number): AsyncGenerator<T[], T[]> {
     const { db } = this.config
-    const items: DynamoDB.DocumentClient.ItemList = []
     let pendingQuery:
-      | Promise<DynamoDB.DocumentClient.QueryOutput>
-      | undefined = this.config.db.query(this.buildQuery()).promise()
+      | DynamoDB.DocumentClient.QueryInput
+      | undefined = this.buildQuery(undefined, maxPageSize)
 
     while (pendingQuery !== undefined) {
-      const response: DynamoDB.DocumentClient.QueryOutput = await pendingQuery
-      items.push(...(response.Items || []))
+      const response: DynamoDB.DocumentClient.QueryOutput = await db
+        .query(pendingQuery)
+        .promise()
 
-      if (response.LastEvaluatedKey !== undefined && this.limit === undefined) {
-        pendingQuery = db
-          .query(this.buildQuery(response.LastEvaluatedKey))
-          .promise()
+      if (response.LastEvaluatedKey !== undefined) {
+        pendingQuery = this.buildQuery(response.LastEvaluatedKey, maxPageSize)
       } else {
         pendingQuery = undefined
       }
+
+      const jsonItemPromises = (response.Items || []).map(async (_) => {
+        const item = await decryptOrPassThroughItem(this.config.jayz, _)
+        return toJSON<T>(item)
+      })
+
+      yield await Promise.all(jsonItemPromises)
     }
 
-    const jsonItemPromises = items.map(async (_) => {
-      const item = await decryptOrPassThroughItem(this.config.jayz, _)
-      return toJSON<T>(item)
-    })
-
-    const jsonItems = await Promise.all(jsonItemPromises)
-    return groupModelsByType(jsonItems)
+    return [] as T[]
   }
 
   private buildQuery(
-    lastEvaluatedKey?: DynamoDB.DocumentClient.Key | undefined
+    lastEvaluatedKey?: DynamoDB.DocumentClient.Key,
+    limit?: number
   ): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
       const { table } = this.config
@@ -87,7 +103,7 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
         ScanIndexForward: this.scanIndexForward,
-        Limit: this.limit,
+        Limit: limit,
       }
     } else {
       const { table } = this.config
@@ -104,7 +120,7 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         FilterExpression: filterExp,
         ExclusiveStartKey: lastEvaluatedKey,
         ScanIndexForward: this.scanIndexForward,
-        Limit: this.limit,
+        Limit: limit,
       }
     }
   }
