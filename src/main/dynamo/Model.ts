@@ -1,4 +1,8 @@
-import { PartitionAndSortKey, PartitionKey } from "./keys"
+import {
+  PartitionAndSortKey,
+  PartitionKey,
+  PartitionKeyAndSortKeyPrefix,
+} from "./keys"
 import { Table } from "./Table"
 import { TaggedModel } from "./types"
 
@@ -34,11 +38,13 @@ export class Model<
     )
   }
 
-  partitionKey(params: { [X in U]: string }): PartitionKey<T> {
+  partitionKey(params: { [X in U]: string }): PartitionKeyAndSortKeyPrefix<T> {
     const { partitionKeyPrefix, partitionKeyField } = this
-    return new PartitionKey(
+    return new PartitionKeyAndSortKeyPrefix(
       this.table.partitionKeyName,
-      this.buildKey(partitionKeyPrefix, params[partitionKeyField])
+      this.buildKey(partitionKeyPrefix, params[partitionKeyField]),
+      this.table.sortKeyName,
+      this.sortKeyPrefix
     )
   }
 

@@ -1,4 +1,4 @@
-import { JayZ, FixedDataKeyProvider } from "@ginger.io/jay-z"
+import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
 import {
   aMusicianWithTwoSongs,
@@ -20,6 +20,10 @@ describe("Beyonce", () => {
 
   it("should put and retrieve multiple items using just pk", async () => {
     await testPutAndRetrieveMultipleItems()
+  })
+
+  it("should query for only single type of model", async () => {
+    await testQueryForSingleTypeOfModel()
   })
 
   it("should filter items when querying", async () => {
@@ -75,6 +79,11 @@ describe("Beyonce", () => {
     await testQueryWithPaginatedResults(jayZ)
   })
 
+  it("should query for only single type of model with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testQueryForSingleTypeOfModel(jayZ)
+  })
+
   it("should filter items when querying with jayZ", async () => {
     const jayZ = await createJayZ()
     await testQueryWithFilter(jayZ)
@@ -119,7 +128,6 @@ describe("Beyonce", () => {
 async function testPutAndRetrieveItem(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, _, __] = aMusicianWithTwoSongs()
-
   await db.put(musician)
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
@@ -129,7 +137,6 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db.query(MusicianModel.key({ id: musician.id })).exec()
@@ -161,12 +168,23 @@ async function testQueryWithPaginatedResults(jayZ?: JayZ) {
 async function testQueryWithFilter(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
     .query(MusicianPartition.key({ id: musician.id }))
     .where("model", "=", ModelType.Song)
+    .exec()
+
+  expect(result).toEqual({ song: [song1, song2] })
+}
+
+async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const result = await db
+    .query(SongModel.partitionKey({ musicianId: musician.id }))
     .exec()
 
   expect(result).toEqual({ song: [song1, song2] })
@@ -240,7 +258,6 @@ async function testBatchGet(jayZ?: JayZ) {
 async function testGSIByModel(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
@@ -253,7 +270,6 @@ async function testGSIByModel(jayZ?: JayZ) {
 async function testGSIByName(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
   const result = await db
@@ -266,7 +282,6 @@ async function testGSIByName(jayZ?: JayZ) {
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-
   await db.batchPutWithTransaction({ items: [musician, song1, song2] })
 
   const results = await db

@@ -2,7 +2,7 @@ import { ExpressionBuilder } from "../../main/dynamo/ExpressionBuilder"
 import { Musician } from "./models"
 import { Operator } from "../../main/dynamo/ExpressionBuilder"
 
-describe("ExpressionBuilder where + or + and clauses", () => {
+describe("ExpressionBuilder basic clauses", () => {
   it("doing nothing should yield blank expression", () => {
     const result = exp().build()
     expect(result).toEqual({
