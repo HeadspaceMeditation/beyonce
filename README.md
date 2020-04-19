@@ -149,7 +149,7 @@ const results = await beyonce
   .exec() // returns { Book: Book[] }
 ```
 
-To reduce the amount of data retrieved by DynamoDB, Beyoncé automatically applies a `KeyConditionExpression` that uses the `sortKey` prefix provided in your model definitions. For example, if the YAML definition for the `Book` model contains `sortKey:[Book, $id]` -- then the generated `KeyConditionExpression` will contain a clause like `#partitionKey = :partitionKey AND begins_with(#sortKey, :Book)`.
+To reduce the amount of data retrieved by DynamoDB, Beyoncé automatically applies a `KeyConditionExpression` that uses the `sortKey` prefix provided in your model definitions. For example, if the YAML definition for the `Book` model contains `sortKey:[Book, $id]` -- then the generated `KeyConditionExpression` will contain a clause like `#partitionKey = :partitionKey AND begins_with(#sortKey, Book)`.
 
 #### Query for all models in a partition
 
