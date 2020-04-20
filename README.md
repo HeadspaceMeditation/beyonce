@@ -188,12 +188,31 @@ const iterator = beyonce
   .query(AuthorPartition.key({ id: "1" }))
   .iterator({ pageSize: 1 })
 
-const firstPage = await iterator.next()
-console.log("First Page: ", firstPage.value.items)
-
-if (!fistPage.done) {
-  const secondPage = await iterator.next({ cursor: firstPage.value.cursor })
+// Step through each page 1 by 1
+for await (const { items } of iterator) {
+   // ...
 }
+```
+
+##### Cursors
+
+Each time you call `.next()` on the iterator, you'll also get a `cursor` back, which you can use to create a new iterator
+that picks up where you left off
+
+```TypeScript
+const iterator1 = beyonce
+  .query(AuthorPartition.key({ id: "1" }))
+  .iterator({ pageSize: 1 })
+
+const firstPage = await iterator1.next()
+const { items, cursor } = firstPage.value // do something with these
+
+// Later...
+const iterator2 = beyonce
+  .query(AuthorPartition.key({ id: "1" }))
+  .iterator({ cursor, pageSize: 1 })
+
+const secondPage = await iterator2.next()
 ```
 
 ### QueryGSI
