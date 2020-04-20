@@ -212,12 +212,22 @@ async function testQueryWithLimit(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const { value } = await db
+  const { value: response1 } = await db
     .query(MusicianPartition.key({ id: musician.id }))
-    .pages({ size: 1 })
+    .iterator({ pageSize: 1 })
     .next()
 
-  expect(value).toEqual({ musician: [musician] })
+  expect(response1.items).toEqual({ musician: [musician] })
+
+  const { value: response2 } = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .iterator({
+      cursor: response1.cursor,
+      pageSize: 1,
+    })
+    .next()
+
+  expect(response2.items).toEqual({ song: [song1] })
 }
 
 async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
@@ -225,13 +235,13 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
   const [_, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(song1), db.put(song2)])
 
-  const { value } = await db
+  const { value, done } = await db
     .query(MusicianPartition.key({ id: song1.musicianId }))
     .reverse()
-    .pages({ size: 1 })
+    .iterator({ pageSize: 1 })
     .next()
 
-  expect(value).toEqual({ song: [song2] })
+  expect(value.items).toEqual({ song: [song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {

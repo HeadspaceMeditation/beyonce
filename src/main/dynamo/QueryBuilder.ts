@@ -22,10 +22,27 @@ type GSIQueryParams<T> = {
   jayz?: JayZ
 }
 
+export type Cursor = Record<string, any>
+
+export type QueryOptions = {
+  cursor?: Cursor
+  pageSize?: number
+}
+
 export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
-  GroupedModels<T>,
-  GroupedModels<T>
+  QueryResults<T>,
+  QueryResults<T>
 >
+
+export type QueryResults<T extends TaggedModel> = {
+  items: GroupedModels<T>
+  cursor?: Cursor
+}
+
+type RawQueryResults<T extends TaggedModel> = {
+  items: T[]
+  lastEvaluatedKey?: DynamoDB.DocumentClient.Key
+}
 
 /** Builds and executes parameters for a DynamoDB Query operation */
 export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
@@ -40,28 +57,34 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
     return this
   }
 
-  async *pages(params: { size?: number }): PaginatedQueryResults<T> {
-    for await (const page of this.doQuery(params.size)) {
-      yield groupModelsByType(page)
-    }
-
-    return groupModelsByType<T>([])
-  }
-
   async exec(): Promise<GroupedModels<T>> {
     const results: T[] = []
-    for await (const page of this.doQuery()) {
-      results.push(...page)
+    for await (const { items } of this.executeQuery()) {
+      results.push(...items)
     }
 
     return groupModelsByType(results)
   }
 
-  private async *doQuery(maxPageSize?: number): AsyncGenerator<T[], T[]> {
+  async *iterator(options: QueryOptions = {}): PaginatedQueryResults<T> {
+    for await (const response of this.executeQuery(options)) {
+      yield {
+        items: groupModelsByType(response.items),
+        cursor: response.lastEvaluatedKey,
+      }
+    }
+
+    return { items: groupModelsByType<T>([]), cursor: undefined }
+  }
+
+  private async *executeQuery(
+    options: QueryOptions = {}
+  ): AsyncGenerator<RawQueryResults<T>, RawQueryResults<T>> {
     const { db } = this.config
+
     let pendingQuery:
       | DynamoDB.DocumentClient.QueryInput
-      | undefined = this.buildQuery(undefined, maxPageSize)
+      | undefined = this.buildQuery(options)
 
     while (pendingQuery !== undefined) {
       const response: DynamoDB.DocumentClient.QueryOutput = await db
@@ -69,25 +92,29 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         .promise()
 
       if (response.LastEvaluatedKey !== undefined) {
-        pendingQuery = this.buildQuery(response.LastEvaluatedKey, maxPageSize)
+        pendingQuery = this.buildQuery({
+          ...options,
+          cursor: response.LastEvaluatedKey,
+        })
       } else {
         pendingQuery = undefined
       }
 
-      const jsonItemPromises = (response.Items || []).map(async (_) => {
+      const itemsToProcess = response.Items || []
+      const jsonItemPromises = itemsToProcess.map(async (_) => {
         const item = await decryptOrPassThroughItem(this.config.jayz, _)
         return toJSON<T>(item)
       })
 
-      yield await Promise.all(jsonItemPromises)
+      const items = await Promise.all(jsonItemPromises)
+      yield { items, lastEvaluatedKey: response.LastEvaluatedKey }
     }
 
-    return [] as T[]
+    return { items: [] as T[], lastEvaluatedKey: undefined }
   }
 
   private buildQuery(
-    lastEvaluatedKey?: DynamoDB.DocumentClient.Key,
-    limit?: number
+    options: QueryOptions
   ): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
       const { table } = this.config
@@ -101,9 +128,9 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
-        ExclusiveStartKey: lastEvaluatedKey,
+        ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: limit,
+        Limit: options.pageSize,
       }
     } else {
       const { table } = this.config
@@ -118,9 +145,9 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
-        ExclusiveStartKey: lastEvaluatedKey,
+        ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: limit,
+        Limit: options.pageSize,
       }
     }
   }

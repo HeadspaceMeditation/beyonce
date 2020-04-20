@@ -179,6 +179,23 @@ const authorWithFilteredBooks = await beyonce
   .exec()
 ```
 
+#### Paginating Queries
+
+When you call `.exec()` Beyoncé will automatically page through all the results and return them to you. If you would like to step through pages manually (e.g to throttle reads) -- use the `.iterator()` method instead:
+
+```TypeScript
+const iterator = beyonce
+  .query(AuthorPartition.key({ id: "1" }))
+  .iterator({ pageSize: 1 })
+
+const firstPage = await iterator.next()
+console.log("First Page: ", firstPage.value.items)
+
+if (!fistPage.done) {
+  const secondPage = await iterator.next({ cursor: firstPage.value.cursor })
+}
+```
+
 ### QueryGSI
 
 ```TypeScript
