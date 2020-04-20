@@ -22,10 +22,31 @@ type GSIQueryParams<T> = {
   jayz?: JayZ
 }
 
+export type Cursor = Record<string, any>
+
+export type QueryOptions = {
+  cursor?: Cursor
+  pageSize?: number
+}
+
+export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
+  QueryResults<T>,
+  QueryResults<T>
+>
+
+export type QueryResults<T extends TaggedModel> = {
+  items: GroupedModels<T>
+  cursor?: Cursor
+}
+
+type RawQueryResults<T extends TaggedModel> = {
+  items: T[]
+  lastEvaluatedKey?: DynamoDB.DocumentClient.Key
+}
+
 /** Builds and executes parameters for a DynamoDB Query operation */
 export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   private scanIndexForward: boolean = true
-  private limit?: number
 
   constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {
     super()
@@ -36,42 +57,64 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
     return this
   }
 
-  maxRecordsToProcess(n: number): this {
-    this.limit = n
-    return this
+  async exec(): Promise<GroupedModels<T>> {
+    const results: T[] = []
+    for await (const { items } of this.executeQuery()) {
+      results.push(...items)
+    }
+
+    return groupModelsByType(results)
   }
 
-  async exec(): Promise<GroupedModels<T>> {
-    const { db } = this.config
-    const items: DynamoDB.DocumentClient.ItemList = []
-    let pendingQuery:
-      | Promise<DynamoDB.DocumentClient.QueryOutput>
-      | undefined = this.config.db.query(this.buildQuery()).promise()
-
-    while (pendingQuery !== undefined) {
-      const response: DynamoDB.DocumentClient.QueryOutput = await pendingQuery
-      items.push(...(response.Items || []))
-
-      if (response.LastEvaluatedKey !== undefined && this.limit === undefined) {
-        pendingQuery = db
-          .query(this.buildQuery(response.LastEvaluatedKey))
-          .promise()
-      } else {
-        pendingQuery = undefined
+  async *iterator(options: QueryOptions = {}): PaginatedQueryResults<T> {
+    for await (const response of this.executeQuery(options)) {
+      yield {
+        items: groupModelsByType(response.items),
+        cursor: response.lastEvaluatedKey,
       }
     }
 
-    const jsonItemPromises = items.map(async (_) => {
-      const item = await decryptOrPassThroughItem(this.config.jayz, _)
-      return toJSON<T>(item)
-    })
+    return { items: groupModelsByType<T>([]), cursor: undefined }
+  }
 
-    const jsonItems = await Promise.all(jsonItemPromises)
-    return groupModelsByType(jsonItems)
+  private async *executeQuery(
+    options: QueryOptions = {}
+  ): AsyncGenerator<RawQueryResults<T>, RawQueryResults<T>> {
+    const { db } = this.config
+
+    let pendingQuery:
+      | DynamoDB.DocumentClient.QueryInput
+      | undefined = this.buildQuery(options)
+
+    while (pendingQuery !== undefined) {
+      const response: DynamoDB.DocumentClient.QueryOutput = await db
+        .query(pendingQuery)
+        .promise()
+
+      if (response.LastEvaluatedKey !== undefined) {
+        pendingQuery = this.buildQuery({
+          ...options,
+          cursor: response.LastEvaluatedKey,
+        })
+      } else {
+        pendingQuery = undefined
+      }
+
+      const itemsToProcess = response.Items || []
+      const jsonItemPromises = itemsToProcess.map(async (_) => {
+        const item = await decryptOrPassThroughItem(this.config.jayz, _)
+        return toJSON<T>(item)
+      })
+
+      const items = await Promise.all(jsonItemPromises)
+      yield { items, lastEvaluatedKey: response.LastEvaluatedKey }
+    }
+
+    return { items: [] as T[], lastEvaluatedKey: undefined }
   }
 
   private buildQuery(
-    lastEvaluatedKey?: DynamoDB.DocumentClient.Key | undefined
+    options: QueryOptions
   ): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
       const { table } = this.config
@@ -85,9 +128,9 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
-        ExclusiveStartKey: lastEvaluatedKey,
+        ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: this.limit,
+        Limit: options.pageSize,
       }
     } else {
       const { table } = this.config
@@ -102,9 +145,9 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
         FilterExpression: filterExp,
-        ExclusiveStartKey: lastEvaluatedKey,
+        ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: this.limit,
+        Limit: options.pageSize,
       }
     }
   }
