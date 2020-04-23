@@ -7,6 +7,7 @@ export class Partition<
   U extends Model<any, any, any>
 > {
   private modelTags: string[]
+
   constructor(private models: [T, ...U[]]) {
     this.modelTags = models.map((_) => _.modelTag)
   }

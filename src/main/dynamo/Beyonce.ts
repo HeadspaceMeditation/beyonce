@@ -79,6 +79,7 @@ export class Beyonce {
     }
 
     const modelTags = params.keys.map((_) => _.modelTag)
+
     if (responses !== undefined) {
       const items = responses[this.table.tableName]
       const jsonItemPromises = items.map(async (_) => {
