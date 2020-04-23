@@ -1,8 +1,4 @@
-import {
-  PartitionAndSortKey,
-  PartitionKey,
-  PartitionKeyAndSortKeyPrefix,
-} from "./keys"
+import { PartitionAndSortKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { Table } from "./Table"
 import { TaggedModel } from "./types"
 
@@ -17,7 +13,7 @@ export class Model<
     private partitionKeyField: U,
     private sortKeyPrefix: string,
     private sortKeyField: V,
-    private modelTag: string
+    readonly modelTag: string
   ) {}
 
   key(
@@ -34,7 +30,8 @@ export class Model<
       this.buildKey(partitionKeyPrefix, params[partitionKeyField]),
 
       this.table.sortKeyName,
-      this.buildKey(sortKeyPrefix, params[sortKeyField])
+      this.buildKey(sortKeyPrefix, params[sortKeyField]),
+      this.modelTag
     )
   }
 
@@ -44,7 +41,8 @@ export class Model<
       this.table.partitionKeyName,
       this.buildKey(partitionKeyPrefix, params[partitionKeyField]),
       this.table.sortKeyName,
-      this.sortKeyPrefix
+      this.sortKeyPrefix,
+      this.modelTag
     )
   }
 

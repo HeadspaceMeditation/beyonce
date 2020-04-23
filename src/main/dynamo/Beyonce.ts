@@ -78,6 +78,7 @@ export class Beyonce {
       console.error("Some keys didn't process", unprocessedKeys)
     }
 
+    const modelTags = params.keys.map((_) => _.modelTag)
     if (responses !== undefined) {
       const items = responses[this.table.tableName]
       const jsonItemPromises = items.map(async (_) => {
@@ -86,9 +87,9 @@ export class Beyonce {
       })
 
       const jsonItems = await Promise.all(jsonItemPromises)
-      return groupModelsByType(jsonItems)
+      return groupModelsByType(jsonItems, modelTags)
     } else {
-      return groupModelsByType<ExtractKeyType<T>>([])
+      return groupModelsByType<ExtractKeyType<T>>([], modelTags)
     }
   }
 

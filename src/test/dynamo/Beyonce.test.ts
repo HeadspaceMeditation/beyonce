@@ -22,6 +22,10 @@ describe("Beyonce", () => {
     await testPutAndRetrieveMultipleItems()
   })
 
+  it("should return empty arrays when no models found when querying", async () => {
+    await testEmptyQuery()
+  })
+
   it("should query for only single type of model", async () => {
     await testQueryForSingleTypeOfModel()
   })
@@ -72,6 +76,11 @@ describe("Beyonce", () => {
   it("should put and retrieve multiple items using just pk with jayZ", async () => {
     const jayZ = await createJayZ()
     await testPutAndRetrieveMultipleItems(jayZ)
+  })
+
+  it("should return empty arrays when no models found when querying with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testEmptyQuery(jayZ)
   })
 
   it("should paginate query results with jayz", async () => {
@@ -137,10 +146,18 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+  await db.batchPutWithTransaction({ items: [musician, song1, song2] })
 
-  const result = await db.query(MusicianModel.key({ id: musician.id })).exec()
+  const result = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .exec()
   expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+}
+
+async function testEmptyQuery(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const result = await db.query(MusicianPartition.key({ id: "foo-1" })).exec()
+  expect(result).toEqual({ musician: [], song: [] })
 }
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
@@ -175,7 +192,7 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .where("model", "=", ModelType.Song)
     .exec()
 
-  expect(result).toEqual({ song: [song1, song2] })
+  expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
 async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
@@ -217,7 +234,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     .iterator({ pageSize: 1 })
     .next()
 
-  expect(response1.items).toEqual({ musician: [musician] })
+  expect(response1.items).toEqual({ musician: [musician], song: [] })
 
   const { value: response2 } = await db
     .query(MusicianPartition.key({ id: musician.id }))
@@ -227,7 +244,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ song: [song1] })
+  expect(response2.items).toEqual({ musician: [], song: [song1] })
 }
 
 async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
@@ -241,7 +258,7 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
     .iterator({ pageSize: 1 })
     .next()
 
-  expect(value.items).toEqual({ song: [song2] })
+  expect(value.items).toEqual({ musician: [], song: [song2] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {
@@ -274,7 +291,7 @@ async function testGSIByModel(jayZ?: JayZ) {
     .queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song))
     .exec()
 
-  expect(result).toEqual({ song: [song1, song2] })
+  expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
 async function testGSIByName(jayZ?: JayZ) {
