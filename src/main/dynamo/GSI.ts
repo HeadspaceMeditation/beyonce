@@ -6,6 +6,8 @@ import { ExtractFields } from "./types"
 type StringKey<T> = keyof ExtractFields<T> & string
 
 export class GSI<T extends Model<any, any, any>> {
+  private modelTags: string[]
+
   constructor(
     private table: Table,
     readonly name: string,
@@ -15,10 +17,11 @@ export class GSI<T extends Model<any, any, any>> {
   ) {
     this.table.addToEncryptionBlacklist(this.partitionKeyName)
     this.table.addToEncryptionBlacklist(this.sortKeyName)
+    this.modelTags = models.map((_) => _.modelTag)
   }
 
   key(partitionKey: string): PartitionKey<ExtractFields<T>> {
-    return new PartitionKey(this.partitionKeyName, partitionKey)
+    return new PartitionKey(this.partitionKeyName, partitionKey, this.modelTags)
   }
 }
 

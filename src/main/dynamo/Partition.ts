@@ -6,7 +6,11 @@ export class Partition<
   T extends Model<any, any, any>,
   U extends Model<any, any, any>
 > {
-  constructor(private models: [T, ...U[]]) {}
+  private modelTags: string[]
+
+  constructor(private models: [T, ...U[]]) {
+    this.modelTags = models.map((_) => _.modelTag)
+  }
 
   /** Since we assume that all this.models[] live under the same partition
    *  we can generate a valid partition key by calling models[0].partitionKey
@@ -20,7 +24,8 @@ export class Partition<
     )
     return new PartitionKey<ExtractFields<T | U>>(
       partitionKeyName,
-      partitionKey
+      partitionKey,
+      this.modelTags
     )
   }
 }

@@ -7,14 +7,14 @@ import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 import { decryptOrPassThroughItem, toJSON } from "./util"
 
-type TableQueryParams<T> = {
+type TableQueryParams<T extends TaggedModel> = {
   db: DynamoDB.DocumentClient
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
   jayz?: JayZ
 }
 
-type GSIQueryParams<T> = {
+type GSIQueryParams<T extends TaggedModel> = {
   db: DynamoDB.DocumentClient
   table: Table
   gsiName: string
@@ -47,6 +47,7 @@ type RawQueryResults<T extends TaggedModel> = {
 /** Builds and executes parameters for a DynamoDB Query operation */
 export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   private scanIndexForward: boolean = true
+  private modelTags: string[] = getModelTags(this.config)
 
   constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {
     super()
@@ -63,18 +64,21 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
       results.push(...items)
     }
 
-    return groupModelsByType(results)
+    return groupModelsByType(results, this.modelTags)
   }
 
   async *iterator(options: QueryOptions = {}): PaginatedQueryResults<T> {
     for await (const response of this.executeQuery(options)) {
       yield {
-        items: groupModelsByType(response.items),
+        items: groupModelsByType(response.items, this.modelTags),
         cursor: response.lastEvaluatedKey,
       }
     }
 
-    return { items: groupModelsByType<T>([]), cursor: undefined }
+    return {
+      items: groupModelsByType<T>([], this.modelTags),
+      cursor: undefined,
+    }
   }
 
   private async *executeQuery(
@@ -188,14 +192,21 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   }
 }
 
-function isTableQuery<T>(
+function isTableQuery<T extends TaggedModel>(
   query: TableQueryParams<T> | GSIQueryParams<T>
 ): query is TableQueryParams<T> {
   return (query as any).key !== undefined
 }
 
-function isPartitionKeyWithSortKeyPrefix<T>(
+function isPartitionKeyWithSortKeyPrefix<T extends TaggedModel>(
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
 ): key is PartitionKeyAndSortKeyPrefix<T> {
   return (key as any).sortKeyPrefix !== undefined
+}
+
+function getModelTags<T extends TaggedModel>(
+  config: TableQueryParams<T> | GSIQueryParams<T>
+): T["model"][] {
+  const key = isTableQuery(config) ? config.key : config.gsiKey
+  return isPartitionKeyWithSortKeyPrefix(key) ? [key.modelTag] : key.modelTags
 }
