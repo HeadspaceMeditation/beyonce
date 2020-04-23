@@ -42,6 +42,10 @@ describe("Beyonce", () => {
     await testBatchGet()
   })
 
+  it("should return empty arrays when no items found during batchGet", async () => {
+    await testEmptyBatchGet()
+  })
+
   // GSIs
   it("should query GSI by model", async () => {
     await testGSIByModel()
@@ -101,6 +105,11 @@ describe("Beyonce", () => {
   it("should batchGet items with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchGet(jayZ)
+  })
+
+  it("should return empty arrays when no items found during batchGet with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testEmptyBatchGet(jayZ)
   })
 
   it("should query GSI by model with jayZ", async () => {
@@ -279,6 +288,23 @@ async function testBatchGet(jayZ?: JayZ) {
   expect(results).toEqual({
     musician: [musician],
     song: [song1, song2],
+  })
+}
+
+async function testEmptyBatchGet(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  const results = await db.batchGet({
+    keys: [
+      MusicianModel.key({ id: musician.id }),
+      SongModel.key({ musicianId: musician.id, id: song1.id }),
+      SongModel.key({ musicianId: musician.id, id: song2.id }),
+    ],
+  })
+
+  expect(results).toEqual({
+    musician: [],
+    song: [],
   })
 }
 
