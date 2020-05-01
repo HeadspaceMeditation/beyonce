@@ -57,7 +57,7 @@ export class Beyonce {
   async delete<T extends TaggedModel>(
     key: PartitionAndSortKey<T>
   ): Promise<void> {
-    const result = await this.client
+    await this.client
       .delete({
         TableName: this.table.tableName,
         Key: {
