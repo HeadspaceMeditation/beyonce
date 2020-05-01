@@ -54,6 +54,20 @@ export class Beyonce {
     }
   }
 
+  async delete<T extends TaggedModel>(
+    key: PartitionAndSortKey<T>
+  ): Promise<void> {
+    await this.client
+      .delete({
+        TableName: this.table.tableName,
+        Key: {
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey,
+        },
+      })
+      .promise()
+  }
+
   /** BatchGet items */
   async batchGet<T extends PartitionAndSortKey<TaggedModel>>(params: {
     keys: T[]

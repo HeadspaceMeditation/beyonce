@@ -18,6 +18,10 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem()
   })
 
+  it("should put and delete an item using pk + sk", async () => {
+    await testPutAndDeleteItem()
+  })
+
   it("should put and retrieve multiple items using just pk", async () => {
     await testPutAndRetrieveMultipleItems()
   })
@@ -75,6 +79,10 @@ describe("Beyonce", () => {
   it("should put and retrieve an item using pk + sk with jayZ", async () => {
     const jayZ = await createJayZ()
     await testPutAndRetrieveItem(jayZ)
+  })
+
+  it("should put and delete an item using pk + sk with jayZ", async () => {
+    await testPutAndDeleteItem()
   })
 
   it("should put and retrieve multiple items using just pk with jayZ", async () => {
@@ -150,6 +158,18 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
   expect(result).toEqual(musician)
+}
+
+async function testPutAndDeleteItem(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, _, __] = aMusicianWithTwoSongs()
+  await db.put(musician)
+
+  const key = MusicianModel.key({ id: musician.id })
+
+  expect(await db.get(key)).toEqual(musician)
+  await db.delete(key)
+  expect(await db.get(key)).toEqual(undefined)
 }
 
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
