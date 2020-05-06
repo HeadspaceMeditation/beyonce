@@ -20,6 +20,14 @@ export type Options = {
   jayz?: JayZ
 }
 
+export type GetOptions = {
+  consistentRead?: boolean
+}
+
+export type QueryOptions = {
+  consistentRead?: boolean
+}
+
 /** A thin wrapper around the DynamoDB sdk client that
  * does auto mapping between JSON <=> DynamoDB Items
  */
@@ -37,11 +45,13 @@ export class Beyonce {
 
   /** Retrieve a single Item out of Dynamo */
   async get<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>
+    key: PartitionAndSortKey<T>,
+    options: GetOptions = {}
   ): Promise<T | undefined> {
     const { Item: item } = await this.client
       .get({
         TableName: this.table.tableName,
+        ConsistentRead: options.consistentRead,
         Key: {
           [this.table.partitionKeyName]: key.partitionKey,
           [this.table.sortKeyName]: key.sortKey,
@@ -109,7 +119,8 @@ export class Beyonce {
   }
 
   query<T extends TaggedModel>(
-    key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
+    key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>,
+    options: QueryOptions = {}
   ): QueryBuilder<T> {
     const { table, jayz } = this
     return new QueryBuilder<T>({
@@ -117,12 +128,14 @@ export class Beyonce {
       table,
       key,
       jayz: jayz,
+      consistentRead: options.consistentRead,
     })
   }
 
   queryGSI<T extends TaggedModel>(
     gsiName: string,
-    gsiKey: PartitionKey<T>
+    gsiKey: PartitionKey<T>,
+    options: QueryOptions = {}
   ): QueryBuilder<T> {
     const { table, jayz } = this
     return new QueryBuilder<T>({
@@ -131,6 +144,7 @@ export class Beyonce {
       gsiName,
       gsiKey,
       jayz,
+      consistentRead: options.consistentRead,
     })
   }
 

@@ -11,11 +11,41 @@ import {
   SongModel,
 } from "./models"
 import { setup } from "./util"
+import { Beyonce } from "../../main/dynamo/Beyonce"
+import { table } from "./models"
+import { DynamoDB } from "aws-sdk"
 
 describe("Beyonce", () => {
   // Without encryption
   it("should put and retrieve an item using pk + sk", async () => {
     await testPutAndRetrieveItem()
+  })
+
+  it("should support a consistentRead option on get", async () => {
+    await setup()
+    const [musician, _, __] = aMusicianWithTwoSongs()
+
+    const mockGet = jest.fn(() => ({
+      promise: () =>
+        Promise.resolve({
+          Item: musician,
+        }),
+    }))
+
+    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
+    ;(db as any).client.get = mockGet
+
+    await db.get(MusicianModel.key({ id: musician.id }), {
+      consistentRead: true,
+    })
+    expect(mockGet).toHaveBeenCalledWith({
+      TableName: table.tableName,
+      Key: {
+        pk: "musician-1",
+        sk: "musician-1",
+      },
+      ConsistentRead: true,
+    })
   })
 
   it("should put and delete an item using pk + sk", async () => {
@@ -28,6 +58,19 @@ describe("Beyonce", () => {
 
   it("should return empty arrays when no models found when querying", async () => {
     await testEmptyQuery()
+  })
+
+  it("should set consistent read on queries", async () => {
+    const db = await setup()
+    const query = await (db as any)
+      .query(MusicianModel.partitionKey({ id: "musician-1" }), {
+        consistentRead: true,
+      })
+      .buildQuery({})
+
+    expect(query).toMatchObject({
+      ConsistentRead: true,
+    })
   })
 
   it("should query for only single type of model", async () => {

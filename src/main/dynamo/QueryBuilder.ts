@@ -12,6 +12,7 @@ type TableQueryParams<T extends TaggedModel> = {
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
   jayz?: JayZ
+  consistentRead?: boolean
 }
 
 type GSIQueryParams<T extends TaggedModel> = {
@@ -20,11 +21,12 @@ type GSIQueryParams<T extends TaggedModel> = {
   gsiName: string
   gsiKey: PartitionKey<T>
   jayz?: JayZ
+  consistentRead?: boolean
 }
 
 export type Cursor = Record<string, any>
 
-export type QueryOptions = {
+export type IteratorOptions = {
   cursor?: Cursor
   pageSize?: number
 }
@@ -67,7 +69,7 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
     return groupModelsByType(results, this.modelTags)
   }
 
-  async *iterator(options: QueryOptions = {}): PaginatedQueryResults<T> {
+  async *iterator(options: IteratorOptions = {}): PaginatedQueryResults<T> {
     for await (const response of this.executeQuery(options)) {
       yield {
         items: groupModelsByType(response.items, this.modelTags),
@@ -82,7 +84,7 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   }
 
   private async *executeQuery(
-    options: QueryOptions = {}
+    options: IteratorOptions = {}
   ): AsyncGenerator<RawQueryResults<T>, RawQueryResults<T>> {
     const { db } = this.config
 
@@ -118,16 +120,17 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
   }
 
   private buildQuery(
-    options: QueryOptions
+    options: IteratorOptions
   ): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
-      const { table } = this.config
+      const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForTable(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
       return {
         TableName: table.tableName,
+        ConsistentRead: consistentRead,
         KeyConditionExpression: keyCondition,
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: attributeValues,
@@ -137,13 +140,14 @@ export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
         Limit: options.pageSize,
       }
     } else {
-      const { table } = this.config
+      const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForGSI(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
       return {
         TableName: table.tableName,
+        ConsistentRead: consistentRead,
         IndexName: this.config.gsiName,
         KeyConditionExpression: keyCondition,
         ExpressionAttributeNames: attributeNames,
