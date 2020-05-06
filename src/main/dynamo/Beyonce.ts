@@ -15,6 +15,7 @@ import {
   MaybeEncryptedItems,
   toJSON,
 } from "./util"
+import { ConfigurationOptions } from "aws-sdk/lib/config"
 
 export type Options = {
   jayz?: JayZ
@@ -81,6 +82,7 @@ export class Beyonce {
   /** BatchGet items */
   async batchGet<T extends PartitionAndSortKey<TaggedModel>>(params: {
     keys: T[]
+    consistentRead?: boolean
   }): Promise<GroupedModels<ExtractKeyType<T>>> {
     const {
       Responses: responses,
@@ -89,6 +91,7 @@ export class Beyonce {
       .batchGet({
         RequestItems: {
           [this.table.tableName]: {
+            ConsistentRead: params.consistentRead,
             Keys: params.keys.map(({ partitionKey, sortKey }) => ({
               [this.table.partitionKeyName]: partitionKey,
               [this.table.sortKeyName]: sortKey,

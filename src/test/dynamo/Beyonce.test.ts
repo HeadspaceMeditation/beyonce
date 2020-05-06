@@ -89,6 +89,40 @@ describe("Beyonce", () => {
     await testBatchGet()
   })
 
+  it("should support a consistentRead option on batchGet", async () => {
+    await setup()
+    const [musician, _, __] = aMusicianWithTwoSongs()
+
+    const mockGet = jest.fn(() => ({
+      promise: () =>
+        Promise.resolve({
+          Item: musician,
+        }),
+    }))
+
+    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
+    ;(db as any).client.batchGet = mockGet
+
+    await db.batchGet({
+      keys: [MusicianModel.key({ id: musician.id })],
+      consistentRead: true,
+    })
+
+    expect(mockGet).toHaveBeenCalledWith({
+      RequestItems: {
+        [table.tableName]: {
+          ConsistentRead: true,
+          Keys: [
+            {
+              pk: "musician-1",
+              sk: "musician-1",
+            },
+          ],
+        },
+      },
+    })
+  })
+
   it("should return empty arrays when no items found during batchGet", async () => {
     await testEmptyBatchGet()
   })
