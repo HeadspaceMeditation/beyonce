@@ -262,6 +262,15 @@ const author2 = AuthorModel.create({
 await beyonce.batchPutWithTransaction({ items: [author1, author2] })
 ```
 
+## Consistent Reads
+
+Beyonce supports consistent reads via an optional parameter on `get`, `batchGet` and `query`, e.g. `get(..., { consistentRead: true })`.
+And if you'd like to _always_ make consistent reads, you can set this as the default when you create a Beyonce instance:
+
+```TypeScript
+new Beyonce(table, dynamo, { consistentReads: true })
+```
+
 ## Encryption
 
 Beyonce integrates with [Jay-Z](https://github.com/ginger-io/jay-z) to enable transparent application-layer encryption

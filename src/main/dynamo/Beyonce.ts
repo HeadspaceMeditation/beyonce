@@ -15,10 +15,10 @@ import {
   MaybeEncryptedItems,
   toJSON,
 } from "./util"
-import { ConfigurationOptions } from "aws-sdk/lib/config"
 
 export type Options = {
   jayz?: JayZ
+  consistentReads?: boolean
 }
 
 export type GetOptions = {
@@ -35,12 +35,19 @@ export type QueryOptions = {
 export class Beyonce {
   private client: DynamoDB.DocumentClient
   private jayz?: JayZ
+  private consistentReads: boolean
 
   constructor(private table: Table, dynamo: DynamoDB, options: Options = {}) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
 
     if (options.jayz !== undefined) {
       this.jayz = options.jayz
+    }
+
+    if (options.consistentReads !== undefined) {
+      this.consistentReads = options.consistentReads
+    } else {
+      this.consistentReads = false
     }
   }
 
@@ -49,10 +56,15 @@ export class Beyonce {
     key: PartitionAndSortKey<T>,
     options: GetOptions = {}
   ): Promise<T | undefined> {
+    const useConsistentRead =
+      options.consistentRead !== undefined
+        ? options.consistentRead
+        : this.consistentReads
+
     const { Item: item } = await this.client
       .get({
         TableName: this.table.tableName,
-        ConsistentRead: options.consistentRead,
+        ConsistentRead: useConsistentRead,
         Key: {
           [this.table.partitionKeyName]: key.partitionKey,
           [this.table.sortKeyName]: key.sortKey,
@@ -84,6 +96,11 @@ export class Beyonce {
     keys: T[]
     consistentRead?: boolean
   }): Promise<GroupedModels<ExtractKeyType<T>>> {
+    const useConsistentRead =
+      params.consistentRead !== undefined
+        ? params.consistentRead
+        : this.consistentReads
+
     const {
       Responses: responses,
       UnprocessedKeys: unprocessedKeys,
@@ -91,7 +108,7 @@ export class Beyonce {
       .batchGet({
         RequestItems: {
           [this.table.tableName]: {
-            ConsistentRead: params.consistentRead,
+            ConsistentRead: useConsistentRead,
             Keys: params.keys.map(({ partitionKey, sortKey }) => ({
               [this.table.partitionKeyName]: partitionKey,
               [this.table.sortKeyName]: sortKey,
@@ -126,12 +143,18 @@ export class Beyonce {
     options: QueryOptions = {}
   ): QueryBuilder<T> {
     const { table, jayz } = this
+
+    const useConsistentRead =
+      options.consistentRead !== undefined
+        ? options.consistentRead
+        : this.consistentReads
+
     return new QueryBuilder<T>({
       db: this.client,
       table,
       key,
       jayz: jayz,
-      consistentRead: options.consistentRead,
+      consistentRead: useConsistentRead,
     })
   }
 
