@@ -1,6 +1,8 @@
-import { ExpressionBuilder } from "../../main/dynamo/ExpressionBuilder"
-import { Musician } from "./models"
-import { Operator } from "../../main/dynamo/ExpressionBuilder"
+import {
+  QueryExpressionBuilder,
+  Operator,
+} from "../../../main/dynamo/expressions/QueryExpressionBuilder"
+import { Musician } from "../models"
 
 describe("ExpressionBuilder basic clauses", () => {
   it("doing nothing should yield blank expression", () => {
@@ -171,6 +173,6 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
   })
 })
 
-function exp(): ExpressionBuilder<Musician> {
-  return new ExpressionBuilder<Musician>()
+function exp(): QueryExpressionBuilder<Musician> {
+  return new QueryExpressionBuilder<Musician>()
 }

@@ -21,6 +21,61 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem()
   })
 
+  it("should update a top-level item attribute", async () => {
+    const db = await setup()
+    const [musician, _, __] = aMusicianWithTwoSongs()
+    await db.put(musician)
+
+    const updated = await db.update(
+      MusicianModel.key({ id: musician.id }),
+      (musician) => {
+        musician.name = "Gary Moore"
+      }
+    )
+
+    expect(updated).toEqual({ ...musician, name: "Gary Moore" })
+
+    const reRead = await db.get(MusicianModel.key({ id: musician.id }))
+    expect(reRead).toEqual({ ...musician, name: "Gary Moore" })
+  })
+
+  it("should update a nested item attribute", async () => {
+    const db = await setup()
+    const [musician, _, __] = aMusicianWithTwoSongs()
+    await db.put(musician)
+
+    const updated = await db.update(
+      MusicianModel.key({ id: musician.id }),
+      (musician) => {
+        musician.details.description = "scottish blues dude"
+      }
+    )
+
+    expect(updated).toEqual({
+      ...musician,
+      details: { description: "scottish blues dude" },
+    })
+  })
+
+  it("should remove an item attribute", async () => {
+    const db = await setup()
+    const [m, _, __] = aMusicianWithTwoSongs()
+    const musician = { ...m, details: { description: "rasta man" } }
+    await db.put(musician)
+
+    const updated = await db.update(
+      MusicianModel.key({ id: musician.id }),
+      (musician) => {
+        delete musician.details.description
+      }
+    )
+
+    expect(updated).toEqual({
+      ...musician,
+      details: {},
+    })
+  })
+
   it("should support a consistentRead option on get", async () => {
     await setup()
     const [musician, _, __] = aMusicianWithTwoSongs()
