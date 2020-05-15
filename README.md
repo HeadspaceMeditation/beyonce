@@ -132,6 +132,20 @@ const author = await beyonce.get(AuthorModel.key({ id: "1" }))
 
 Note: the key `prefix` ("Author" from our earlier example) will be automatically appeneded.
 
+### Update
+
+Beyoncé supports performing type-safe partial updates on items even through nested attributes.
+
+```TypeScript
+const updatedAuthor = await beyonce.update(AuthorModel.key({ id: "1" }), (author) => {
+  author.name = "Jack London",
+  author.details.description = "American novelist"
+  delete author.details.someDeprecatedField
+})
+```
+
+Here `beyonce.update(...)` returns the full `Author`, with the updated fields.
+
 ### Query
 
 Beyoncé supports type-safe `query` operations that either return a single model type or all model types that live under a given partition key.
