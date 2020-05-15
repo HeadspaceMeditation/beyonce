@@ -134,7 +134,8 @@ Note: the key `prefix` ("Author" from our earlier example) will be automatically
 
 ### Update
 
-Beyoncé supports performing type-safe partial updates on items even through nested attributes.
+Beyoncé supports type-safe partial updates on items, without having to read the item from the db first.
+And it works, even through nested attributes:
 
 ```TypeScript
 const updatedAuthor = await beyonce.update(AuthorModel.key({ id: "1" }), (author) => {
@@ -144,7 +145,8 @@ const updatedAuthor = await beyonce.update(AuthorModel.key({ id: "1" }), (author
 })
 ```
 
-Here `beyonce.update(...)` returns the full `Author`, with the updated fields.
+Here `author` is an intelligent proxy object (thus we avoid having to read the full item from the DB prior to updating it).
+And `beyonce.update(...)` returns the full `Author`, with the updated fields.
 
 ### Query
 
