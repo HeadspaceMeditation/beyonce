@@ -1,5 +1,8 @@
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 
+/** A recursive proxy used to dynamically build a DynamoDB update expression
+ *  as the proxied attributes are accessed and/or set.
+ */
 export function updateItemProxy<T extends {}>(
   expBuilder: UpdateItemExpressionBuilder,
   attrPath: string[] = []
