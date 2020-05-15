@@ -1,18 +1,5 @@
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 
-type Author = {
-  id: string
-  name: string
-  book: Book
-  model: "Author"
-}
-
-type Book = {
-  id: string
-  title: string
-  model: "Book"
-}
-
 export function updateItemProxy<T extends {}>(
   expBuilder: UpdateItemExpressionBuilder,
   attrPath: string[] = []
