@@ -1,5 +1,6 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import {
   PartitionAndSortKey,
@@ -9,6 +10,7 @@ import {
 import { QueryBuilder } from "./QueryBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
+import { updateItemProxy } from "./updateItemProxy"
 import {
   decryptOrPassThroughItem,
   encryptOrPassThroughItems,
@@ -184,6 +186,52 @@ export class Beyonce {
         Item: maybeEncryptedItem,
       })
       .promise()
+  }
+
+  /** Performs a (partial) update on an existing item in Dynamo.
+   *  Partial updates do not work with JayZ encryption and this method
+   *  will throw an error if you attempt to use it with JayZ enabled.
+   */
+  async update<T extends TaggedModel>(
+    key: PartitionAndSortKey<T>,
+    updateFunc: (lens: T) => void
+  ): Promise<T> {
+    if (this.jayz) {
+      throw new Error(
+        "You can't perform partial updates on items with JayZ encryption enabled"
+      )
+    }
+
+    const expBuilder = new UpdateItemExpressionBuilder()
+    const proxy = updateItemProxy<T>(expBuilder)
+    updateFunc(proxy)
+    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
+    const { expression, attributeNames, attributeValues } = expBuilder.build()
+
+    const hasValues = Object.keys(attributeValues).length > 0
+
+    const result = await this.client
+      .update({
+        TableName: this.table.tableName,
+        ConditionExpression: keyConditionExp,
+        Key: {
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey,
+        },
+        UpdateExpression: expression,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
+        ReturnValues: "ALL_NEW", // return item after update applied
+      })
+      .promise()
+
+    if (result.Attributes !== undefined) {
+      return toJSON<T>(result.Attributes)
+    } else {
+      throw new Error(
+        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
+      )
+    }
   }
 
   /** Write multiple items into Dynamo using a transaction.
