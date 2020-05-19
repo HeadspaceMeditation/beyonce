@@ -15,6 +15,9 @@ export interface Musician {
   model: ModelType.Musician
   id: string
   name: string
+  details: {
+    description?: string
+  }
 }
 
 export interface Song {
@@ -53,6 +56,9 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   const musician = MusicianModel.create({
     id: "1",
     name: "Bob Marley",
+    details: {
+      description: "rasta man",
+    },
   })
 
   const song1 = SongModel.create({

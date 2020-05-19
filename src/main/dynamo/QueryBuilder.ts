@@ -1,8 +1,8 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
-import { ExpressionBuilder } from "./ExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
+import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 import { decryptOrPassThroughItem, toJSON } from "./util"
@@ -47,7 +47,9 @@ type RawQueryResults<T extends TaggedModel> = {
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T extends TaggedModel> extends ExpressionBuilder<T> {
+export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
+  T
+> {
   private scanIndexForward: boolean = true
   private modelTags: string[] = getModelTags(this.config)
 

@@ -1,17 +1,13 @@
-import { DynamoDB } from "aws-sdk"
-import { KeysOf } from "../typeUtils"
-import { TaggedModel } from "./types"
+import { KeysOf } from "../../typeUtils"
+import { TaggedModel } from "../types"
+import { Attributes } from "./Attributes"
+import { Variables } from "./Variables"
+import { DynamoDBExpression } from "./DynamoDBExpression"
 
 export type Operator = "=" | "<>" | "<" | "<=" | ">" | ">="
 
-export type DynamoDBExpression = {
-  expression: DynamoDB.DocumentClient.ConditionExpression
-  attributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap
-  attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap
-}
-
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class ExpressionBuilder<T extends TaggedModel> {
+export class QueryExpressionBuilder<T extends TaggedModel> {
   private statements: string[] = []
   private attributeNames = new Attributes()
   private attributeValues = new Variables()
@@ -33,37 +29,37 @@ export class ExpressionBuilder<T extends TaggedModel> {
 
   attributeExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`attribute_exists(${placeholder})`)
+    this.addStatement(`attribute_exists(${placeholder})`)
     return this
   }
 
   attributeNotExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`attribute_not_exists(${placeholder})`)
+    this.addStatement(`attribute_not_exists(${placeholder})`)
     return this
   }
 
   orAttributeExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`OR attribute_exists(${placeholder})`)
+    this.addStatement(`OR attribute_exists(${placeholder})`)
     return this
   }
 
   orAttributeNotExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`OR attribute_not_exists(${placeholder})`)
+    this.addStatement(`OR attribute_not_exists(${placeholder})`)
     return this
   }
 
   andAttributeExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`AND attribute_exists(${placeholder})`)
+    this.addStatement(`AND attribute_exists(${placeholder})`)
     return this
   }
 
   andAttributeNotExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
-    this.statements.push(`AND attribute_not_exists(${placeholder})`)
+    this.addStatement(`AND attribute_not_exists(${placeholder})`)
     return this
   }
 
@@ -72,6 +68,21 @@ export class ExpressionBuilder<T extends TaggedModel> {
   }
   protected addAttributeValue(name: string, value: any): string {
     return this.attributeValues.add(name, value)
+  }
+
+  protected addStatement(statement: string): void {
+    this.statements.push(statement)
+  }
+
+  build(): DynamoDBExpression {
+    const expression = this.statements.join(" ")
+    const attributeNames = this.attributeNames.getSubstitutions()
+    const attributeValues = this.attributeValues.getSubstitutions()
+    return {
+      expression,
+      attributeNames,
+      attributeValues,
+    }
   }
 
   private addCondition(params: {
@@ -92,45 +103,6 @@ export class ExpressionBuilder<T extends TaggedModel> {
     }
 
     expression.push(attributePlaceholder, params.operator, valuePlaceholder)
-    this.statements.push(expression.join(" "))
-  }
-
-  build(): DynamoDBExpression {
-    const expression = this.statements.join(" ")
-    const attributeNames = this.attributeNames.getSubstitutions()
-    const attributeValues = this.attributeValues.getSubstitutions()
-    return {
-      expression,
-      attributeNames,
-      attributeValues,
-    }
-  }
-}
-
-class Attributes {
-  private substitutions: { [key: string]: string } = {}
-
-  add(attribute: string): string {
-    const placeholder = `#${attribute}`
-    this.substitutions[placeholder] = attribute
-    return placeholder
-  }
-
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
-  }
-}
-
-class Variables {
-  private substitutions: { [key: string]: string } = {}
-
-  add(name: string, value: any): string {
-    const placeholder = `:${name}`
-    this.substitutions[placeholder] = value
-    return placeholder
-  }
-
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
+    this.addStatement(expression.join(" "))
   }
 }
