@@ -88,7 +88,7 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.get = mockGet
+      ; (db as any).client.get = mockGet
 
     await db.get(MusicianModel.key({ id: musician.id }), {
       consistentRead: true,
@@ -156,7 +156,7 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.batchGet = mockGet
+      ; (db as any).client.batchGet = mockGet
 
     await db.batchGet({
       keys: [MusicianModel.key({ id: musician.id })],
@@ -499,6 +499,23 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
     song: [song1, song2],
   })
 }
+
+async function blah(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await db.batchPutWithTransaction({ items: [musician, song1, song2] })
+
+  const results = await db
+    .query(MusicianPartition.key({ id: musician.id, }))
+    .exec()
+
+  sortById(results.song)
+  expect(results).toEqual({
+    musician: [musician],
+    song: [song1, song2],
+  })
+}
+
 
 function sortById<T extends { id: string }>(items: T[]): T[] {
   return items.sort((a, b) => {

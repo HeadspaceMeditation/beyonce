@@ -21,8 +21,8 @@ export type Keys = { partitionKey: [string, string]; sortKey: [string, string] }
 export type Fields = { [fieldName: string]: string }
 
 export type GSIDefinition = {
-  partitionKey: string
-  sortKey: string
+  partitionKey: string | string[]
+  sortKey: string | string[]
 }
 
 export type Table = {

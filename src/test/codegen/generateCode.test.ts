@@ -322,3 +322,45 @@ Tables:
 
   expect(lines).toContainEqual(`name: BestNameEvah`)
 })
+
+it("should generate a complex key model", () => {
+  const result = generateCode(`
+Tables:
+  Library:
+    Partitions:
+      Authors:
+        Author:
+          partitionKey: [Author, $id]
+          sortKey: [Author, [$id, $name]]
+          id: string
+          name: string
+`)
+
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "name"]
+})
+
+export enum ModelType {
+  Author = "Author"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", ["id", "name"])
+
+export type Model = Author
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel])
+`)
+})
