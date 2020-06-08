@@ -1,4 +1,5 @@
 import { Model } from "./types"
+import { buildKey } from "./util"
 
 export function generateModels(models: Model[]) {
   return models.map(generateModel)
@@ -10,7 +11,8 @@ function generateModel(model: Model): string {
 
   return `export const ${model.name}Model = ${model.tableName}Table
     .model<${model.name}>(ModelType.${model.name})
-    .partitionKey("${pkPrefix}", "${pk.replace("$", "")}")
-    .sortKey("${skPrefix}", "${sk.replace("$", "")}")
+    .partitionKey("${pkPrefix}", ${buildKey(pk)})
+    .sortKey("${skPrefix}", ${buildKey(sk)})
   `
 }
+

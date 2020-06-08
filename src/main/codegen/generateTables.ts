@@ -1,4 +1,5 @@
 import { Table } from "./types"
+import { buildKeyArray } from "./util"
 
 export function generateTables(tables: Table[]): string {
   const tableCode = tables.map((table) => {
@@ -24,13 +25,18 @@ function generateEncryptionBlacklist(table: Table): string {
     .forEach((model) => {
       const [, pk] = model.keys.partitionKey
       const [, sk] = model.keys.sortKey
-      encryptionBlacklistSet.add(pk.replace("$", ""))
-      encryptionBlacklistSet.add(sk.replace("$", ""))
+
+      const pks = buildKeyArray(model.keys.partitionKey[1])
+      const sks = buildKeyArray(model.keys.sortKey[1])
+      pks.forEach((key: string) => encryptionBlacklistSet.add(key))
+      sks.forEach((key: string) => encryptionBlacklistSet.add(key))
     })
 
   table.gsis.forEach(({ name, partitionKey, sortKey }) => {
-    encryptionBlacklistSet.add(partitionKey.replace("$", ""))
-    encryptionBlacklistSet.add(sortKey.replace("$", ""))
+    const pk = buildKeyArray(partitionKey)
+    const sk = buildKeyArray(sortKey)
+    pk.forEach((key: string) => encryptionBlacklistSet.add(key))
+    sk.forEach((key: string) => encryptionBlacklistSet.add(key))
   })
 
   return JSON.stringify(Array.from(encryptionBlacklistSet))

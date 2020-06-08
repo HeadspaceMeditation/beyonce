@@ -49,7 +49,7 @@ type RawQueryResults<T extends TaggedModel> = {
 /** Builds and executes parameters for a DynamoDB Query operation */
 export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   T
-> {
+  > {
   private scanIndexForward: boolean = true
   private modelTags: string[] = getModelTags(this.config)
 

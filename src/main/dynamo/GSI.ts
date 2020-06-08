@@ -20,7 +20,7 @@ export class GSI<T extends Model<any, any, any>> {
     this.modelTags = models.map((_) => _.modelTag)
   }
 
-  key(partitionKey: string): PartitionKey<ExtractFields<T>> {
+  key(partitionKey: string | string[]): PartitionKey<ExtractFields<T>> {
     return new PartitionKey(this.partitionKeyName, partitionKey, this.modelTags)
   }
 }

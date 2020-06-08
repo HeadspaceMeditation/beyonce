@@ -1,4 +1,5 @@
 import { Fields, Table } from "./types"
+import {buildKey, replaceKeyDollar} from "./util"
 
 export function generateGSIs(tables: Table[]): string {
   return tables.map(generateGSIsForTable).join("\n\n")

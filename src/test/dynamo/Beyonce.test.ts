@@ -1,3 +1,4 @@
+
 import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
 import {
@@ -9,6 +10,9 @@ import {
   MusicianPartition,
   Song,
   SongModel,
+  aAlbum,
+  AlbumModel,
+  someAlbums,
 } from "./models"
 import { setup } from "./util"
 import { Beyonce } from "../../main/dynamo/Beyonce"
@@ -88,7 +92,7 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.get = mockGet
+      ; (db as any).client.get = mockGet
 
     await db.get(MusicianModel.key({ id: musician.id }), {
       consistentRead: true,
@@ -156,7 +160,7 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.batchGet = mockGet
+      ; (db as any).client.batchGet = mockGet
 
     await db.batchGet({
       keys: [MusicianModel.key({ id: musician.id })],
@@ -205,6 +209,14 @@ describe("Beyonce", () => {
 
   it("should find the highest sort key", async () => {
     await testQueryWithReverseAndLimit()
+  })
+
+  it("should put and retrieve an item using pk + complex sk", async () => {
+    await testPutAndRetreiveItemWithComplexKey()
+  })
+
+  it("should query using using pk + partial complex sk", async () => {
+    await testQueryPartialComplexKey()
   })
 
   // With JayZ encryption
@@ -312,13 +324,13 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const result = await db
     .query(MusicianPartition.key({ id: musician.id }))
     .exec()
-  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+  expect(result).toEqual({ musician: [musician], song: [song1, song2], album: [] })
 }
 
 async function testEmptyQuery(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const result = await db.query(MusicianPartition.key({ id: "foo-1" })).exec()
-  expect(result).toEqual({ musician: [], song: [] })
+  expect(result).toEqual({ musician: [], song: [], album: [] })
 }
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
@@ -353,7 +365,7 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .where("model", "=", ModelType.Song)
     .exec()
 
-  expect(result).toEqual({ musician: [], song: [song1, song2] })
+  expect(result).toEqual({ musician: [], song: [song1, song2], album: [] })
 }
 
 async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
@@ -382,7 +394,7 @@ async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
     .orAttributeNotExists("mp3")
     .exec()
 
-  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+  expect(result).toEqual({ musician: [musician], song: [song1, song2], album: [] })
 }
 
 async function testQueryWithLimit(jayZ?: JayZ) {
@@ -395,7 +407,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     .iterator({ pageSize: 1 })
     .next()
 
-  expect(response1.items).toEqual({ musician: [musician], song: [] })
+  expect(response1.items).toEqual({ musician: [musician], song: [], album: [] })
 
   const { value: response2 } = await db
     .query(MusicianPartition.key({ id: musician.id }))
@@ -405,7 +417,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ musician: [], song: [song1] })
+  expect(response2.items).toEqual({ musician: [], song: [song1], album: [] })
 }
 
 async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
@@ -419,7 +431,7 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
     .iterator({ pageSize: 1 })
     .next()
 
-  expect(value.items).toEqual({ musician: [], song: [song2] })
+  expect(value.items).toEqual({ musician: [], song: [song2], album: [] })
 }
 
 async function testBatchGet(jayZ?: JayZ) {
@@ -497,7 +509,33 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   expect(results).toEqual({
     musician: [musician],
     song: [song1, song2],
+    album: [],
   })
+}
+
+async function testPutAndRetreiveItemWithComplexKey(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const album = aAlbum()
+  await db.put(album)
+
+  const result = await db.get(AlbumModel.key({
+    musicianId: album.musicianId,
+    id: album.id,
+    year: album.year
+  }))
+
+  expect(result).toEqual(album)
+}
+
+async function testQueryPartialComplexKey(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const albums = someAlbums()
+  await db.batchPutWithTransaction({ items: albums })
+
+  const result = await db
+    .query(AlbumModel.partialKey({ musicianId: '1', year: '1994' }))
+    .exec()
+  expect(result).toEqual({ album: [albums[0], albums[1]] })
 }
 
 function sortById<T extends { id: string }>(items: T[]): T[] {

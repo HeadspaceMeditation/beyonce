@@ -9,6 +9,7 @@ export const table = new Table({
 export enum ModelType {
   Musician = "musician",
   Song = "song",
+  Album = "album"
 }
 
 export interface Musician {
@@ -28,6 +29,14 @@ export interface Song {
   mp3: Buffer
 }
 
+export interface Album {
+  model: ModelType.Album
+  id: string
+  name: string
+  musicianId: string,
+  year: string,
+}
+
 export const MusicianModel = table
   .model<Musician>(ModelType.Musician)
   .partitionKey(ModelType.Musician, "id")
@@ -38,7 +47,12 @@ export const SongModel = table
   .partitionKey(ModelType.Musician, "musicianId")
   .sortKey(ModelType.Song, "id")
 
-export const MusicianPartition = table.partition([MusicianModel, SongModel])
+export const AlbumModel = table
+  .model<Album>(ModelType.Album)
+  .partitionKey(ModelType.Musician, "musicianId")
+  .sortKey(ModelType.Album, ["year", "id"])
+
+export const MusicianPartition = table.partition([MusicianModel, SongModel, AlbumModel])
 
 export const byModelAndIdGSI = table
   .gsi("byModelAndId")
@@ -76,4 +90,21 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   })
 
   return [musician, song1, song2]
+}
+
+export function aAlbum(album?: Partial<Album>): Album {
+  const defaultAlbum = {
+    id: "1",
+    name: "Dummy",
+    musicianId: "1",
+    year: "1994"
+  }
+  return AlbumModel.create({ ...defaultAlbum, ...album })
+}
+
+export function someAlbums(): Album[] {
+  return [
+    aAlbum(),
+    aAlbum({ id: "2", name: "Dummy Live" }),
+    aAlbum({ id: "3", name: "Third", year: "2008" })]
 }
