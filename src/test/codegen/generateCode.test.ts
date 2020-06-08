@@ -326,10 +326,10 @@ Tables:
 it("should generate a complex key model", () => {
   const result = generateCode(`
 Tables:
-  Library:
+  ComplexLibrary:
     Partitions:
-      Authors:
-        Author:
+      ComplexAuthors:
+        ComplexAuthor:
           partitionKey: [Author, $id]
           sortKey: [Author, [$id, $name]]
           id: string
@@ -338,29 +338,33 @@ Tables:
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
 
-export const LibraryTable = new Table({
-  name: "Library",
+export const ComplexLibraryTable = new Table({
+  name: "ComplexLibrary",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "name"]
 })
 
 export enum ModelType {
-  Author = "Author"
+  ComplexAuthor = "ComplexAuthor"
 }
 
-export interface Author {
-  model: ModelType.Author
+export interface ComplexAuthor {
+  model: ModelType.ComplexAuthor
   id: string
   name: string
 }
 
-export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+export const ComplexAuthorModel = ComplexLibraryTable.model<ComplexAuthor>(
+  ModelType.ComplexAuthor
+)
   .partitionKey("Author", "id")
   .sortKey("Author", ["id", "name"])
 
-export type Model = Author
+export type Model = ComplexAuthor
 
-export const AuthorsPartition = LibraryTable.partition([AuthorModel])
+export const ComplexAuthorsPartition = ComplexLibraryTable.partition([
+  ComplexAuthorModel
+])
 `)
 })

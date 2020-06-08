@@ -11,3 +11,5 @@ export type ExtractKeyType<T> = T extends PartitionAndSortKey<infer U>
 export type GroupedModels<T extends TaggedModel> = {
   [K in T["model"]]: T extends { model: K } ? T[] : never
 }
+
+export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> & U[keyof U]

@@ -1,6 +1,6 @@
 import { PartitionAndSortKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { Table } from "./Table"
-import { TaggedModel } from "./types"
+import { TaggedModel, AtLeastOne } from "./types"
 import { key } from "aws-sdk/clients/signer"
 
 export class Model<
@@ -32,6 +32,28 @@ export class Model<
         partitionKeyPrefix,
         this._buildPartitionKey(params, partitionKeyField)),
 
+      this.table.sortKeyName,
+      this.buildKey(
+        sortKeyPrefix,
+        this._buildSortKey(params, sortKeyField)),
+      this.modelTag
+    )
+  }
+
+  partialKey(
+    params: AtLeastOne<{ [X in U]: string }> & AtLeastOne<{ [Y in V]: string }>
+  ): PartitionKeyAndSortKeyPrefix<T> {
+    const {
+      partitionKeyPrefix,
+      sortKeyPrefix,
+      partitionKeyField,
+      sortKeyField,
+    } = this
+    return new PartitionKeyAndSortKeyPrefix(
+      this.table.partitionKeyName,
+      this.buildKey(
+        partitionKeyPrefix,
+        this._buildPartitionKey(params, partitionKeyField)),
       this.table.sortKeyName,
       this.buildKey(
         sortKeyPrefix,
@@ -79,7 +101,7 @@ export class Model<
   }
 
   /* TODO: Had issue mapping unioned fields of T & V */
-  private _buildPartitionKey(model: { [X in U]: string }, fields: U | U[]): string | string[] {
+  private _buildPartitionKey(model: AtLeastOne<{ [X in U]: string }>, fields: U | U[]): string | string[] {
     if (Array.isArray(fields)) {
       const pkey: string[] = [];
       for (const field of fields) {
@@ -142,7 +164,7 @@ export class SortKeyBuilder<T extends TaggedModel, U extends keyof T> {
     private modelTag: string
   ) { }
 
-  sortKey<V extends keyof T>(prefix: string, sortKeyField: V): Model<T, U, V> {
+  sortKey<V extends keyof T>(prefix: string, sortKeyField: V | V[]): Model<T, U, V> {
     return new Model(
       this.table,
       this.partitionKeyPrefix,
