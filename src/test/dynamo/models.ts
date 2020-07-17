@@ -9,7 +9,6 @@ export const table = new Table({
 export enum ModelType {
   Musician = "musician",
   Song = "song",
-  Album = "album",
 }
 
 export interface Musician {
