@@ -47,7 +47,7 @@ Tables:
 
 #### A note on `partitionKey` and `sortKey` syntax
 
-Beyonce expects you to specify your partition and sort keys as tuple-2s, e.g. `[Author, $id]`. The first element is a "key prefix" and the 2nd must be a field on your model. For example we set the primary key of the `Author` model above to: `[Author, $id]`, would result in the key: `Author-$id`, where `$id` is the value of a specific Author's id.
+Beyonce expects you to specify your partition and sort keys as arrays, e.g. `[Author, $id]`. The first element is a "key prefix" and all subsequent items must be field names on your model. For example we set the primary key of the `Author` model above to: `[Author, $id]`, would result in the key: `Author-$id`, where `$id` is the value of a specific Author's id. And if we wanted a compound key we could do `[Author, $id, $name]`. You can specify compound keys for both partition and sort keys.
 
 Using the example above, if we wanted to place `Books` under the same partition key, then we'd need to set the `Book` model's `partitionKey` to `[Author, $authorId]`.
 
