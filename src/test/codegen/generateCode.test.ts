@@ -176,7 +176,7 @@ export const MusiciansPartition = MusicTable.partition([MusicianModel])
 `)
 })
 
-it("should generate table, add partition and sork key to encryption blacklist", () => {
+it("should generate table, add partition and sort key to encryption blacklist", () => {
   const result = generateCode(`
 Tables:
   Library:
