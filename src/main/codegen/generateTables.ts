@@ -1,4 +1,5 @@
 import { Table } from "./types"
+import { formatKeyComponent } from "./util"
 
 export function generateTables(tables: Table[]): string {
   const tableCode = tables.map((table) => {
@@ -22,16 +23,22 @@ function generateEncryptionBlacklist(table: Table): string {
   table.partitions
     .flatMap((_) => _.models)
     .forEach((model) => {
-      const [, pk] = model.keys.partitionKey
-      const [, sk] = model.keys.sortKey
-      encryptionBlacklistSet.add(pk.replace("$", ""))
-      encryptionBlacklistSet.add(sk.replace("$", ""))
+      const [, ...pkComponents] = model.keys.partitionKey
+      const [, ...skComponents] = model.keys.sortKey
+
+      pkComponents
+        .map(formatKeyComponent)
+        .forEach((_) => encryptionBlacklistSet.add(_))
+
+      skComponents
+        .map(formatKeyComponent)
+        .forEach((_) => encryptionBlacklistSet.add(_))
     })
 
-  table.gsis.forEach(({ name, partitionKey, sortKey }) => {
-    encryptionBlacklistSet.add(partitionKey.replace("$", ""))
-    encryptionBlacklistSet.add(sortKey.replace("$", ""))
+  table.gsis.forEach(({ partitionKey, sortKey }) => {
+    encryptionBlacklistSet.add(formatKeyComponent(partitionKey))
+    encryptionBlacklistSet.add(formatKeyComponent(sortKey))
   })
 
-  return JSON.stringify(Array.from(encryptionBlacklistSet))
+  return `[${Array.from(encryptionBlacklistSet).join(", ")}]`
 }

@@ -17,7 +17,7 @@ export type PartitionDefinition = {
 }
 
 export type ModelDefinition = Keys & Fields
-export type Keys = { partitionKey: [string, string]; sortKey: [string, string] }
+export type Keys = { partitionKey: string[]; sortKey: string[] }
 export type Fields = { [fieldName: string]: string }
 
 export type GSIDefinition = {

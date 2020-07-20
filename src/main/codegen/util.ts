@@ -11,3 +11,7 @@ export function groupBy<T extends { [key: string]: any }, U extends keyof T>(
 
   return Object.entries(groupedItems)
 }
+
+export function formatKeyComponent(component: string): string {
+  return `"${component.replace("$", "")}"`
+}

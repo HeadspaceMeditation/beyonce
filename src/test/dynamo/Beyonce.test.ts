@@ -1,5 +1,7 @@
 import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
+import { DynamoDB } from "aws-sdk"
 import crypto from "crypto"
+import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
   aMusicianWithTwoSongs,
   byModelAndIdGSI,
@@ -9,16 +11,22 @@ import {
   MusicianPartition,
   Song,
   SongModel,
+  table,
 } from "./models"
 import { setup } from "./util"
-import { Beyonce } from "../../main/dynamo/Beyonce"
-import { table } from "./models"
-import { DynamoDB } from "aws-sdk"
 
 describe("Beyonce", () => {
   // Without encryption
   it("should put and retrieve an item using pk + sk", async () => {
     await testPutAndRetrieveItem()
+  })
+
+  it("should put and retrieve a model with a compound partition key", async () => {
+    await testPutAndRetrieveCompoundPartitionKey()
+  })
+
+  it("should put and retrieve a model with a compound sort key", async () => {
+    await testPutAndRetrieveCompoundSortKey()
   })
 
   it("should update a top-level item attribute", async () => {
@@ -213,6 +221,16 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem(jayZ)
   })
 
+  it("should put and retrieve a model with a compound partition key with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveCompoundPartitionKey(jayZ)
+  })
+
+  it("should put and retrieve a model with a compound sort key", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveCompoundSortKey(jayZ)
+  })
+
   it("should put and delete an item using pk + sk with jayZ", async () => {
     await testPutAndDeleteItem()
   })
@@ -319,6 +337,61 @@ async function testEmptyQuery(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const result = await db.query(MusicianPartition.key({ id: "foo-1" })).exec()
   expect(result).toEqual({ musician: [], song: [] })
+}
+
+async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
+  interface Person {
+    model: "person"
+    first: string
+    last: string
+    sortKey: string
+  }
+
+  const PersonModel = table
+    .model<Person>("person")
+    .partitionKey("Person", "first", "last")
+    .sortKey("Person", "sortKey")
+
+  const db = await setup(jayZ)
+  const model = PersonModel.create({
+    first: "Bob",
+    last: "Smith",
+    sortKey: "sortKey-123",
+  })
+  await db.put(model)
+
+  const result = await db.get(
+    PersonModel.key({ first: "Bob", last: "Smith", sortKey: "sortKey-123" })
+  )
+
+  expect(result).toEqual(model)
+}
+
+async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
+  interface LineItem {
+    model: "lineItem"
+    orderId: string
+    id: string
+    timestamp: string
+  }
+
+  const LineItemModel = table
+    .model<LineItem>("lineItem")
+    .partitionKey("OrderId", "orderId")
+    .sortKey("LineItem", "id", "timestamp")
+
+  const db = await setup(jayZ)
+  const model = LineItemModel.create({
+    id: "l1",
+    orderId: "o1",
+    timestamp: "456",
+  })
+  await db.put(model)
+
+  const result = await db.get(
+    LineItemModel.key({ id: "l1", orderId: "o1", timestamp: "456" })
+  )
+  expect(result).toEqual(model)
 }
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {

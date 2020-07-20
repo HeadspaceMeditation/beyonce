@@ -10,9 +10,9 @@ export class Model<
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
-    private partitionKeyField: U,
+    private partitionKeyFields: U[],
     private sortKeyPrefix: string,
-    private sortKeyField: V,
+    private sortKeyFields: V[],
     readonly modelTag: string
   ) {}
 
@@ -22,24 +22,27 @@ export class Model<
     const {
       partitionKeyPrefix,
       sortKeyPrefix,
-      partitionKeyField,
-      sortKeyField,
+      partitionKeyFields,
+      sortKeyFields,
     } = this
+    const pkComponents = partitionKeyFields.map((_) => params[_])
+    const skComponents = sortKeyFields.map((_) => params[_])
     return new PartitionAndSortKey(
       this.table.partitionKeyName,
-      this.buildKey(partitionKeyPrefix, params[partitionKeyField]),
+      this.buildKey(partitionKeyPrefix, ...pkComponents),
 
       this.table.sortKeyName,
-      this.buildKey(sortKeyPrefix, params[sortKeyField]),
+      this.buildKey(sortKeyPrefix, ...skComponents),
       this.modelTag
     )
   }
 
   partitionKey(params: { [X in U]: string }): PartitionKeyAndSortKeyPrefix<T> {
-    const { partitionKeyPrefix, partitionKeyField } = this
+    const { partitionKeyPrefix, partitionKeyFields } = this
+    const pkComponents = partitionKeyFields.map((_) => params[_])
     return new PartitionKeyAndSortKeyPrefix(
       this.table.partitionKeyName,
-      this.buildKey(partitionKeyPrefix, params[partitionKeyField]),
+      this.buildKey(partitionKeyPrefix, ...pkComponents),
       this.table.sortKeyName,
       this.sortKeyPrefix,
       this.modelTag
@@ -50,18 +53,18 @@ export class Model<
     const {
       partitionKeyPrefix,
       sortKeyPrefix,
-      partitionKeyField,
-      sortKeyField,
+      partitionKeyFields,
+      sortKeyFields,
       modelTag,
     } = this
 
     const fieldsWithTag = { ...fields, model: modelTag } as T
 
-    const pk = this.buildKey(
-      partitionKeyPrefix,
-      fieldsWithTag[partitionKeyField]
-    )
-    const sk = this.buildKey(sortKeyPrefix, fieldsWithTag[sortKeyField])
+    const pkComponents = partitionKeyFields.map((_) => fieldsWithTag[_])
+    const skComponents = sortKeyFields.map((_) => fieldsWithTag[_])
+
+    const pk = this.buildKey(partitionKeyPrefix, ...pkComponents)
+    const sk = this.buildKey(sortKeyPrefix, ...skComponents)
 
     return {
       ...fieldsWithTag,
@@ -70,8 +73,8 @@ export class Model<
     }
   }
 
-  private buildKey(prefix: string, key: string): string {
-    return `${prefix}-${key}`
+  private buildKey(...components: string[]): string {
+    return components.join("-")
   }
 }
 
@@ -79,12 +82,12 @@ export class PartitionKeyBuilder<T extends TaggedModel> {
   constructor(private table: Table, private modelTag: string) {}
   partitionKey<U extends keyof T>(
     prefix: string,
-    partitionKeyField: U
+    ...partitionKeyFields: U[]
   ): SortKeyBuilder<T, U> {
     return new SortKeyBuilder(
       this.table,
       prefix,
-      partitionKeyField,
+      partitionKeyFields,
       this.modelTag
     )
   }
@@ -94,17 +97,20 @@ export class SortKeyBuilder<T extends TaggedModel, U extends keyof T> {
   constructor(
     private table: Table,
     private partitionKeyPrefix: string,
-    private partitionKeyField: U,
+    private partitionKeyFields: U[],
     private modelTag: string
   ) {}
 
-  sortKey<V extends keyof T>(prefix: string, sortKeyField: V): Model<T, U, V> {
+  sortKey<V extends keyof T>(
+    prefix: string,
+    ...sortKeyFields: V[]
+  ): Model<T, U, V> {
     return new Model(
       this.table,
       this.partitionKeyPrefix,
-      this.partitionKeyField,
+      this.partitionKeyFields,
       prefix,
-      sortKeyField,
+      sortKeyFields,
       this.modelTag
     )
   }
