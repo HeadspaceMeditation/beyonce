@@ -5,7 +5,7 @@ import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
   aMusicianWithTwoSongs,
   byModelAndIdGSI,
-  byNameAndIdGSI,
+  invertedIndexGSI,
   ModelType,
   MusicianModel,
   MusicianPartition,
@@ -195,8 +195,8 @@ describe("Beyonce", () => {
     await testGSIByModel()
   })
 
-  it("should query GSI by name", async () => {
-    await testGSIByName()
+  it("should query inverted index GSI", async () => {
+    await testInvertedIndexGSI()
   })
 
   it("should write multiple items at once", async () => {
@@ -275,9 +275,9 @@ describe("Beyonce", () => {
     await testGSIByModel(jayZ)
   })
 
-  it("should query GSI by name with jayZ", async () => {
+  it("should inverted index GSI by name with jayZ", async () => {
     const jayZ = await createJayZ()
-    await testGSIByName(jayZ)
+    await testInvertedIndexGSI(jayZ)
   })
 
   it("should write multiple items at once with jayZ", async () => {
@@ -545,16 +545,53 @@ async function testGSIByModel(jayZ?: JayZ) {
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
-async function testGSIByName(jayZ?: JayZ) {
+async function testInvertedIndexGSI(jayZ?: JayZ) {
   const db = await setup(jayZ)
-  const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db
-    .queryGSI(byNameAndIdGSI.name, byNameAndIdGSI.key(musician.name))
+  const santana = MusicianModel.create({
+    id: "1",
+    name: "Santana",
+    details: {
+      description: "famous guitarist",
+    },
+  })
+
+  const slash = MusicianModel.create({
+    id: "2",
+    name: "Slash",
+    details: {
+      description: "another famous guitarist",
+    },
+  })
+
+  const santanasSong = SongModel.create({
+    musicianId: santana.id,
+    id: "1",
+    title: "A song where Slash and Santana play together",
+    mp3: Buffer.from("fake-data", "utf8"),
+  })
+
+  const slashesSong = SongModel.create({
+    musicianId: slash.id,
+    id: "1", // note the same id as above
+    title: "A song where Slash and Santana play together",
+    mp3: Buffer.from("fake-data", "utf8"),
+  })
+
+  await db.batchPutWithTransaction({
+    items: [santana, slash, santanasSong, slashesSong],
+  })
+
+  // Now when we query our inverted index, pk and sk are reversed,
+  // so song id: 1 => [santanasSong, slashesSong]
+  const { song: songs } = await db
+    .queryGSI(
+      invertedIndexGSI.name,
+      invertedIndexGSI.key(`${ModelType.Song}-1`)
+    )
     .exec()
 
-  expect(result).toEqual({ musician: [musician] })
+  expect(songs).toEqual([santanasSong, slashesSong])
 }
 
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {

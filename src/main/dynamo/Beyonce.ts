@@ -39,7 +39,11 @@ export class Beyonce {
   private jayz?: JayZ
   private consistentReads: boolean
 
-  constructor(private table: Table, dynamo: DynamoDB, options: Options = {}) {
+  constructor(
+    private table: Table<string, string>,
+    dynamo: DynamoDB,
+    options: Options = {}
+  ) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
 
     if (options.jayz !== undefined) {

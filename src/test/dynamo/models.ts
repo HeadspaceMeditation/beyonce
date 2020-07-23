@@ -46,11 +46,11 @@ export const byModelAndIdGSI = table
   .partitionKey("model")
   .sortKey("id")
 
-export const byNameAndIdGSI = table
-  .gsi("byNameAndId")
-  .models([MusicianModel])
-  .partitionKey("name")
-  .sortKey("id")
+export const invertedIndexGSI = table
+  .gsi("invertedIndex")
+  .models([MusicianModel, SongModel])
+  .partitionKey("sk")
+  .sortKey("pk")
 
 export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   const musician = MusicianModel.create({
