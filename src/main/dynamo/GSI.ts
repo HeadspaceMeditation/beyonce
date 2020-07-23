@@ -16,11 +16,10 @@ export class GSI<
     private table: Table<PK, SK>,
     readonly name: string,
     private models: T[],
-    private partitionKeyName: StringKey<T>,
-    private sortKeyName: StringKey<T>
+    readonly partitionKeyName: StringKey<T>,
+    readonly sortKeyName: StringKey<T>
   ) {
-    this.table.addToEncryptionBlacklist(this.partitionKeyName)
-    this.table.addToEncryptionBlacklist(this.sortKeyName)
+    this.table.registerGSI(this)
     this.modelTags = models.map((_) => _.modelTag)
   }
 
