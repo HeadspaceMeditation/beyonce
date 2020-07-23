@@ -275,7 +275,7 @@ describe("Beyonce", () => {
     await testGSIByModel(jayZ)
   })
 
-  it("should inverted index GSI by name with jayZ", async () => {
+  it("should query inverted index GSI by name with jayZ", async () => {
     const jayZ = await createJayZ()
     await testInvertedIndexGSI(jayZ)
   })
