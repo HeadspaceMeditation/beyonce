@@ -233,7 +233,8 @@ Tables:
         sortKey: $id
 `)
 
-  expect(result).toContain(`const modelByIdGSI = LibraryTable.gsi("modelById")
+  expect(result)
+    .toContain(`export const modelByIdGSI = LibraryTable.gsi("modelById")
   .models([AuthorModel, BookModel])
   .partitionKey("model")
   .sortKey("id")
