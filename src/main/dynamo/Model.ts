@@ -8,7 +8,7 @@ export class Model<
   V extends keyof T
 > {
   constructor(
-    private table: Table<string, string>,
+    private table: Table,
     private partitionKeyPrefix: string,
     private partitionKeyFields: U[],
     private sortKeyPrefix: string,
@@ -79,7 +79,7 @@ export class Model<
 }
 
 export class PartitionKeyBuilder<T extends TaggedModel> {
-  constructor(private table: Table<string, string>, private modelTag: string) {}
+  constructor(private table: Table, private modelTag: string) {}
   partitionKey<U extends keyof T>(
     prefix: string,
     ...partitionKeyFields: U[]
@@ -95,7 +95,7 @@ export class PartitionKeyBuilder<T extends TaggedModel> {
 
 export class SortKeyBuilder<T extends TaggedModel, U extends keyof T> {
   constructor(
-    private table: Table<string, string>,
+    private table: Table,
     private partitionKeyPrefix: string,
     private partitionKeyFields: U[],
     private modelTag: string
