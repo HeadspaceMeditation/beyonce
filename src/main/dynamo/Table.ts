@@ -1,4 +1,5 @@
-import { GSIBuilder } from "./GSI"
+import { DynamoDB } from "aws-sdk"
+import { GSI, GSIBuilder } from "./GSI"
 import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
 import { TaggedModel } from "./types"
@@ -8,6 +9,7 @@ export class Table<PK extends string = string, SK extends string = string> {
   readonly partitionKeyName: PK
   readonly sortKeyName: SK
   private encryptionBlacklist: Set<string>
+  private gsis: GSI<string, string, any>[] = []
 
   constructor(config: {
     name: string
@@ -42,11 +44,56 @@ export class Table<PK extends string = string, SK extends string = string> {
     return new GSIBuilder(this, name)
   }
 
-  addToEncryptionBlacklist(field: string) {
-    this.encryptionBlacklist.add(field)
+  registerGSI(gsi: GSI<string, string, any>) {
+    this.gsis.push(gsi)
+    this.encryptionBlacklist.add(gsi.partitionKeyName)
+    this.encryptionBlacklist.add(gsi.sortKeyName)
   }
 
   getEncryptionBlacklist(): Set<string> {
     return this.encryptionBlacklist
+  }
+
+  asCreateTableInput(
+    billingMode: DynamoDB.Types.BillingMode
+  ): DynamoDB.Types.CreateTableInput {
+    const attributeSet = new Set([
+      this.partitionKeyName,
+      this.sortKeyName,
+      "model",
+      ...this.gsis.flatMap((_) => [_.partitionKeyName, _.sortKeyName]),
+    ])
+
+    const attributeDefinitions: DynamoDB.Types.AttributeDefinitions = Array.from(
+      attributeSet
+    ).map((attr) => ({
+      AttributeName: attr,
+      AttributeType: "S",
+    }))
+
+    return {
+      TableName: this.tableName,
+
+      KeySchema: [
+        { AttributeName: this.partitionKeyName, KeyType: "HASH" },
+        { AttributeName: this.sortKeyName, KeyType: "RANGE" },
+      ],
+
+      AttributeDefinitions: attributeDefinitions,
+      GlobalSecondaryIndexes: this.gsis.map(
+        ({ name, partitionKeyName, sortKeyName }) => ({
+          IndexName: name,
+          KeySchema: [
+            { AttributeName: partitionKeyName, KeyType: "HASH" },
+            { AttributeName: sortKeyName, KeyType: "RANGE" },
+          ],
+          Projection: {
+            ProjectionType: "ALL",
+          },
+        })
+      ),
+
+      BillingMode: billingMode,
+    }
   }
 }

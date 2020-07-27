@@ -25,47 +25,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
   }
 
   await client
-    .createTable({
-      TableName: tableName,
-
-      KeySchema: [
-        { AttributeName: "pk", KeyType: "HASH" },
-        { AttributeName: "sk", KeyType: "RANGE" },
-      ],
-
-      AttributeDefinitions: [
-        { AttributeName: "pk", AttributeType: "S" },
-        { AttributeName: "sk", AttributeType: "S" },
-        { AttributeName: "model", AttributeType: "S" },
-        { AttributeName: "name", AttributeType: "S" },
-        { AttributeName: "id", AttributeType: "S" },
-      ],
-
-      GlobalSecondaryIndexes: [
-        {
-          IndexName: "invertedIndex",
-          KeySchema: [
-            { AttributeName: "sk", KeyType: "HASH" },
-            { AttributeName: "pk", KeyType: "RANGE" },
-          ],
-          Projection: {
-            ProjectionType: "ALL",
-          },
-        },
-        {
-          IndexName: "byModelAndId",
-          KeySchema: [
-            { AttributeName: "model", KeyType: "HASH" },
-            { AttributeName: "id", KeyType: "RANGE" },
-          ],
-          Projection: {
-            ProjectionType: "ALL",
-          },
-        },
-      ],
-
-      BillingMode: "PAY_PER_REQUEST",
-    })
+    .createTable(table.asCreateTableInput("PAY_PER_REQUEST"))
     .promise()
 
   return new Beyonce(table, client, { jayz })

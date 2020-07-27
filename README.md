@@ -87,7 +87,17 @@ Which transforms into `import { Address } from "author/address"`
 
 `npx beyonce --in src/models.yaml --out src/generated/models.ts`
 
-### 4. Write type-safe queries
+### 4. Create your DynamoDB table(s)
+
+```TypeScript
+import { LibraryTable } from "generated/models"
+const dynamo = new DynamoDB({ endpoint: "...", region: "..."})
+await dynamo
+  .createTable(LibraryTable.asCreateTableInput("PAY_PER_REQUEST"))
+  .promise()
+```
+
+### 5. Write type-safe queries
 
 Now you can write partition-aware, type safe queries with abandon:
 
@@ -98,7 +108,6 @@ import { Beyonce } from "@ginger.io/beyonce"
 import { DynamoDB } from "aws-sdk"
 import { LibraryTable } from "generated/models"
 
-const dynamo = new DynamoDB({ endpoint: "...", region: "..."})
 const beyonce = new Beyonce(LibraryTable, dynamo)
 ```
 
