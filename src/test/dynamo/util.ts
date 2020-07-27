@@ -43,10 +43,10 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
       GlobalSecondaryIndexes: [
         {
-          IndexName: "byNameAndId",
+          IndexName: "invertedIndex",
           KeySchema: [
-            { AttributeName: "name", KeyType: "HASH" },
-            { AttributeName: "id", KeyType: "RANGE" },
+            { AttributeName: "sk", KeyType: "HASH" },
+            { AttributeName: "pk", KeyType: "RANGE" },
           ],
           Projection: {
             ProjectionType: "ALL",

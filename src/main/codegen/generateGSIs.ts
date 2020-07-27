@@ -31,7 +31,7 @@ function generateGSIsForTable(table: Table): string {
     const sk = sortKey.replace("$", "")
     const models = fieldToModels[pk].map((_) => `${_}Model`).join(", ")
 
-    return `const ${name}GSI = ${table.name}Table.gsi("${name}")
+    return `export const ${name}GSI = ${table.name}Table.gsi("${name}")
       .models([${models}])
       .partitionKey("${pk}")
       .sortKey("${sk}")

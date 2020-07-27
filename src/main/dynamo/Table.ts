@@ -3,16 +3,16 @@ import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
 import { TaggedModel } from "./types"
 
-export class Table {
+export class Table<PK extends string = string, SK extends string = string> {
   readonly tableName: string
-  readonly partitionKeyName: string
-  readonly sortKeyName: string
+  readonly partitionKeyName: PK
+  readonly sortKeyName: SK
   private encryptionBlacklist: Set<string>
 
   constructor(config: {
     name: string
-    partitionKeyName: string
-    sortKeyName: string
+    partitionKeyName: PK
+    sortKeyName: SK
     encryptionBlacklist?: string[]
   }) {
     this.tableName = config.name
@@ -38,7 +38,7 @@ export class Table {
     return new Partition(models)
   }
 
-  gsi(name: string): GSIBuilder {
+  gsi(name: string): GSIBuilder<PK, SK> {
     return new GSIBuilder(this, name)
   }
 
