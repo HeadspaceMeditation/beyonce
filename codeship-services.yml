@@ -1,6 +1,12 @@
+dynamodb:
+  image: amazon/dynamodb-local
+
 beyonce:
   build: .
   cached: true
+  depends_on:
+    - dynamodb
+
   #Volume needed for a step to use another step's artifact
   volumes:
     - .:/usr/app
