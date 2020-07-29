@@ -331,7 +331,6 @@ occur _before_ decryption. Put plainly, this means you _can't_ filter `.query` c
 ## Things beyonce should do, but doesn't (yet)
 
 1. Support the full range of Dynamo filter expressions
-2. Support partition and sort key names other than `pk` and `sk`
 
 ## An aside on storing heterogenous models in the same table
 
