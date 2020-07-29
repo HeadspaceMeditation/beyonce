@@ -1,10 +1,6 @@
-- name: codegen
-  service: beyonce
-  command: /bin/sh -c "npm install && npm run codegen"
-
 - name: build
   service: beyonce
-  command: /bin/sh -c "npm run build"
+  command: /bin/sh -c "npm run install && npm run build"
 
 - name: test
   service: beyonce
