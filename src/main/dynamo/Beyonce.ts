@@ -124,7 +124,10 @@ export class Beyonce {
       })
       .promise()
 
-    if (unprocessedKeys !== undefined) {
+    if (
+      unprocessedKeys !== undefined &&
+      Object.keys(unprocessedKeys).length > 0
+    ) {
       console.error("Some keys didn't process", unprocessedKeys)
     }
 
