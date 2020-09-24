@@ -47,11 +47,10 @@ export class Beyonce {
     dynamo: DynamoDB,
     options: Options = {}
   ) {
-    const client = new DynamoDB.DocumentClient({ service: dynamo })
+    this.client = new DynamoDB.DocumentClient({ service: dynamo })
     if (options.xRayTracingEnabled) {
-      this.client = captureAWSClient(client) as DynamoDB.DocumentClient
-    } else {
-      this.client = client
+      // hack per: https://github.com/aws/aws-xray-sdk-node/issues/23#issuecomment-509745488
+      captureAWSClient((this.client as any).service)
     }
 
     if (options.jayz !== undefined) {
