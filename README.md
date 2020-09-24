@@ -354,3 +354,15 @@ You are probably not Amazon scale. And thus probably don't need to shove _everyt
 
 But you might want to keep a few related models in the same table, under the same partition key and fetch
 those models in a type-safe way. Beyonce makes that easy.
+
+## Misc
+
+You can enable AWS XRay tracing like so:
+
+```TypeScript
+const beyonce = new Beyonce(
+  LibraryTable,
+  dynamo,
+  { xRayTracingEnabled }
+)
+```

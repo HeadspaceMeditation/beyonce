@@ -18,8 +18,11 @@ import {
   toJSON,
 } from "./util"
 
+import { captureAWSClient } from "aws-xray-sdk"
+
 export type Options = {
   jayz?: JayZ
+  xRayTracingEnabled?: boolean
   consistentReads?: boolean
 }
 
@@ -44,7 +47,12 @@ export class Beyonce {
     dynamo: DynamoDB,
     options: Options = {}
   ) {
-    this.client = new DynamoDB.DocumentClient({ service: dynamo })
+    const client = new DynamoDB.DocumentClient({ service: dynamo })
+    if (options.xRayTracingEnabled) {
+      this.client = captureAWSClient(client) as DynamoDB.DocumentClient
+    } else {
+      this.client = client
+    }
 
     if (options.jayz !== undefined) {
       this.jayz = options.jayz
