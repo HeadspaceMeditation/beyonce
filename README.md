@@ -363,6 +363,6 @@ You can enable AWS XRay tracing like so:
 const beyonce = new Beyonce(
   LibraryTable,
   dynamo,
-  { xRayTracingEnabled }
+  { xRayTracingEnabled: true }
 )
 ```
