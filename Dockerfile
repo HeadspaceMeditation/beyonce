@@ -5,6 +5,7 @@ FROM openjdk:15-alpine3.11
 WORKDIR /usr/app
 COPY . ./
 RUN apk add --update \
+    yarn \
     python \
     python-dev \
     py-pip \

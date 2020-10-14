@@ -1,7 +1,7 @@
 - name: build
   service: beyonce
-  command: /bin/sh -c "npm install && npm run build"
+  command: /bin/sh -c "yarn install && yarn build"
 
 - name: test
   service: beyonce
-  command: /bin/sh -c "npm run test"
+  command: /bin/sh -c "yarn test"
