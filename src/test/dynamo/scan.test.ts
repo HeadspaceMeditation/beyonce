@@ -1,13 +1,7 @@
 import { JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
-import {
-  aMusicianWithTwoSongs,
-  ModelType,
-  MusicianPartition,
-  Song,
-  SongModel,
-} from "./models"
-import { createJayZ, setup } from "./util"
+import { aMusicianWithTwoSongs, ModelType, Song, SongModel } from "./models"
+import { createJayZ, createSongs, setup } from "./util"
 
 describe("Beyonce.scan", () => {
   it("should return empty arrays when no models found during scan", async () => {
@@ -28,6 +22,10 @@ describe("Beyonce.scan", () => {
 
   it("should scan with a user specified limit", async () => {
     await testScanWithLimit()
+  })
+
+  it("should parallel scan", async () => {
+    await testParallelScan()
   })
 })
 
@@ -56,6 +54,11 @@ describe("Beyonce.scan with JayZ", () => {
     const jayz = await createJayZ()
     await testScanWithLimit(jayz)
   })
+
+  it("should parallel scan", async () => {
+    const jayz = await createJayZ()
+    await testParallelScan(jayz)
+  })
 })
 
 async function testEmptyScan(jayZ?: JayZ) {
@@ -66,24 +69,34 @@ async function testEmptyScan(jayZ?: JayZ) {
 
 async function testScanWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
-
-  // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
-  // Thus the following items comprise at least 100kb * 25 = ~2.5MB of data
-  // i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
-  const mp3 = crypto.randomBytes(100_000)
-  const songs: Song[] = [...Array(25).keys()].map((songId) =>
-    SongModel.create({
-      musicianId: "1",
-      id: songId.toString(),
-      title: `Song ${songId}`,
-      mp3,
-    })
-  )
-
-  await Promise.all(songs.map((song) => db.put(song)))
-
+  const songs = await createSongs(db)
   const results = await db.scan().exec()
   expect(results.song.length).toEqual(songs.length)
+}
+
+async function testParallelScan(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const songs = await createSongs(db)
+
+  const segment1 = db
+    .scan<Song>({ parallelScan: { segmentId: 0, totalSegments: 2 } })
+    .iterator()
+
+  const segment2 = db
+    .scan<Song>({ parallelScan: { segmentId: 1, totalSegments: 2 } })
+    .iterator()
+
+  const results: Song[] = []
+
+  for await (const { items } of segment1) {
+    results.push(...items.song)
+  }
+
+  for await (const { items } of segment2) {
+    results.push(...items.song)
+  }
+
+  expect(results.length).toEqual(songs.length)
 }
 
 async function testScanWithFilter(jayZ?: JayZ) {

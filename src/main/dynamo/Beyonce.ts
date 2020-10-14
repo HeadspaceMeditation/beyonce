@@ -9,7 +9,7 @@ import {
   PartitionKeyAndSortKeyPrefix,
 } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
-import { ScanBuilder } from "./ScanBuilder"
+import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
@@ -36,6 +36,7 @@ export type QueryOptions = {
 
 export type ScanOptions = {
   consistentRead?: boolean
+  parallelScan?: ParallelScanConfig
 }
 
 /** A thin wrapper around the DynamoDB sdk client that
