@@ -274,6 +274,33 @@ for await (const { items } of iterator) {
 }
 ```
 
+#### Parallel Scans
+
+You can perform "parallel scans" by passing a `parallelScan` config operation to the `.scan` method,
+like so:
+
+```TypeScript
+// Somewhere inside of Worker 1
+const segment1 = beyonce
+  .scan({ parallelScan: { segmentId: 0, totalSegments: 2 }})
+  .iterator()
+
+for await (const results of segment1) {
+  // ...
+}
+
+// Somewhere inside of Worker 2
+const segment2 = beyonce
+  .scan({ parallelScan: { segmentId: 1, totalSegments: 2 }})
+  .iterator()
+
+for await (const results of segment2) {
+  // ...
+}
+```
+
+These options mirror the underlying [DynamoDB API](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
+
 ### BatchGet
 
 ```TypeScript
