@@ -1,4 +1,4 @@
-import { JayZ } from "@ginger.io/jay-z"
+import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import { table } from "./models"
@@ -31,4 +31,9 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
     .promise()
 
   return new Beyonce(table, client, { jayz })
+}
+
+export async function createJayZ(): Promise<JayZ> {
+  const keyProvider = await FixedDataKeyProvider.forLibsodium()
+  return new JayZ({ keyProvider })
 }

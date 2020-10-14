@@ -1,13 +1,19 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
+import {
+  groupAllPages,
+  IteratorOptions,
+  pagedIterator,
+  PaginatedQueryResults,
+} from "./pagedIterator"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
-import { decryptOrPassThroughItem, toJSON } from "./util"
 
-type TableQueryParams<T extends TaggedModel> = {
+type TableQueryConfig<T extends TaggedModel> = {
   db: DynamoDB.DocumentClient
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
@@ -15,35 +21,13 @@ type TableQueryParams<T extends TaggedModel> = {
   consistentRead?: boolean
 }
 
-type GSIQueryParams<T extends TaggedModel> = {
+type GSIQueryConfig<T extends TaggedModel> = {
   db: DynamoDB.DocumentClient
   table: Table
   gsiName: string
   gsiKey: PartitionKey<T>
   jayz?: JayZ
   consistentRead?: boolean
-}
-
-export type Cursor = Record<string, any>
-
-export type IteratorOptions = {
-  cursor?: Cursor
-  pageSize?: number
-}
-
-export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
-  QueryResults<T>,
-  QueryResults<T>
->
-
-export type QueryResults<T extends TaggedModel> = {
-  items: GroupedModels<T>
-  cursor?: Cursor
-}
-
-type RawQueryResults<T extends TaggedModel> = {
-  items: T[]
-  lastEvaluatedKey?: DynamoDB.DocumentClient.Key
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
@@ -53,7 +37,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   private scanIndexForward: boolean = true
   private modelTags: string[] = getModelTags(this.config)
 
-  constructor(private config: TableQueryParams<T> | GSIQueryParams<T>) {
+  constructor(private config: TableQueryConfig<T> | GSIQueryConfig<T>) {
     super()
   }
 
@@ -63,16 +47,25 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   }
 
   async exec(): Promise<GroupedModels<T>> {
-    const results: T[] = []
-    for await (const { items } of this.executeQuery()) {
-      results.push(...items)
-    }
+    const iterator = pagedIterator<DocumentClient.QueryInput, T>(
+      {},
+      (options) => this.buildQuery(options),
+      (query) => this.config.db.query(query).promise(),
+      this.config.jayz
+    )
 
-    return groupModelsByType(results, this.modelTags)
+    return groupAllPages(iterator, this.modelTags)
   }
 
   async *iterator(options: IteratorOptions = {}): PaginatedQueryResults<T> {
-    for await (const response of this.executeQuery(options)) {
+    const iterator = pagedIterator<DocumentClient.QueryInput, T>(
+      options,
+      (options) => this.buildQuery(options),
+      (query) => this.config.db.query(query).promise(),
+      this.config.jayz
+    )
+
+    for await (const response of iterator) {
       yield {
         items: groupModelsByType(response.items, this.modelTags),
         cursor: response.lastEvaluatedKey,
@@ -83,42 +76,6 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       items: groupModelsByType<T>([], this.modelTags),
       cursor: undefined,
     }
-  }
-
-  private async *executeQuery(
-    options: IteratorOptions = {}
-  ): AsyncGenerator<RawQueryResults<T>, RawQueryResults<T>> {
-    const { db } = this.config
-
-    let pendingQuery:
-      | DynamoDB.DocumentClient.QueryInput
-      | undefined = this.buildQuery(options)
-
-    while (pendingQuery !== undefined) {
-      const response: DynamoDB.DocumentClient.QueryOutput = await db
-        .query(pendingQuery)
-        .promise()
-
-      if (response.LastEvaluatedKey !== undefined) {
-        pendingQuery = this.buildQuery({
-          ...options,
-          cursor: response.LastEvaluatedKey,
-        })
-      } else {
-        pendingQuery = undefined
-      }
-
-      const itemsToProcess = response.Items || []
-      const jsonItemPromises = itemsToProcess.map(async (_) => {
-        const item = await decryptOrPassThroughItem(this.config.jayz, _)
-        return toJSON<T>(item)
-      })
-
-      const items = await Promise.all(jsonItemPromises)
-      yield { items, lastEvaluatedKey: response.LastEvaluatedKey }
-    }
-
-    return { items: [] as T[], lastEvaluatedKey: undefined }
   }
 
   private buildQuery(
@@ -162,7 +119,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private buildKeyConditionForTable(config: TableQueryParams<T>): string {
+  private buildKeyConditionForTable(config: TableQueryConfig<T>): string {
     const { key } = config
     const pkPlaceholder = this.addAttributeName(key.partitionKeyName)
     const pkValuePlaceholder = this.addAttributeValue(
@@ -186,7 +143,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     return keyConditionExpression.join(" AND ")
   }
 
-  private buildKeyConditionForGSI(config: GSIQueryParams<T>): string {
+  private buildKeyConditionForGSI(config: GSIQueryConfig<T>): string {
     const { gsiKey } = config
     const pkPlaceholder = this.addAttributeName(gsiKey.partitionKeyName)
     const pkValuePlaceholder = this.addAttributeValue(
@@ -199,8 +156,8 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
 }
 
 function isTableQuery<T extends TaggedModel>(
-  query: TableQueryParams<T> | GSIQueryParams<T>
-): query is TableQueryParams<T> {
+  query: TableQueryConfig<T> | GSIQueryConfig<T>
+): query is TableQueryConfig<T> {
   return (query as any).key !== undefined
 }
 
@@ -211,7 +168,7 @@ function isPartitionKeyWithSortKeyPrefix<T extends TaggedModel>(
 }
 
 function getModelTags<T extends TaggedModel>(
-  config: TableQueryParams<T> | GSIQueryParams<T>
+  config: TableQueryConfig<T> | GSIQueryConfig<T>
 ): T["model"][] {
   const key = isTableQuery(config) ? config.key : config.gsiKey
   return isPartitionKeyWithSortKeyPrefix(key) ? [key.modelTag] : key.modelTags

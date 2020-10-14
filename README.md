@@ -250,6 +250,30 @@ const prideAndPrejudice = await beyonce
   .exec()
 ```
 
+### Scan
+
+You can `scan` every record in your DynamoDB table using an API that closely mirrors the `query` API. For example:
+
+```TypeScript
+import { AuthorPartition } from "generated/models"
+
+// Scan through everything in the table and load it into memory (not recommended for prod)
+const results = await beyonce
+  .scan()
+  .exec() // returns { Author: Author[], Book: Book[] }
+```
+
+```TypeScript
+const iterator = beyonce
+  .scan()
+  .iterator({ pageSize: 1 })
+
+// Step through each page 1 by 1
+for await (const { items } of iterator) {
+  // ...
+}
+```
+
 ### BatchGet
 
 ```TypeScript
