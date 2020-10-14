@@ -1,5 +1,6 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import { captureAWSClient } from "aws-xray-sdk"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import {
@@ -8,6 +9,7 @@ import {
   PartitionKeyAndSortKeyPrefix,
 } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
+import { ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
@@ -17,8 +19,6 @@ import {
   MaybeEncryptedItems,
   toJSON,
 } from "./util"
-
-import { captureAWSClient } from "aws-xray-sdk"
 
 export type Options = {
   jayz?: JayZ
@@ -31,6 +31,10 @@ export type GetOptions = {
 }
 
 export type QueryOptions = {
+  consistentRead?: boolean
+}
+
+export type ScanOptions = {
   consistentRead?: boolean
 }
 
@@ -187,6 +191,17 @@ export class Beyonce {
       gsiKey,
       jayz,
       consistentRead: options.consistentRead,
+    })
+  }
+
+  scan<T extends TaggedModel = TaggedModel>(
+    options: ScanOptions = {}
+  ): ScanBuilder<T> {
+    return new ScanBuilder<T>({
+      db: this.client,
+      table: this.table,
+      jayz: this.jayz,
+      ...options,
     })
   }
 

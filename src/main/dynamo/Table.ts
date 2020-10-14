@@ -8,6 +8,7 @@ export class Table<PK extends string = string, SK extends string = string> {
   readonly tableName: string
   readonly partitionKeyName: PK
   readonly sortKeyName: SK
+  private modelTags: string[] = []
   private encryptionBlacklist: Set<string>
   private gsis: GSI<string, string, any>[] = []
 
@@ -31,6 +32,7 @@ export class Table<PK extends string = string, SK extends string = string> {
   }
 
   model<T extends TaggedModel>(modelType: T["model"]): PartitionKeyBuilder<T> {
+    this.modelTags.push(modelType)
     return new PartitionKeyBuilder(this, modelType)
   }
 
@@ -52,6 +54,10 @@ export class Table<PK extends string = string, SK extends string = string> {
 
   getEncryptionBlacklist(): Set<string> {
     return this.encryptionBlacklist
+  }
+
+  getModelTags(): string[] {
+    return this.modelTags
   }
 
   asCreateTableInput(
