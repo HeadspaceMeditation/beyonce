@@ -8,7 +8,7 @@ import {
   Song,
   SongModel,
 } from "./models"
-import { createJayZ, setup } from "./util"
+import { createJayZ, createSongs, setup } from "./util"
 
 describe("Beyonce.query", () => {
   it("should return empty arrays when no models found when querying", async () => {
@@ -121,22 +121,7 @@ async function testEmptyQuery(jayZ?: JayZ) {
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
-
-  // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
-  // Thus the following items comprise at least 100kb * 25 = ~2.5MB of data
-  // i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
-  const mp3 = crypto.randomBytes(100_000)
-  const songs: Song[] = [...Array(25).keys()].map((songId) =>
-    SongModel.create({
-      musicianId: "1",
-      id: songId.toString(),
-      title: `Song ${songId}`,
-      mp3,
-    })
-  )
-
-  await Promise.all(songs.map((song) => db.put(song)))
-
+  const songs = await createSongs(db)
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
   expect(results.song.length).toEqual(songs.length)
 }
