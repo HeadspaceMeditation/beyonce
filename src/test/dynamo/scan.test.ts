@@ -79,11 +79,11 @@ async function testParallelScan(jayZ?: JayZ) {
   const songs = await createSongs(db)
 
   const segment1 = db
-    .scan<Song>({ parallelScan: { segmentId: 0, totalSegments: 2 } })
+    .scan<Song>({ parallel: { segmentId: 0, totalSegments: 2 } })
     .iterator()
 
   const segment2 = db
-    .scan<Song>({ parallelScan: { segmentId: 1, totalSegments: 2 } })
+    .scan<Song>({ parallel: { segmentId: 1, totalSegments: 2 } })
     .iterator()
 
   const results: Song[] = []

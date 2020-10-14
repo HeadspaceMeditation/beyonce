@@ -276,13 +276,13 @@ for await (const { items } of iterator) {
 
 #### Parallel Scans
 
-You can perform "parallel scans" by passing a `parallelScan` config operation to the `.scan` method,
+You can perform "parallel scans" by passing a `parallel` config operation to the `.scan` method,
 like so:
 
 ```TypeScript
 // Somewhere inside of Worker 1
 const segment1 = beyonce
-  .scan({ parallelScan: { segmentId: 0, totalSegments: 2 }})
+  .scan({ parallel: { segmentId: 0, totalSegments: 2 }})
   .iterator()
 
 for await (const results of segment1) {

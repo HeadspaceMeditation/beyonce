@@ -36,7 +36,7 @@ export type QueryOptions = {
 
 export type ScanOptions = {
   consistentRead?: boolean
-  parallelScan?: ParallelScanConfig
+  parallel?: ParallelScanConfig
 }
 
 /** A thin wrapper around the DynamoDB sdk client that

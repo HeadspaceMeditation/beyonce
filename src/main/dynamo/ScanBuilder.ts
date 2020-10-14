@@ -17,7 +17,7 @@ type ScanConfig<T extends TaggedModel> = {
   table: Table
   jayz?: JayZ
   consistentRead?: boolean
-  parallelScan?: ParallelScanConfig
+  parallel?: ParallelScanConfig
 }
 
 export type ParallelScanConfig = {
@@ -70,7 +70,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   private buildScan(
     options: IteratorOptions
   ): DynamoDB.DocumentClient.ScanInput {
-    const { table, consistentRead, parallelScan } = this.config
+    const { table, consistentRead, parallel } = this.config
     const { expression, attributeNames, attributeValues } = this.build()
     const filterExp = expression !== "" ? expression : undefined
 
@@ -90,8 +90,8 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       FilterExpression: filterExp,
       ExclusiveStartKey: options.cursor,
       Limit: options.pageSize,
-      Segment: parallelScan?.segmentId,
-      TotalSegments: parallelScan?.totalSegments,
+      Segment: parallel?.segmentId,
+      TotalSegments: parallel?.totalSegments,
     }
   }
 }
