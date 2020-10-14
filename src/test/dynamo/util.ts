@@ -1,7 +1,8 @@
 import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
-import { table } from "./models"
+import { Song, SongModel, table } from "./models"
 
 export const port = 8000
 const isRunningOnCI = process.env.CI_BUILD_ID !== undefined
@@ -36,4 +37,24 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 export async function createJayZ(): Promise<JayZ> {
   const keyProvider = await FixedDataKeyProvider.forLibsodium()
   return new JayZ({ keyProvider })
+}
+
+// DynamoDB has a 400kb Item limit w/ a 1MB response size limit
+// Thus 25 song items comprise at least 100kb * 25 = ~2.5MB of data
+// i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
+export async function createSongs(
+  db: Beyonce,
+  n: number = 25
+): Promise<Song[]> {
+  const mp3 = crypto.randomBytes(100_000)
+  const songs: Song[] = [...Array(n).keys()].map((songId) =>
+    SongModel.create({
+      musicianId: "1",
+      id: songId.toString(),
+      title: `Song ${songId}`,
+      mp3,
+    })
+  )
+  await Promise.all(songs.map((song) => db.put(song)))
+  return songs
 }
