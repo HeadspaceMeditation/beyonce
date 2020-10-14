@@ -291,7 +291,7 @@ for await (const results of segment1) {
 
 // Somewhere inside of Worker 2
 const segment2 = beyonce
-  .scan({ parallelScan: { segmentId: 1, totalSegments: 2 }})
+  .scan({ parallel: { segmentId: 1, totalSegments: 2 }})
   .iterator()
 
 for await (const results of segment2) {
