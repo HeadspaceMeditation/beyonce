@@ -20,9 +20,9 @@ describe("ExpressionBuilder basic clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name",
+      expression: "#name = :v1",
       attributeNames: { "#name": "name" },
-      attributeValues: { ":name": "Bob Marley" },
+      attributeValues: { ":v1": "Bob Marley" },
     })
   })
 
@@ -34,9 +34,9 @@ describe("ExpressionBuilder basic clauses", () => {
         .build()
 
       expect(result).toEqual({
-        expression: `#name ${operator} :name`,
+        expression: `#name ${operator} :v1`,
         attributeNames: { "#name": "name" },
-        attributeValues: { ":name": "Bob Marley" },
+        attributeValues: { ":v1": "Bob Marley" },
       })
     })
   })
@@ -48,7 +48,7 @@ describe("ExpressionBuilder basic clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name OR #id <> :id",
+      expression: "#name = :v1 OR #id <> :v2",
 
       attributeNames: {
         "#name": "name",
@@ -56,8 +56,28 @@ describe("ExpressionBuilder basic clauses", () => {
       },
 
       attributeValues: {
-        ":name": "Bob Marley",
-        ":id": "123",
+        ":v1": "Bob Marley",
+        ":v2": "123",
+      },
+    })
+  })
+
+  it("should support using the same attribute name multiple times", () => {
+    const result = exp()
+      .where("name", "=", "Bob Marley")
+      .or("name", "=", "Flea")
+      .build()
+
+    expect(result).toEqual({
+      expression: "#name = :v1 OR #name = :v2",
+
+      attributeNames: {
+        "#name": "name",
+      },
+
+      attributeValues: {
+        ":v1": "Bob Marley",
+        ":v2": "Flea",
       },
     })
   })
@@ -69,7 +89,7 @@ describe("ExpressionBuilder basic clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name AND #id <> :id",
+      expression: "#name = :v1 AND #id <> :v2",
 
       attributeNames: {
         "#name": "name",
@@ -77,8 +97,8 @@ describe("ExpressionBuilder basic clauses", () => {
       },
 
       attributeValues: {
-        ":name": "Bob Marley",
-        ":id": "123",
+        ":v1": "Bob Marley",
+        ":v2": "123",
       },
     })
   })
@@ -117,7 +137,7 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
   }
 
   const attributeValues = {
-    ":name": "Bob Marley",
+    ":v1": "Bob Marley",
   }
 
   it("should support orAttributeExists clauses", () => {
@@ -127,7 +147,7 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name OR attribute_exists(#id)",
+      expression: "#name = :v1 OR attribute_exists(#id)",
       attributeNames,
       attributeValues,
     })
@@ -140,7 +160,7 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name AND attribute_exists(#id)",
+      expression: "#name = :v1 AND attribute_exists(#id)",
       attributeNames,
       attributeValues,
     })
@@ -153,7 +173,7 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name OR attribute_not_exists(#id)",
+      expression: "#name = :v1 OR attribute_not_exists(#id)",
       attributeNames,
       attributeValues,
     })
@@ -166,7 +186,7 @@ describe("ExpressionBuilder and/or attribute_(not)_exists clauses", () => {
       .build()
 
     expect(result).toEqual({
-      expression: "#name = :name AND attribute_not_exists(#id)",
+      expression: "#name = :v1 AND attribute_not_exists(#id)",
       attributeNames,
       attributeValues,
     })

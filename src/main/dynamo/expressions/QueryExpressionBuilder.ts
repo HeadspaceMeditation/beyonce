@@ -63,26 +63,33 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
     return this
   }
 
+  build(): DynamoDBExpression {
+    const expression = this.statements.join(" ")
+    const attributeNames = this.attributeNames.getSubstitutions()
+    const attributeValues = this.attributeValues.getSubstitutions()
+
+    return {
+      expression,
+      attributeNames,
+      attributeValues,
+    }
+  }
+
   protected addAttributeName(name: string): string {
     return this.attributeNames.add(name)
   }
-  protected addAttributeValue(name: string, value: any): string {
-    return this.attributeValues.add(name, value)
+  protected addAttributeValue(value: any): string {
+    return this.attributeValues.add(value)
   }
 
   protected addStatement(statement: string): void {
     this.statements.push(statement)
   }
 
-  build(): DynamoDBExpression {
-    const expression = this.statements.join(" ")
-    const attributeNames = this.attributeNames.getSubstitutions()
-    const attributeValues = this.attributeValues.getSubstitutions()
-    return {
-      expression,
-      attributeNames,
-      attributeValues,
-    }
+  protected reset(): void {
+    this.attributeNames = new Attributes()
+    this.attributeValues = new Variables()
+    this.statements = []
   }
 
   private addCondition(params: {
@@ -92,10 +99,7 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
     booleanOperator?: "OR" | "AND"
   }): void {
     const attributePlaceholder = this.addAttributeName(params.attribute)
-    const valuePlaceholder = this.addAttributeValue(
-      params.attribute,
-      params.value
-    )
+    const valuePlaceholder = this.addAttributeValue(params.value)
     const expression = []
 
     if (params.booleanOperator !== undefined) {

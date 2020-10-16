@@ -81,13 +81,14 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   private buildQuery(
     options: IteratorOptions
   ): DynamoDB.DocumentClient.QueryInput {
+    let query: DynamoDB.DocumentClient.QueryInput
     if (isTableQuery(this.config)) {
       const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForTable(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
-      return {
+      query = {
         TableName: table.tableName,
         ConsistentRead: consistentRead,
         KeyConditionExpression: keyCondition,
@@ -104,7 +105,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
-      return {
+      query = {
         TableName: table.tableName,
         ConsistentRead: consistentRead,
         IndexName: this.config.gsiName,
@@ -117,24 +118,21 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         Limit: options.pageSize,
       }
     }
+
+    this.reset()
+    return query
   }
 
   private buildKeyConditionForTable(config: TableQueryConfig<T>): string {
     const { key } = config
     const pkPlaceholder = this.addAttributeName(key.partitionKeyName)
-    const pkValuePlaceholder = this.addAttributeValue(
-      key.partitionKeyName,
-      key.partitionKey
-    )
+    const pkValuePlaceholder = this.addAttributeValue(key.partitionKey)
     const keyConditionExpression = [`${pkPlaceholder} = ${pkValuePlaceholder}`]
 
     if (isPartitionKeyWithSortKeyPrefix(key)) {
       const { sortKeyName, sortKeyPrefix } = key
       const skPlaceholder = this.addAttributeName(sortKeyName)
-      const skValuePlaceholder = this.addAttributeValue(
-        sortKeyName,
-        sortKeyPrefix
-      )
+      const skValuePlaceholder = this.addAttributeValue(sortKeyPrefix)
       keyConditionExpression.push(
         `begins_with(${skPlaceholder}, ${skValuePlaceholder})`
       )
@@ -146,10 +144,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   private buildKeyConditionForGSI(config: GSIQueryConfig<T>): string {
     const { gsiKey } = config
     const pkPlaceholder = this.addAttributeName(gsiKey.partitionKeyName)
-    const pkValuePlaceholder = this.addAttributeValue(
-      gsiKey.partitionKeyName,
-      gsiKey.partitionKey
-    )
+    const pkValuePlaceholder = this.addAttributeValue(gsiKey.partitionKey)
 
     return `${pkPlaceholder} = ${pkValuePlaceholder}`
   }

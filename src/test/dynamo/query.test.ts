@@ -1,11 +1,9 @@
 import { JayZ } from "@ginger.io/jay-z"
-import crypto from "crypto"
 import {
   aMusicianWithTwoSongs,
   ModelType,
   MusicianModel,
   MusicianPartition,
-  Song,
   SongModel,
 } from "./models"
 import { createJayZ, createSongs, setup } from "./util"

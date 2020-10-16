@@ -78,7 +78,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     const includeAttributeValues =
       filterExp !== undefined && Object.values(attributeValues).length > 0
 
-    return {
+    const scan = {
       TableName: table.tableName,
       ConsistentRead: consistentRead,
       ExpressionAttributeNames: includeAttributeNames
@@ -93,5 +93,8 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       Segment: parallel?.segmentId,
       TotalSegments: parallel?.totalSegments,
     }
+
+    this.reset()
+    return scan
   }
 }
