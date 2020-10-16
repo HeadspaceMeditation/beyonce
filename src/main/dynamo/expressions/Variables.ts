@@ -1,13 +1,15 @@
 export class Variables {
   private substitutions: { [key: string]: string } = {}
+  private counter = 1
 
-  add(name: string, value: any): string {
-    const placeholder = `:${name}`
+  add(value: any): string {
+    const placeholder = `:v${this.counter}`
     this.substitutions[placeholder] = value
+    this.counter += 1
     return placeholder
   }
 
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
+  getSubstitutions(): { [key: string]: string } {
+    return { ...this.substitutions }
   }
 }

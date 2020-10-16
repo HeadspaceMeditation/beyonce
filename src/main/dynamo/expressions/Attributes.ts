@@ -7,7 +7,7 @@ export class Attributes {
     return placeholder
   }
 
-  getSubstitutions(): Readonly<{ [key: string]: string }> {
-    return this.substitutions
+  getSubstitutions(): { [key: string]: string } {
+    return { ...this.substitutions }
   }
 }
