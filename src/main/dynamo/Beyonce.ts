@@ -140,7 +140,9 @@ export class Beyonce {
       unprocessedKeys !== undefined &&
       Object.keys(unprocessedKeys).length > 0
     ) {
-      console.error("Some keys didn't process", unprocessedKeys)
+      throw new Error(
+        `Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`
+      )
     }
 
     const modelTags = params.keys.map((_) => _.modelTag)
