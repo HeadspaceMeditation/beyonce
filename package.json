@@ -1,6 +1,6 @@
 {
   "name": "@ginger.io/beyonce",
-  "version": "0.0.48",
+  "version": "0.0.49",
   "description": "Type-safe DynamoDB query builder for TypeScript. Designed with single-table architecture in mind.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,10 +8,11 @@
     "beyonce": "dist/codegen/cli.js"
   },
   "files": [
-    "./dist"
+    "./dist",
+    "./src"
   ],
   "dependencies": {
-    "@ginger.io/jay-z": "0.0.8",
+    "@ginger.io/jay-z": "0.0.9",
     "aws-sdk": "^2.760.0",
     "aws-xray-sdk": "^3.2.0",
     "fast-json-stable-stringify": "^2.1.0",
