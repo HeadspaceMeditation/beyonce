@@ -21,7 +21,7 @@ export async function encryptOrPassThroughItems<T extends Record<string, any>>(
 
       return {
         item,
-        fieldsToEncrypt,
+        fieldsToEncrypt
       }
     })
 

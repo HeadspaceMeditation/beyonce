@@ -6,7 +6,7 @@ import { groupModelsByType } from "./groupModelsByType"
 import {
   PartitionAndSortKey,
   PartitionKey,
-  PartitionKeyAndSortKeyPrefix,
+  PartitionKeyAndSortKeyPrefix
 } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
 import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
@@ -17,7 +17,7 @@ import {
   decryptOrPassThroughItems,
   encryptOrPassThroughItems,
   MaybeEncryptedItems,
-  toJSON,
+  toJSON
 } from "./util"
 
 export type Options = {
@@ -85,14 +85,14 @@ export class Beyonce {
         ConsistentRead: useConsistentRead,
         Key: {
           [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey,
-        },
+          [this.table.sortKeyName]: key.sortKey
+        }
       })
       .promise()
 
     if (item !== undefined) {
       const [maybeDecryptedItem] = await decryptOrPassThroughItems(this.jayz, [
-        item,
+        item
       ])
       return toJSON<T>(maybeDecryptedItem)
     }
@@ -106,8 +106,8 @@ export class Beyonce {
         TableName: this.table.tableName,
         Key: {
           [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey,
-        },
+          [this.table.sortKeyName]: key.sortKey
+        }
       })
       .promise()
   }
@@ -124,7 +124,7 @@ export class Beyonce {
 
     const {
       Responses: responses,
-      UnprocessedKeys: unprocessedKeys,
+      UnprocessedKeys: unprocessedKeys
     } = await this.client
       .batchGet({
         RequestItems: {
@@ -132,10 +132,10 @@ export class Beyonce {
             ConsistentRead: useConsistentRead,
             Keys: params.keys.map(({ partitionKey, sortKey }) => ({
               [this.table.partitionKeyName]: partitionKey,
-              [this.table.sortKeyName]: sortKey,
-            })),
-          },
-        },
+              [this.table.sortKeyName]: sortKey
+            }))
+          }
+        }
       })
       .promise()
 
@@ -181,7 +181,7 @@ export class Beyonce {
       table,
       key,
       jayz: jayz,
-      consistentRead: useConsistentRead,
+      consistentRead: useConsistentRead
     })
   }
 
@@ -197,7 +197,7 @@ export class Beyonce {
       gsiName,
       gsiKey,
       jayz,
-      consistentRead: options.consistentRead,
+      consistentRead: options.consistentRead
     })
   }
 
@@ -208,7 +208,7 @@ export class Beyonce {
       db: this.client,
       table: this.table,
       jayz: this.jayz,
-      ...options,
+      ...options
     })
   }
 
@@ -219,7 +219,7 @@ export class Beyonce {
     await this.client
       .put({
         TableName: this.table.tableName,
-        Item: maybeEncryptedItem,
+        Item: maybeEncryptedItem
       })
       .promise()
   }
@@ -252,12 +252,12 @@ export class Beyonce {
         ConditionExpression: keyConditionExp,
         Key: {
           [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey,
+          [this.table.sortKeyName]: key.sortKey
         },
         UpdateExpression: expression,
         ExpressionAttributeNames: attributeNames,
         ExpressionAttributeValues: hasValues ? attributeValues : undefined,
-        ReturnValues: "ALL_NEW", // return item after update applied
+        ReturnValues: "ALL_NEW" // return item after update applied
       })
       .promise()
 
@@ -277,7 +277,7 @@ export class Beyonce {
   }): Promise<void> {
     const maybeEncryptedItems = await this.maybeEncryptItems(params.items)
     const encryptedItems = maybeEncryptedItems.map((item) => ({
-      Put: { TableName: this.table.tableName, Item: item },
+      Put: { TableName: this.table.tableName, Item: item }
     }))
 
     await this.client.transactWrite({ TransactItems: encryptedItems }).promise()

@@ -145,7 +145,7 @@ async function testScanWithLimit(jayZ?: JayZ) {
     .scan()
     .iterator({
       cursor: response1.cursor,
-      pageSize: 1,
+      pageSize: 1
     })
     .next()
 

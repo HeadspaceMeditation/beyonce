@@ -60,7 +60,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
     if (response.LastEvaluatedKey !== undefined) {
       pendingOperation = buildOperation({
         ...options,
-        cursor: response.LastEvaluatedKey,
+        cursor: response.LastEvaluatedKey
       })
     } else {
       pendingOperation = undefined
