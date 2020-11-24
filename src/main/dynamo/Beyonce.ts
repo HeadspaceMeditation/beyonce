@@ -14,7 +14,7 @@ import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
 import {
-  decryptOrPassThroughItem,
+  decryptOrPassThroughItems,
   encryptOrPassThroughItems,
   MaybeEncryptedItems,
   toJSON,
@@ -91,7 +91,10 @@ export class Beyonce {
       .promise()
 
     if (item !== undefined) {
-      return toJSON<T>(await decryptOrPassThroughItem(this.jayz, item))
+      const [maybeDecryptedItem] = await decryptOrPassThroughItems(this.jayz, [
+        item,
+      ])
+      return toJSON<T>(maybeDecryptedItem)
     }
   }
 
@@ -149,12 +152,13 @@ export class Beyonce {
 
     if (responses !== undefined) {
       const items = responses[this.table.tableName]
-      const jsonItemPromises = items.map(async (_) => {
-        const item = await decryptOrPassThroughItem(this.jayz, _)
-        return toJSON<ExtractKeyType<T>>(item)
-      })
-
-      const jsonItems = await Promise.all(jsonItemPromises)
+      const maybeDecryptedItems = await decryptOrPassThroughItems(
+        this.jayz,
+        items
+      )
+      const jsonItems = maybeDecryptedItems.map((item) =>
+        toJSON<ExtractKeyType<T>>(item)
+      )
       return groupModelsByType(jsonItems, modelTags)
     } else {
       return groupModelsByType<ExtractKeyType<T>>([], modelTags)
@@ -210,7 +214,7 @@ export class Beyonce {
 
   /** Write an item into Dynamo */
   async put<T extends TaggedModel>(item: T): Promise<void> {
-    const maybeEncryptedItem = await this.maybeEncryptItems(item)
+    const [maybeEncryptedItem] = await this.maybeEncryptItems([item])
 
     await this.client
       .put({
@@ -271,25 +275,17 @@ export class Beyonce {
   async batchPutWithTransaction<T extends TaggedModel>(params: {
     items: T[]
   }): Promise<void> {
-    const asyncEncryptedItems = params.items.map(async (item) => {
-      const maybeEncryptedItem = await this.maybeEncryptItems(item)
-      return {
-        Put: { TableName: this.table.tableName, Item: maybeEncryptedItem },
-      }
-    })
+    const maybeEncryptedItems = await this.maybeEncryptItems(params.items)
+    const encryptedItems = maybeEncryptedItems.map((item) => ({
+      Put: { TableName: this.table.tableName, Item: item },
+    }))
 
-    const encryptedItems = await Promise.all(asyncEncryptedItems)
-
-    await this.client
-      .transactWrite({
-        TransactItems: encryptedItems,
-      })
-      .promise()
+    await this.client.transactWrite({ TransactItems: encryptedItems }).promise()
   }
 
   private async maybeEncryptItems<T extends TaggedModel>(
-    item: T
-  ): Promise<MaybeEncryptedItems<T>> {
+    item: T[]
+  ): Promise<MaybeEncryptedItems<T>[]> {
     const { jayz, table } = this
 
     return await encryptOrPassThroughItems(
