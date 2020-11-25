@@ -4,7 +4,7 @@ import {
   ModelType,
   MusicianModel,
   MusicianPartition,
-  SongModel,
+  SongModel
 } from "./models"
 import { createJayZ, createSongs, setup } from "./util"
 
@@ -17,12 +17,12 @@ describe("Beyonce.query", () => {
     const db = await setup()
     const query = await (db as any)
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
-        consistentRead: true,
+        consistentRead: true
       })
       .buildQuery({})
 
     expect(query).toMatchObject({
-      ConsistentRead: true,
+      ConsistentRead: true
     })
   })
 
@@ -66,12 +66,12 @@ describe("Beyonce.query with JayZ", () => {
     const db = await setup(jayz)
     const query = await (db as any)
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
-        consistentRead: true,
+        consistentRead: true
       })
       .buildQuery({})
 
     expect(query).toMatchObject({
-      ConsistentRead: true,
+      ConsistentRead: true
     })
   })
 
@@ -182,7 +182,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     .query(MusicianPartition.key({ id: musician.id }))
     .iterator({
       cursor: response1.cursor,
-      pageSize: 1,
+      pageSize: 1
     })
     .next()
 

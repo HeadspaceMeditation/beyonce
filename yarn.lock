@@ -134,9 +134,10 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@ginger.io/jay-z@0.0.9":
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/@ginger.io/jay-z/-/jay-z-0.0.9.tgz#d01d7953f59014e765ee1445bbad676cb5748c8f"
+"@ginger.io/jay-z@0.0.10":
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/@ginger.io/jay-z/-/jay-z-0.0.10.tgz#c7df84e5d08045637c8a7efe4afca6c42fbd2dea"
+  integrity sha512-KX4ZQZy2NyoF0ODYs6BZnWgXMh3Kg/WSvEHyymOBSrWoJqnZdqDNyaHxI9QmC8qaIGiz7s/ajSE5vZAAKMk7bA==
   dependencies:
     aws-sdk "^2.640.0"
     fast-json-stable-stringify "^2.1.0"

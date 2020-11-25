@@ -11,7 +11,7 @@ import {
   MusicianPartition,
   Song,
   SongModel,
-  table,
+  table
 } from "./models"
 import { setup, createJayZ } from "./util"
 
@@ -61,7 +61,7 @@ describe("Beyonce", () => {
 
     expect(updated).toEqual({
       ...musician,
-      details: { description: "scottish blues dude" },
+      details: { description: "scottish blues dude" }
     })
   })
 
@@ -80,7 +80,7 @@ describe("Beyonce", () => {
 
     expect(updated).toEqual({
       ...musician,
-      details: {},
+      details: {}
     })
   })
 
@@ -91,23 +91,23 @@ describe("Beyonce", () => {
     const mockGet = jest.fn(() => ({
       promise: () =>
         Promise.resolve({
-          Item: musician,
-        }),
+          Item: musician
+        })
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
     ;(db as any).client.get = mockGet
 
     await db.get(MusicianModel.key({ id: musician.id }), {
-      consistentRead: true,
+      consistentRead: true
     })
     expect(mockGet).toHaveBeenCalledWith({
       TableName: table.tableName,
       Key: {
         pk: "musician-1",
-        sk: "musician-1",
+        sk: "musician-1"
       },
-      ConsistentRead: true,
+      ConsistentRead: true
     })
   })
 
@@ -119,12 +119,12 @@ describe("Beyonce", () => {
     const db = await setup()
     const query = await (db as any)
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
-        consistentRead: true,
+        consistentRead: true
       })
       .buildQuery({})
 
     expect(query).toMatchObject({
-      ConsistentRead: true,
+      ConsistentRead: true
     })
   })
 
@@ -139,8 +139,8 @@ describe("Beyonce", () => {
     const mockGet = jest.fn(() => ({
       promise: () =>
         Promise.resolve({
-          Item: musician,
-        }),
+          Item: musician
+        })
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
@@ -148,7 +148,7 @@ describe("Beyonce", () => {
 
     await db.batchGet({
       keys: [MusicianModel.key({ id: musician.id })],
-      consistentRead: true,
+      consistentRead: true
     })
 
     expect(mockGet).toHaveBeenCalledWith({
@@ -158,11 +158,11 @@ describe("Beyonce", () => {
           Keys: [
             {
               pk: "musician-1",
-              sk: "musician-1",
-            },
-          ],
-        },
-      },
+              sk: "musician-1"
+            }
+          ]
+        }
+      }
     })
   })
 
@@ -267,7 +267,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
   const model = PersonModel.create({
     first: "Bob",
     last: "Smith",
-    sortKey: "sortKey-123",
+    sortKey: "sortKey-123"
   })
   await db.put(model)
 
@@ -295,7 +295,7 @@ async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
   const model = LineItemModel.create({
     id: "l1",
     orderId: "o1",
-    timestamp: "456",
+    timestamp: "456"
   })
   await db.put(model)
 
@@ -315,14 +315,14 @@ async function testBatchGet(jayZ?: JayZ) {
     keys: [
       MusicianModel.key({ id: musician.id }),
       SongModel.key({ musicianId: musician.id, id: song1.id }),
-      SongModel.key({ musicianId: musician.id, id: song2.id }),
-    ],
+      SongModel.key({ musicianId: musician.id, id: song2.id })
+    ]
   })
 
   sortById(results.song)
   expect(results).toEqual({
     musician: [musician],
-    song: [song1, song2],
+    song: [song1, song2]
   })
 }
 
@@ -333,13 +333,13 @@ async function testEmptyBatchGet(jayZ?: JayZ) {
     keys: [
       MusicianModel.key({ id: musician.id }),
       SongModel.key({ musicianId: musician.id, id: song1.id }),
-      SongModel.key({ musicianId: musician.id, id: song2.id }),
-    ],
+      SongModel.key({ musicianId: musician.id, id: song2.id })
+    ]
   })
 
   expect(results).toEqual({
     musician: [],
-    song: [],
+    song: []
   })
 }
 
@@ -362,34 +362,34 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
     id: "1",
     name: "Santana",
     details: {
-      description: "famous guitarist",
-    },
+      description: "famous guitarist"
+    }
   })
 
   const slash = MusicianModel.create({
     id: "2",
     name: "Slash",
     details: {
-      description: "another famous guitarist",
-    },
+      description: "another famous guitarist"
+    }
   })
 
   const santanasSong = SongModel.create({
     musicianId: santana.id,
     id: "1",
     title: "A song where Slash and Santana play together",
-    mp3: Buffer.from("fake-data", "utf8"),
+    mp3: Buffer.from("fake-data", "utf8")
   })
 
   const slashesSong = SongModel.create({
     musicianId: slash.id,
     id: "1", // note the same id as above
     title: "A song where Slash and Santana play together",
-    mp3: Buffer.from("fake-data", "utf8"),
+    mp3: Buffer.from("fake-data", "utf8")
   })
 
   await db.batchPutWithTransaction({
-    items: [santana, slash, santanasSong, slashesSong],
+    items: [santana, slash, santanasSong, slashesSong]
   })
 
   // Now when we query our inverted index, pk and sk are reversed,
@@ -416,7 +416,7 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   sortById(results.song)
   expect(results).toEqual({
     musician: [musician],
-    song: [song1, song2],
+    song: [song1, song2]
   })
 }
 

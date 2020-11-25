@@ -1,5 +1,6 @@
 {
     "prettier.semi": false,
+    "prettier.trailingComma": "none",
     "editor.formatOnSave": true,
     "files.exclude": {
         "**/.git": true,

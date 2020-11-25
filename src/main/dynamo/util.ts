@@ -10,26 +10,34 @@ export function toJSON<T>(item: { [key: string]: any }): T {
 
 export async function encryptOrPassThroughItems<T extends Record<string, any>>(
   jayz: JayZ | undefined,
-  item: T,
+  items: T[],
   encryptionBlacklist: Set<string>
-): Promise<MaybeEncryptedItems<T>> {
+): Promise<MaybeEncryptedItems<T>[]> {
   if (jayz !== undefined) {
-    const fieldsToEncrypt = Object.keys(item).filter(
-      (_) => !encryptionBlacklist.has(_)
-    )
-    return jayz.encryptItem(item, fieldsToEncrypt)
+    const itemsToEncrypt = items.map((item) => {
+      const fieldsToEncrypt = Object.keys(item).filter(
+        (_) => !encryptionBlacklist.has(_)
+      )
+
+      return {
+        item,
+        fieldsToEncrypt
+      }
+    })
+
+    return jayz.encryptItems(itemsToEncrypt)
   } else {
-    return item
+    return items
   }
 }
 
-export async function decryptOrPassThroughItem(
+export async function decryptOrPassThroughItems(
   jayz: JayZ | undefined,
-  item: Record<string, any>
-): Promise<{ [key: string]: any }> {
+  items: Record<string, any>[]
+): Promise<{ [key: string]: any }[]> {
   if (jayz !== undefined) {
-    return jayz.decryptItem(item as EncryptedJayZItem<any, any>)
+    return jayz.decryptItems(items as EncryptedJayZItem<any, any>[])
   } else {
-    return item
+    return items
   }
 }

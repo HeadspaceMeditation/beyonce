@@ -3,7 +3,7 @@ import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { groupModelsByType } from "./groupModelsByType"
 import { GroupedModels, TaggedModel } from "./types"
-import { decryptOrPassThroughItem, toJSON } from "./util"
+import { decryptOrPassThroughItems, toJSON } from "./util"
 
 export type Cursor = Record<string, any>
 
@@ -60,19 +60,18 @@ export async function* pagedIterator<T, U extends TaggedModel>(
     if (response.LastEvaluatedKey !== undefined) {
       pendingOperation = buildOperation({
         ...options,
-        cursor: response.LastEvaluatedKey,
+        cursor: response.LastEvaluatedKey
       })
     } else {
       pendingOperation = undefined
     }
 
-    const itemsToProcess = response.Items || []
-    const jsonItemPromises = itemsToProcess.map(async (_) => {
-      const item = await decryptOrPassThroughItem(jayz, _)
-      return toJSON<U>(item)
-    })
+    const maybeDecryptedItems = await decryptOrPassThroughItems(
+      jayz,
+      response.Items || []
+    )
 
-    const items = await Promise.all(jsonItemPromises)
+    const items = maybeDecryptedItems.map((item) => toJSON<U>(item))
     yield { items, lastEvaluatedKey: response.LastEvaluatedKey }
   }
 
