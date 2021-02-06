@@ -1,24 +1,30 @@
 export type YAMLFile = {
-  Tables: {
+  tables: {
     [tableName: string]: TableDefinition
   }
 }
 
 export type TableDefinition = {
-  Partitions: {
+  models: {
+    [modelName: string]: ModelDefinition
+  }
+
+  partitions: {
     [partitionName: string]: PartitionDefinition
   }
 
-  GSIs?: { [indexName: string]: GSIDefinition }
+  gsis?: { [indexName: string]: GSIDefinition }
 }
 
 export type PartitionDefinition = {
-  [modelName: string]: ModelDefinition
+  partitionKeyPrefix: string
+  models: {
+    [modelName: string]: ModelKeys
+  }
 }
 
-export type ModelDefinition = Keys & Fields
-export type Keys = { partitionKey: string[]; sortKey: string[] }
-export type Fields = { [fieldName: string]: string }
+export type ModelKeys = { partitionKey: string[]; sortKey: string[] }
+export type ModelDefinition = { [fieldName: string]: string }
 
 export type GSIDefinition = {
   partitionKey: string
@@ -49,6 +55,6 @@ export type Model = {
   tableName: string
   partitionName: string
   name: string
-  keys: Keys
-  fields: Fields
+  keys: ModelKeys
+  fields: ModelDefinition
 }
