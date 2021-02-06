@@ -8,7 +8,14 @@ import { generateModelTypeEnum } from "./generateModelTypeEnum"
 import { generatePartitions } from "./generatePartitions"
 import { generateTables } from "./generateTables"
 import { generateTaggedUnion } from "./generateTaggedUnion"
-import { Model, Partition, Table, TableDefinition, YAMLFile } from "./types"
+import {
+  Model,
+  Partition,
+  PartitionDefinition,
+  Table,
+  TableDefinition,
+  YAMLFile
+} from "./types"
 
 export function generateCode(yamlData: string): string {
   const config = parseYaml<YAMLFile>(yamlData)
@@ -57,60 +64,79 @@ export function generateCode(yamlData: string): string {
 
   return prettier.format(code, {
     parser: "typescript",
-    semi: false,
+    semi: false
   })
 }
 
 function toTables(config: YAMLFile): Table[] {
   const tables: Table[] = []
 
-  Object.entries(config.Tables).forEach(([name, { Partitions, GSIs }]) => {
-    const table: Table = {
-      name,
-      partitionKeyName: "pk",
-      sortKeyName: "sk",
-      partitions: toPartitions(name, Partitions),
-      gsis: [],
-    }
+  Object.entries(config.tables).forEach(
+    ([name, { models, partitions, gsis }]) => {
+      const table: Table = {
+        name,
+        partitionKeyName: "pk",
+        sortKeyName: "sk",
+        partitions: buildPartitions(name, models, partitions),
+        gsis: []
+      }
 
-    if (GSIs !== undefined) {
-      Object.entries(GSIs).forEach(([name, { partitionKey, sortKey }]) => {
-        table.gsis.push({ name, partitionKey, sortKey })
-      })
-    }
+      if (gsis !== undefined) {
+        Object.entries(gsis).forEach(([name, { partitionKey, sortKey }]) => {
+          table.gsis.push({ name, partitionKey, sortKey })
+        })
+      }
 
-    tables.push(table)
-  })
+      tables.push(table)
+    }
+  )
 
   return tables
 }
 
-function toPartitions(
+function buildPartitions(
   tableName: string,
-  partitionDefs: TableDefinition["Partitions"]
+  modelDefinitions: TableDefinition["models"],
+  partitionDefinitions: TableDefinition["partitions"]
 ): Partition[] {
-  const partitions = Object.entries(partitionDefs).map(
-    ([partitionName, partition]) => {
-      const models = Object.entries(partition).map(([modelName, model]) => {
-        const { partitionKey, sortKey, ...fields } = model
-        return {
-          tableName,
-          partitionName,
-          name: modelName,
-          keys: { partitionKey, sortKey },
-          fields,
-        }
-      })
+  return Object.entries(partitionDefinitions).map(
+    ([partitionName, partition]) => ({
+      tableName,
+      name: partitionName,
+      models: buildModels(tableName, partitionName, partition, modelDefinitions)
+    })
+  )
+}
+
+function buildModels(
+  tableName: string,
+  partitionName: string,
+  partition: PartitionDefinition,
+  modelDefinitions: TableDefinition["models"]
+): Model[] {
+  return Object.entries(partition.models).map(
+    ([modelName, { partitionKey, sortKey }]) => {
+      const partitionKeyWithPrefix = [
+        partition.partitionKeyPrefix,
+        ...partitionKey
+      ]
+
+      const fields = modelDefinitions[modelName]
+      if (!fields) {
+        throw new Error(
+          `${modelName} is defined in a YAML partition, but does not appear in your models list`
+        )
+      }
 
       return {
         tableName,
-        name: partitionName,
-        models,
+        partitionName,
+        name: modelName,
+        keys: { partitionKey: partitionKeyWithPrefix, sortKey },
+        fields
       }
     }
   )
-
-  return partitions
 }
 
 function parseYaml<T>(yamlData: string): T {
