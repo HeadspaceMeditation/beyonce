@@ -2,15 +2,19 @@ import { generateCode } from "../../main/codegen/generateCode"
 
 it("should generate a simple model", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string 
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 `)
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
@@ -44,22 +48,29 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel])
 
 it("should generate two models", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
-      Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+    models:
+      Author:
+        id: string
+        name: string
+      
+      Book:
+        id: string
+        authorId: string
+        name: string
 
-        Book:
-          partitionKey: [Author, $authorId]
-          sortKey: [Book, $id]
-          id: string
-          authorId: string
-          name: string
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
 `)
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
@@ -105,25 +116,36 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
 
 it("should generate multiple tables with simple models", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string
+        userId: string
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $userId]
-          id: string
-          name: string
-          userId: string
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $userId]
+          
   Music:
-    Partitions:
+    models:
+      Musician:
+        id: string
+        name: string
+        musicianId: string
+
+    partitions:
       Musicians:
-        Musician:
-          partitionKey: [Musician, $id]
-          sortKey: [Musician, $musicianId]
-          id: string
-          name: string
-          musicianId: string
+        partitionKeyPrefix: Musician
+        models:
+          Musician:
+            partitionKey: [$id]
+            sortKey: [Musician, $musicianId]
 `)
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
@@ -178,23 +200,30 @@ export const MusiciansPartition = MusicTable.partition([MusicianModel])
 
 it("should generate table, add partition and sort key to encryption blacklist", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string
+      
+      Book:
+        id: string
+        name: string
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models: 
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 
-        Book:
-          partitionKey: [Author, $id]
-          sortKey: [Book, $id]
-          id: string
-          name: string
+          Book:
+            partitionKey: [$id]
+            sortKey: [Book, $id]
 
-    GSIs:
+    gsis:
       modelById:
         partitionKey: $model
         sortKey: $id
@@ -211,23 +240,30 @@ Tables:
 
 it("should generate GSI for Beyonces model field", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string
+
+      Book:
+        id: string
+        name: string
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 
-        Book:
-          partitionKey: [Author, $id]
-          sortKey: [Book, $id]
-          id: string
-          name: string
+          Book:
+            partitionKey: [$id]
+            sortKey: [Book, $id]
 
-    GSIs:
+    gsis:
       modelById:
         partitionKey: $model
         sortKey: $id
@@ -243,23 +279,30 @@ Tables:
 
 it("should generate GSI with specified fields", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string
+
+      Book:
+        id: string
+        name: string
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 
-        Book:
-          partitionKey: [Author, $id]
-          sortKey: [Book, $id]
-          id: string
-          name: string
+          Book:
+            partitionKey: [$id]
+            sortKey: [Book, $id]
 
-    GSIs:
+    gsis:
       byNameAndId:
         partitionKey: $name
         sortKey: $id
@@ -274,23 +317,29 @@ Tables:
 
 it("should generate GSI with pk and sk swapped", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: string
+
+      Book:
+        id: string
+        name: string
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 
-        Book:
-          partitionKey: [Author, $id]
-          sortKey: [Book, $id]
-          id: string
-          name: string
-
-    GSIs:
+          Book:
+            partitionKey: [$id]
+            sortKey: [Book, $id]
+    gsis:
       byNameAndId:
         partitionKey: $sk
         sortKey: $pk
@@ -305,15 +354,20 @@ Tables:
 
 it("should import external TypeScript types from a package", () => {
   const result = generateCode(`
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+      Author:
+        id: string
+        name: BestNameEvah from @cool.io/some/sweet/package
+
+    partitions:
       Authors:
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: BestNameEvah from @cool.io/some/sweet/package
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
 `)
 
   const lines = result.split("\n").map((_) => _.trim())
@@ -326,15 +380,20 @@ Tables:
 
 it("should generate a complex key model", () => {
   const result = generateCode(`
-Tables:
+tables:
   ComplexLibrary:
-    Partitions:
+    models:
+      ComplexAuthor:
+        id: string
+        name: string
+
+    partitions:
       ComplexAuthors:
-        ComplexAuthor:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id, $name]
-          id: string
-          name: string
+        partitionKeyPrefix: Author
+        models:
+          ComplexAuthor:
+            partitionKey: [$id]
+            sortKey: [Author, $id, $name]
 `)
 
   expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
