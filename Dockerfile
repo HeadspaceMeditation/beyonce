@@ -10,5 +10,5 @@ RUN apk add --update \
     python-dev \
     py-pip \
     build-base \
-    nodejs=12.15.0-r1 \
-    npm=12.15.0-r1
+    nodejs \
+    npm
