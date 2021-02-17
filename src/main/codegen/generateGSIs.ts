@@ -1,4 +1,4 @@
-import { Fields, Table } from "./types"
+import { ModelDefinition, Table } from "./types"
 
 export function generateGSIs(tables: Table[]): string {
   return tables.map(generateGSIsForTable).join("\n\n")
@@ -6,13 +6,13 @@ export function generateGSIs(tables: Table[]): string {
 
 function generateGSIsForTable(table: Table): string {
   const fieldToModels: { [fieldName: string]: string[] } = {
-    model: [],
+    model: []
   }
 
-  const fieldsAllModelsHave: Fields = {
+  const fieldsAllModelsHave: ModelDefinition = {
     [table.partitionKeyName]: "string",
     [table.sortKeyName]: "string",
-    model: "string",
+    model: "string"
   }
 
   table.partitions.forEach((partition) => {

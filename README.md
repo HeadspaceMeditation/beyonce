@@ -23,45 +23,72 @@ First install beyonce - `npm install @ginger.io/beyonce`
 
 ### 2. Define your models
 
-Define your `tables`, `partitions` and `models` in YAML:
+Define your `tables`, `models` and `partitions` in YAML:
 
 ```YAML
-Tables:
+tables:
+  # We have a single DynamoDB Table named "Library".
   Library:
-    Partitions: # A "partition" is a set of models with the same partition key
-      Authors: # e.g. this one contains Authors + Books
 
-        Author:
-          partitionKey: [Author, $id]
-          sortKey: [Author, $id]
-          id: string
-          name: string
+    # Let's add two models to our Library table: Author and Book.
+    models:
+      Author:
+        id: string
+        name: string
 
-        Book:
-          partitionKey: [Author, $authorId]
-          sortKey: [Book, $id]
-          id: string
-          authorId: string
-          name: string
+      Book:
+        id: string
+        authorId: string
+        name: string
+
+    # Now, imagine we want to be able to retrieve an Author + all their Books
+    # in a single DynamoDB Query operation.
+
+    # To do that, we need a specific Author and all their Books to live under the same partition key.
+    # How about we use "Author-$id" as the partition key? Great, let's go with that.
+
+    # Beyonce calls a group of models that share the same partition key a "patition".
+    # Let's define one now, and name it "Authors"
+    partitions:
+      Authors:
+
+        # All Beyonce partition keys are prefixed (to help you avoid collisions)
+        # We said above we want our final partition key to be "Author-$id",
+        # so we set: "Author" as our prefix here
+        partitionKeyPrefix: Author
+
+        # And, now we can put a given Author and all their Books into the same partition
+        models:
+          Author:
+            partitionKey: [$id] # "Author-$id"
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId] # "Author-$authorId"
+            sortKey: [Book, $id]
 ```
 
 #### A note on `partitionKey` and `sortKey` syntax
 
-Beyonce expects you to specify your partition and sort keys as arrays, e.g. `[Author, $id]`. The first element is a "key prefix" and all subsequent items must be field names on your model. For example we set the primary key of the `Author` model above to: `[Author, $id]`, would result in the key: `Author-$id`, where `$id` is the value of a specific Author's id. And if we wanted a compound key we could do `[Author, $id, $name]`. You can specify compound keys for both partition and sort keys.
+Beyonce expects you to specify your partition and sort keys using arrays, e.g. `[Author, $id]`. The first element in this example is interpreted as a string literal, while the second substitutes the value of a specific model instance's `id` field. In addition, Beyonce prefixes partition keys with the `partitionKeyPrefix` set on the Beyonce "partition" configured your the YAML file.
 
-Using the example above, if we wanted to place `Books` under the same partition key, then we'd need to set the `Book` model's `partitionKey` to `[Author, $authorId]`.
+In our example above, we set the `Author` partiion's `partitionKeyPrefix` to `"Author"` and the `Author` model's `partitionKey` field to `[$id]`. Thus the full partition key at runtime is `Author-$id` (Beyonce uses `-` as a delimiter).
+
+If you'd like to form a composite partition or sort key using multiple model fields, that is supported as well, e.g. `[$id, $name]`.
 
 #### Global secondary indexes
 
 If your table(s) have GSI's you can specify them like this:
 
 ```YAML
-Tables:
+tables:
   Library:
-    Partitions:
+    models:
+     ...
+    partitions:
       ...
 
-    GSIs:
+    gsis:
       byName: # must match your GSI's name
         partitionKey: $name # name field must exist on at least one model
         sortKey: $id # same here
