@@ -185,8 +185,12 @@ describe("Beyonce", () => {
     await testInvertedIndexGSI()
   })
 
-  it("should write multiple items at once", async () => {
+  it("should write multiple items at once using transaction", async () => {
     await testBatchWriteWithTransaction()
+  })
+
+  it("should write multiple items at once ", async () => {
+    await testBatchWrite()
   })
 
   // With JayZ encryption
@@ -240,9 +244,14 @@ describe("Beyonce", () => {
     await testInvertedIndexGSI(jayZ)
   })
 
-  it("should write multiple items at once with jayZ", async () => {
+  it("should write multiple items at once in a transact with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchWriteWithTransaction(jayZ)
+  })
+
+  it("should write multiple items at once with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testBatchWrite(jayZ)
   })
 })
 
@@ -462,6 +471,24 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.executeTransaction({ putItems: [musician, song1, song2] })
+
+  const results = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .exec()
+
+  sortById(results.song)
+  expect(results).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
+}
+
+async function testBatchWrite(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await db.batchPut({
+    items: [musician, song1, song2]
+  })
 
   const results = await db
     .query(MusicianPartition.key({ id: musician.id }))

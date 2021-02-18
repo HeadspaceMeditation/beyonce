@@ -268,6 +268,34 @@ export class Beyonce {
     }
   }
 
+  /** Write multiple items into Dynamo.
+   */
+  async batchPut<T extends TaggedModel>(params: {
+    items: T[]
+  }): Promise<{ unprocessedItems: T[] }> {
+    const { tableName } = this.table
+    const itemPromises = params.items.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItem(item)
+      return { PutRequest: { Item: maybeEncryptedItem } }
+    })
+
+    const itemsToWrite = await Promise.all(itemPromises)
+    const { UnprocessedItems } = await this.client
+      .batchWrite({ RequestItems: { [tableName]: itemsToWrite } })
+      .promise()
+
+    const unprocessedItems: T[] = []
+    if (UnprocessedItems && UnprocessedItems[tableName]) {
+      UnprocessedItems[tableName].forEach(({ PutRequest }) => {
+        if (PutRequest !== undefined) {
+          unprocessedItems.push(PutRequest.Item as T)
+        }
+      })
+    }
+
+    return { unprocessedItems }
+  }
+
   /** Write multiple items into Dynamo using a transaction.
    *
    *  @deprecated -- use executeTransaction
