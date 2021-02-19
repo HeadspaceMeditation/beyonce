@@ -1,6 +1,5 @@
-import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
+import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
-import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
   aMusicianWithTwoSongs,
@@ -9,11 +8,10 @@ import {
   ModelType,
   MusicianModel,
   MusicianPartition,
-  Song,
   SongModel,
   table
 } from "./models"
-import { setup, createJayZ } from "./util"
+import { createJayZ, setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption
