@@ -176,6 +176,10 @@ describe("Beyonce", () => {
     await testEmptyBatchGet()
   })
 
+  it("should write multiple items with empty fields at once", async () => {
+    await testPutAndRetrieveForItemWithEmptyFields()
+  })
+
   // GSIs
   it("should query GSI by model", async () => {
     await testGSIByModel()
@@ -253,6 +257,11 @@ describe("Beyonce", () => {
     const jayZ = await createJayZ()
     await testBatchWrite(jayZ)
   })
+
+  it("should write multiple items with empty fields at once with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveForItemWithEmptyFields(jayZ)
+  })
 })
 
 async function testPutAndRetrieveItem(jayZ?: JayZ) {
@@ -262,6 +271,22 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
   expect(result).toEqual(musician)
+}
+
+async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
+  const db = await setup(jayZ);
+  const [musician, song1, song2] = aMusicianWithTwoSongs();
+  song1.genre = undefined;
+  song2.genre = null;
+  await db.batchPut({ items: [musician, song1, song2] });
+
+  const result = await db.get(MusicianModel.key({ id: musician.id }));
+  expect(
+    await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))
+  ).toEqual(song1);
+  expect(
+    await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))
+  ).toEqual(song2);
 }
 
 async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
