@@ -191,7 +191,7 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem(jayZ)
   })
 
-  it("should put and retrieve an item with an undefined field", async () => {
+  it("should put and retrieve an item with an undefined field with jayZ", async () => {
     const jayZ = await createJayZ()
     await testPutAndRetrieveItemWithUndefinedField(jayZ)
   })
