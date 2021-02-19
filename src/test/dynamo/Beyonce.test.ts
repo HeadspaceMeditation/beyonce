@@ -244,7 +244,7 @@ describe("Beyonce", () => {
     await testInvertedIndexGSI(jayZ)
   })
 
-  it("should write multiple items at once in a transact with jayZ", async () => {
+  it("should write multiple items at once in a transaction with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchWriteWithTransaction(jayZ)
   })
