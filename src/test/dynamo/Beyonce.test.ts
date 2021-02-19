@@ -1,6 +1,5 @@
-import { FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
+import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
-import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
   aMusicianWithTwoSongs,
@@ -9,16 +8,19 @@ import {
   ModelType,
   MusicianModel,
   MusicianPartition,
-  Song,
   SongModel,
   table
 } from "./models"
-import { setup, createJayZ } from "./util"
+import { createJayZ, setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption
   it("should put and retrieve an item using pk + sk", async () => {
     await testPutAndRetrieveItem()
+  })
+
+  it("should put and retrieve an item with an undefined field", async () => {
+    await testPutAndRetrieveItemWithUndefinedField()
   })
 
   it("should put and retrieve a model with a compound partition key", async () => {
@@ -189,6 +191,11 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem(jayZ)
   })
 
+  it("should put and retrieve an item with an undefined field with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveItemWithUndefinedField(jayZ)
+  })
+
   it("should put and retrieve a model with a compound partition key with jayZ", async () => {
     const jayZ = await createJayZ()
     await testPutAndRetrieveCompoundPartitionKey(jayZ)
@@ -232,6 +239,22 @@ describe("Beyonce", () => {
 async function testPutAndRetrieveItem(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, _, __] = aMusicianWithTwoSongs()
+  await db.put(musician)
+
+  const result = await db.get(MusicianModel.key({ id: musician.id }))
+  expect(result).toEqual(musician)
+}
+
+async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const musician = MusicianModel.create({
+    id: "1",
+    name: "Bob Marley",
+    divaRating: undefined,
+    details: {
+      description: "rasta man"
+    }
+  })
   await db.put(musician)
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
@@ -361,6 +384,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   const santana = MusicianModel.create({
     id: "1",
     name: "Santana",
+    divaRating: 10,
     details: {
       description: "famous guitarist"
     }
@@ -369,6 +393,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   const slash = MusicianModel.create({
     id: "2",
     name: "Slash",
+    divaRating: 25,
     details: {
       description: "another famous guitarist"
     }
