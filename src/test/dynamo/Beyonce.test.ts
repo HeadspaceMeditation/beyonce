@@ -19,6 +19,10 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem()
   })
 
+  it("should put and retrieve an item with an undefined field", async () => {
+    await testPutAndRetrieveItemWithUndefinedField()
+  })
+
   it("should put and retrieve a model with a compound partition key", async () => {
     await testPutAndRetrieveCompoundPartitionKey()
   })
@@ -187,6 +191,11 @@ describe("Beyonce", () => {
     await testPutAndRetrieveItem(jayZ)
   })
 
+  it("should put and retrieve an item with an undefined field", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveItemWithUndefinedField(jayZ)
+  })
+
   it("should put and retrieve a model with a compound partition key with jayZ", async () => {
     const jayZ = await createJayZ()
     await testPutAndRetrieveCompoundPartitionKey(jayZ)
@@ -230,6 +239,22 @@ describe("Beyonce", () => {
 async function testPutAndRetrieveItem(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, _, __] = aMusicianWithTwoSongs()
+  await db.put(musician)
+
+  const result = await db.get(MusicianModel.key({ id: musician.id }))
+  expect(result).toEqual(musician)
+}
+
+async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const musician = MusicianModel.create({
+    id: "1",
+    name: "Bob Marley",
+    divaRating: undefined,
+    details: {
+      description: "rasta man"
+    }
+  })
   await db.put(musician)
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
@@ -359,6 +384,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   const santana = MusicianModel.create({
     id: "1",
     name: "Santana",
+    divaRating: 10,
     details: {
       description: "famous guitarist"
     }
@@ -367,6 +393,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   const slash = MusicianModel.create({
     id: "2",
     name: "Slash",
+    divaRating: 25,
     details: {
       description: "another famous guitarist"
     }

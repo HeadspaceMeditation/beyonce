@@ -3,18 +3,19 @@ import { Table } from "../../main/dynamo/Table"
 export const table = new Table({
   name: "TestTable",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
+  sortKeyName: "sk"
 })
 
 export enum ModelType {
   Musician = "musician",
-  Song = "song",
+  Song = "song"
 }
 
 export interface Musician {
   model: ModelType.Musician
   id: string
   name: string
+  divaRating: number | undefined
   details: {
     description?: string
   }
@@ -56,23 +57,24 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
   const musician = MusicianModel.create({
     id: "1",
     name: "Bob Marley",
+    divaRating: 0,
     details: {
-      description: "rasta man",
-    },
+      description: "rasta man"
+    }
   })
 
   const song1 = SongModel.create({
     musicianId: "1",
     id: "2",
     title: "Buffalo Soldier",
-    mp3: Buffer.from("fake-data", "utf8"),
+    mp3: Buffer.from("fake-data", "utf8")
   })
 
   const song2 = SongModel.create({
     musicianId: "1",
     id: "3",
     title: "No Woman, No Cry",
-    mp3: Buffer.from("fake-data", "utf8"),
+    mp3: Buffer.from("fake-data", "utf8")
   })
 
   return [musician, song1, song2]
