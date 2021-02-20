@@ -163,7 +163,10 @@ async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
     .orAttributeNotExists("mp3")
     .exec()
 
-  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+  expect(result).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
 }
 
 async function testQueryWithLimit(jayZ?: JayZ) {
@@ -211,5 +214,8 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const result = await db
     .query(MusicianPartition.key({ id: musician.id }))
     .exec()
-  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+  expect(result).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
 }

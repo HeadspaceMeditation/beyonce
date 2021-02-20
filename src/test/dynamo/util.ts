@@ -14,14 +14,10 @@ const endpoint = isRunningOnCI
 
 export async function setup(jayz?: JayZ): Promise<Beyonce> {
   const { tableName } = table
-  const client = new DynamoDB({
-    endpoint,
-    region: "us-west-2", // silly, but still need to specify region for LocalDynamo
-  })
+  const client = createDynamoDB()
 
   // DynamoDB Local runs as an external http server, so we need to clear
   // the table from previous test runs
-
   const { TableNames: tables } = await client.listTables().promise()
   if (tables !== undefined && tables.indexOf(tableName) !== -1) {
     await client.deleteTable({ TableName: tableName }).promise()
@@ -31,7 +27,18 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
     .createTable(table.asCreateTableInput("PAY_PER_REQUEST"))
     .promise()
 
-  return new Beyonce(table, client, { jayz })
+  return createBeyonce(client, jayz)
+}
+
+export function createDynamoDB(): DynamoDB {
+  return new DynamoDB({
+    endpoint,
+    region: "us-west-2" // silly, but still need to specify region for LocalDynamo
+  })
+}
+
+export function createBeyonce(db: DynamoDB, jayz?: JayZ): Beyonce {
+  return new Beyonce(table, db, { jayz })
 }
 
 export async function createJayZ(): Promise<JayZ> {
@@ -52,7 +59,7 @@ export async function createSongs(
       musicianId: "1",
       id: songId.toString(),
       title: `Song ${songId}`,
-      mp3,
+      mp3
     })
   )
   await Promise.all(songs.map((song) => db.put(song)))

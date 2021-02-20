@@ -233,7 +233,9 @@ const authorWithFilteredBooks = await beyonce
 
 #### Paginating Queries
 
-When you call `.exec()` Beyoncé will automatically page through all the results and return them to you. If you would like to step through pages manually (e.g to throttle reads) -- use the `.iterator()` method instead:
+When you call `.exec()` Beyoncé will automatically page through all the results and return them to you.
+
+If you would like to step through pages manually (e.g to throttle reads) -- use the `.iterator()` method instead:
 
 ```TypeScript
 const iterator = beyonce
@@ -241,10 +243,16 @@ const iterator = beyonce
   .iterator({ pageSize: 1 })
 
 // Step through each page 1 by 1
-for await (const { items } of iterator) {
+for await (const { items, errors } of iterator) {
    // ...
 }
 ```
+
+The `errors` field above contains any exceptions thrown while attempting to load the next iterator "page".
+So it's up to you, the caller to decide if you want to continue walking the iterator, or give up and exit.
+
+**Important**: When an error is encountered within the iterator, the _entire_ "page" is not processed,
+you'll get an errors array, but no items.
 
 ##### Cursors
 

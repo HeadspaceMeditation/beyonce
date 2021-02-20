@@ -7,7 +7,7 @@ import {
   groupAllPages,
   IteratorOptions,
   pagedIterator,
-  PaginatedQueryResults,
+  PaginatedQueryResults
 } from "./pagedIterator"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
@@ -55,15 +55,17 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     )
 
     for await (const response of iterator) {
+      const errors = response.error ? [response.error] : undefined
       yield {
         items: groupModelsByType(response.items, this.modelTags),
-        cursor: response.lastEvaluatedKey,
+        errors,
+        cursor: response.lastEvaluatedKey
       }
     }
 
     return {
       items: groupModelsByType<T>([], this.modelTags),
-      cursor: undefined,
+      cursor: undefined
     }
   }
 
@@ -91,7 +93,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       ExclusiveStartKey: options.cursor,
       Limit: options.pageSize,
       Segment: parallel?.segmentId,
-      TotalSegments: parallel?.totalSegments,
+      TotalSegments: parallel?.totalSegments
     }
 
     this.reset()
