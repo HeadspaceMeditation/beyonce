@@ -43,7 +43,9 @@ export function createBeyonce(db: DynamoDB, jayz?: JayZ): Beyonce {
 
 export async function createJayZ(): Promise<JayZ> {
   const keyProvider = await FixedDataKeyProvider.forLibsodium()
-  return new JayZ({ keyProvider })
+  const jayz = new JayZ({ keyProvider })
+  await jayz.ready
+  return jayz
 }
 
 // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
