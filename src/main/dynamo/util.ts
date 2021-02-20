@@ -1,6 +1,6 @@
 import { EncryptedJayZItem, JayZ } from "@ginger.io/jay-z"
 
-export type MaybeEncryptedItems<T> =
+export type MaybeEncryptedItem<T> =
   | EncryptedJayZItem<T & Record<string, string>, string>
   | (T & Record<string, string>)
 
@@ -8,36 +8,34 @@ export function toJSON<T>(item: { [key: string]: any }): T {
   return item as T
 }
 
-export async function encryptOrPassThroughItems<T extends Record<string, any>>(
+export async function encryptOrPassThroughItem<T extends Record<string, any>>(
   jayz: JayZ | undefined,
-  items: T[],
+  item: T,
   encryptionBlacklist: Set<string>
-): Promise<MaybeEncryptedItems<T>[]> {
+): Promise<MaybeEncryptedItem<T>> {
   if (jayz !== undefined) {
-    const itemsToEncrypt = items.map((item) => {
-      const fieldsToEncrypt = Object.keys(item).filter(
-        (_) => !encryptionBlacklist.has(_)
-      )
+    const fieldsToEncrypt = Object.keys(item).filter(
+      (_) => !encryptionBlacklist.has(_)
+    )
 
-      return {
-        item,
-        fieldsToEncrypt
-      }
+    await jayz.ready
+    return jayz.encryptItem({
+      item,
+      fieldsToEncrypt
     })
-
-    return jayz.encryptItems(itemsToEncrypt)
   } else {
-    return items
+    return item
   }
 }
 
-export async function decryptOrPassThroughItems(
+export async function decryptOrPassThroughItem(
   jayz: JayZ | undefined,
-  items: Record<string, any>[]
-): Promise<{ [key: string]: any }[]> {
+  item: Record<string, any>
+): Promise<{ [key: string]: any }> {
   if (jayz !== undefined) {
-    return jayz.decryptItems(items as EncryptedJayZItem<any, any>[])
+    await jayz.ready
+    return jayz.decryptItem(item as EncryptedJayZItem<any, any>)
   } else {
-    return items
+    return item
   }
 }
