@@ -1,7 +1,14 @@
-import { JayZ } from "@ginger.io/jay-z"
+import { DataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
+import { crypto_kdf_KEYBYTES, randombytes_buf } from "libsodium-wrappers"
 import { aMusicianWithTwoSongs, ModelType, Song, SongModel } from "./models"
-import { createJayZ, createSongs, setup } from "./util"
+import {
+  createBeyonce,
+  createDynamoDB,
+  createJayZ,
+  createSongs,
+  setup
+} from "./util"
 
 describe("Beyonce.scan", () => {
   it("should return empty arrays when no models found during scan", async () => {
@@ -58,6 +65,57 @@ describe("Beyonce.scan with JayZ", () => {
   it("should parallel scan", async () => {
     const jayz = await createJayZ()
     await testParallelScan(jayz)
+  })
+
+  it("should not stop the iterator if an error occurs", async () => {
+    const jayz = await createJayZ()
+    // Given some songs encrypted correctly with JayZ
+    const db = await setup(jayz)
+    await createSongs(db, 25)
+
+    // And one last song that is encrypted incorrectly (e.g. with a different key)
+    const oneLastSong: Song = SongModel.create({
+      musicianId: "1",
+      id: "bad-song",
+      title: `Bad song`,
+      mp3: crypto.randomBytes(100_000)
+    })
+
+    const keyProvider: DataKeyProvider = {
+      generateDataKey: async () => ({
+        dataKey: randombytes_buf(crypto_kdf_KEYBYTES),
+        encryptedDataKey: randombytes_buf(crypto_kdf_KEYBYTES)
+      }),
+
+      decryptDataKey: async (key) => key
+    }
+
+    const badBeyonce = createBeyonce(
+      createDynamoDB(),
+      new JayZ({ keyProvider })
+    )
+
+    await badBeyonce.put(oneLastSong)
+
+    // Then we should still page through all the results, but collect the errors
+    const songs: Song[] = []
+    const errors: Error[] = []
+    for await (const results of badBeyonce.scan<Song>().iterator()) {
+      songs.push(...results.items.song)
+      if (results.errors) {
+        errors.push(...results.errors)
+      }
+    }
+
+    // TODO: clean this up.
+    // We get 24 items processed, not 25 here because the last "good"
+    // item ends up in the same iterator "page" as the "bad item".
+    // i.e. if we a record in a page that we can't process, we give up on the whole page and move on
+    // Ideally, we'd process the rest of records in the page
+    expect(songs.length).toEqual(24)
+    expect(errors).toEqual([
+      new Error("wrong secret key for the given ciphertext")
+    ])
   })
 })
 
