@@ -16,8 +16,7 @@ import { updateItemProxy } from "./updateItemProxy"
 import {
   decryptOrPassThroughItem,
   encryptOrPassThroughItem,
-  MaybeEncryptedItem,
-  toJSON
+  MaybeEncryptedItem
 } from "./util"
 
 export type Options = {
@@ -92,7 +91,7 @@ export class Beyonce {
 
     if (item !== undefined) {
       const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
-      return toJSON<T>(maybeDecryptedItem)
+      return maybeDecryptedItem as T
     }
   }
 
@@ -155,7 +154,7 @@ export class Beyonce {
           this.jayz,
           item
         )
-        return toJSON<ExtractKeyType<T>>(maybeDecryptedItem)
+        return maybeDecryptedItem as ExtractKeyType<T>
       })
 
       const jsonItems = await Promise.all(jsonItemPromises)
@@ -261,7 +260,7 @@ export class Beyonce {
       .promise()
 
     if (result.Attributes !== undefined) {
-      return toJSON<T>(result.Attributes)
+      return result.Attributes as T
     } else {
       throw new Error(
         `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`

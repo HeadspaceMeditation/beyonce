@@ -4,10 +4,6 @@ export type MaybeEncryptedItem<T> =
   | EncryptedJayZItem<T & Record<string, string>, string>
   | (T & Record<string, string>)
 
-export function toJSON<T>(item: { [key: string]: any }): T {
-  return item as T
-}
-
 export async function encryptOrPassThroughItem<T extends Record<string, any>>(
   jayz: JayZ | undefined,
   item: T,

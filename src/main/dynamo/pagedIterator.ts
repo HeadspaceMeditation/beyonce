@@ -4,7 +4,7 @@ import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { CompositeError } from "../CompositeError"
 import { groupModelsByType } from "./groupModelsByType"
 import { GroupedModels, TaggedModel } from "./types"
-import { decryptOrPassThroughItem, toJSON } from "./util"
+import { decryptOrPassThroughItem } from "./util"
 
 export type Cursor = Record<string, any>
 
@@ -83,7 +83,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
       const itemPromises = itemsToDecrypt.map(async (item) => {
         try {
           const maybeDecryptedItem = await decryptOrPassThroughItem(jayz, item)
-          items.push(toJSON<U>(maybeDecryptedItem))
+          items.push(maybeDecryptedItem as U)
         } catch (error) {
           errors.push(error)
         }
