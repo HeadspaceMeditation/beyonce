@@ -8,7 +8,7 @@ import {
   groupAllPages,
   IteratorOptions,
   pagedIterator,
-  PaginatedQueryResults,
+  PaginatedQueryResults
 } from "./pagedIterator"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
@@ -68,13 +68,15 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     for await (const response of iterator) {
       yield {
         items: groupModelsByType(response.items, this.modelTags),
-        cursor: response.lastEvaluatedKey,
+        errors: response.errors,
+        cursor: response.lastEvaluatedKey
       }
     }
 
     return {
       items: groupModelsByType<T>([], this.modelTags),
-      cursor: undefined,
+      errors: [],
+      cursor: undefined
     }
   }
 
@@ -97,7 +99,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         FilterExpression: filterExp,
         ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: options.pageSize,
+        Limit: options.pageSize
       }
     } else {
       const { table, consistentRead } = this.config
@@ -115,7 +117,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         FilterExpression: filterExp,
         ExclusiveStartKey: options.cursor,
         ScanIndexForward: this.scanIndexForward,
-        Limit: options.pageSize,
+        Limit: options.pageSize
       }
     }
 

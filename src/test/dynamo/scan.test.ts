@@ -107,12 +107,7 @@ describe("Beyonce.scan with JayZ", () => {
       }
     }
 
-    // TODO: clean this up.
-    // We get 24 items processed, not 25 here because the last "good"
-    // item ends up in the same iterator "page" as the "bad item".
-    // i.e. if we get a record in a page that we can't process, we give up on the whole page and move on
-    // Ideally, we'd process the rest of records in the page
-    expect(songs.length).toEqual(24)
+    expect(songs.length).toEqual(25)
     expect(errors).toEqual([
       new Error("wrong secret key for the given ciphertext")
     ])

@@ -14,10 +14,9 @@ import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
 import {
-  decryptOrPassThroughItems,
-  encryptOrPassThroughItems,
-  MaybeEncryptedItems,
-  toJSON
+  decryptOrPassThroughItem,
+  encryptOrPassThroughItem,
+  MaybeEncryptedItem
 } from "./util"
 
 export type Options = {
@@ -91,10 +90,8 @@ export class Beyonce {
       .promise()
 
     if (item !== undefined) {
-      const [maybeDecryptedItem] = await decryptOrPassThroughItems(this.jayz, [
-        item
-      ])
-      return toJSON<T>(maybeDecryptedItem)
+      const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
+      return maybeDecryptedItem as T
     }
   }
 
@@ -152,13 +149,15 @@ export class Beyonce {
 
     if (responses !== undefined) {
       const items = responses[this.table.tableName]
-      const maybeDecryptedItems = await decryptOrPassThroughItems(
-        this.jayz,
-        items
-      )
-      const jsonItems = maybeDecryptedItems.map((item) =>
-        toJSON<ExtractKeyType<T>>(item)
-      )
+      const jsonItemPromises = items.map(async (item) => {
+        const maybeDecryptedItem = await decryptOrPassThroughItem(
+          this.jayz,
+          item
+        )
+        return maybeDecryptedItem as ExtractKeyType<T>
+      })
+
+      const jsonItems = await Promise.all(jsonItemPromises)
       return groupModelsByType(jsonItems, modelTags)
     } else {
       return groupModelsByType<ExtractKeyType<T>>([], modelTags)
@@ -214,8 +213,7 @@ export class Beyonce {
 
   /** Write an item into Dynamo */
   async put<T extends TaggedModel>(item: T): Promise<void> {
-    const [maybeEncryptedItem] = await this.maybeEncryptItems([item])
-
+    const maybeEncryptedItem = await this.maybeEncryptItem(item)
     await this.client
       .put({
         TableName: this.table.tableName,
@@ -262,7 +260,7 @@ export class Beyonce {
       .promise()
 
     if (result.Attributes !== undefined) {
-      return toJSON<T>(result.Attributes)
+      return result.Attributes as T
     } else {
       throw new Error(
         `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
@@ -275,20 +273,26 @@ export class Beyonce {
   async batchPutWithTransaction<T extends TaggedModel>(params: {
     items: T[]
   }): Promise<void> {
-    const maybeEncryptedItems = await this.maybeEncryptItems(params.items)
-    const encryptedItems = maybeEncryptedItems.map((item) => ({
-      Put: { TableName: this.table.tableName, Item: item }
-    }))
+    const { items } = params
+    const maybeEncryptedItemPromises = items.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItem(item)
+      return {
+        Put: { TableName: this.table.tableName, Item: maybeEncryptedItem }
+      }
+    })
 
-    await this.client.transactWrite({ TransactItems: encryptedItems }).promise()
+    const maybeEncryptedItems = await Promise.all(maybeEncryptedItemPromises)
+    await this.client
+      .transactWrite({ TransactItems: maybeEncryptedItems })
+      .promise()
   }
 
-  private async maybeEncryptItems<T extends TaggedModel>(
-    item: T[]
-  ): Promise<MaybeEncryptedItems<T>[]> {
+  private async maybeEncryptItem<T extends TaggedModel>(
+    item: T
+  ): Promise<MaybeEncryptedItem<T>> {
     const { jayz, table } = this
 
-    return await encryptOrPassThroughItems(
+    return await encryptOrPassThroughItem(
       jayz,
       item,
       table.getEncryptionBlacklist()

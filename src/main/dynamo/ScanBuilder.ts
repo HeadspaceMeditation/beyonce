@@ -55,16 +55,16 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     )
 
     for await (const response of iterator) {
-      const errors = response.error ? [response.error] : undefined
       yield {
         items: groupModelsByType(response.items, this.modelTags),
-        errors,
+        errors: response.errors,
         cursor: response.lastEvaluatedKey
       }
     }
 
     return {
       items: groupModelsByType<T>([], this.modelTags),
+      errors: [],
       cursor: undefined
     }
   }

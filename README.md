@@ -251,8 +251,8 @@ for await (const { items, errors } of iterator) {
 The `errors` field above contains any exceptions thrown while attempting to load the next iterator "page".
 So it's up to you, the caller to decide if you want to continue walking the iterator, or give up and exit.
 
-**Important**: When an error is encountered within the iterator, the _entire_ "page" is not processed,
-you'll get an errors array, but no items.
+**Important**: When an error is encountered within the iterator, you might get a partial result
+that contains one or more `items` and one or more `errors`. Thus, you should always check `errors.length`.
 
 ##### Cursors
 
