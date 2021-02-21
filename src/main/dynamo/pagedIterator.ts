@@ -31,7 +31,7 @@ export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
 
 export type QueryResults<T extends TaggedModel> = {
   items: GroupedModels<T>
-  errors?: Error[]
+  errors: Error[]
   cursor?: Cursor
 }
 

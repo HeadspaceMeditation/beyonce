@@ -64,6 +64,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
 
     return {
       items: groupModelsByType<T>([], this.modelTags),
+      errors: [],
       cursor: undefined
     }
   }
