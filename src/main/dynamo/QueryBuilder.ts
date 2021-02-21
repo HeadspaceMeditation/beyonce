@@ -47,9 +47,14 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   }
 
   async exec(): Promise<GroupedModels<T>> {
+    const query = this.createQueryInput({})
     const iterator = pagedIterator<DocumentClient.QueryInput, T>(
       {},
-      (options) => this.buildQuery(options),
+      ({ cursor, pageSize }) => ({
+        ...query,
+        ExclusiveStartKey: cursor,
+        Limit: pageSize
+      }),
       (query) => this.config.db.query(query).promise(),
       this.config.jayz
     )
@@ -58,9 +63,14 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   }
 
   async *iterator(options: IteratorOptions = {}): PaginatedQueryResults<T> {
+    const query = this.createQueryInput(options)
     const iterator = pagedIterator<DocumentClient.QueryInput, T>(
       options,
-      (options) => this.buildQuery(options),
+      ({ cursor, pageSize }) => ({
+        ...query,
+        ExclusiveStartKey: cursor,
+        Limit: pageSize
+      }),
       (query) => this.config.db.query(query).promise(),
       this.config.jayz
     )
@@ -80,17 +90,16 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private buildQuery(
+  private createQueryInput(
     options: IteratorOptions
   ): DynamoDB.DocumentClient.QueryInput {
-    let query: DynamoDB.DocumentClient.QueryInput
     if (isTableQuery(this.config)) {
       const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForTable(this.config)
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
-      query = {
+      return {
         TableName: table.tableName,
         ConsistentRead: consistentRead,
         KeyConditionExpression: keyCondition,
@@ -107,7 +116,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       const { expression, attributeNames, attributeValues } = this.build()
       const filterExp = expression !== "" ? expression : undefined
 
-      query = {
+      return {
         TableName: table.tableName,
         ConsistentRead: consistentRead,
         IndexName: this.config.gsiName,
@@ -120,9 +129,6 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         Limit: options.pageSize
       }
     }
-
-    this.reset()
-    return query
   }
 
   private buildKeyConditionForTable(config: TableQueryConfig<T>): string {

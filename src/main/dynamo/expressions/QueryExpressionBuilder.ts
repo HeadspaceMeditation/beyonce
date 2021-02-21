@@ -71,7 +71,7 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
     return {
       expression,
       attributeNames,
-      attributeValues,
+      attributeValues
     }
   }
 
@@ -84,12 +84,6 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
 
   protected addStatement(statement: string): void {
     this.statements.push(statement)
-  }
-
-  protected reset(): void {
-    this.attributeNames = new Attributes()
-    this.attributeValues = new Variables()
-    this.statements = []
   }
 
   private addCondition(params: {
