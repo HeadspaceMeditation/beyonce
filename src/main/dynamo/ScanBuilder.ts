@@ -36,9 +36,14 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   }
 
   async exec(): Promise<GroupedModels<T>> {
+    const scanInput = this.createScanInput()
     const iterator = pagedIterator<DocumentClient.ScanInput, T>(
       {},
-      (options) => this.buildScan(options),
+      ({ cursor, pageSize }) => ({
+        ...scanInput,
+        ExclusiveStartKey: cursor,
+        Limit: pageSize
+      }),
       (input) => this.config.db.scan(input).promise(),
       this.config.jayz
     )
@@ -47,9 +52,14 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   }
 
   async *iterator(options: IteratorOptions = {}): PaginatedQueryResults<T> {
+    const scanInput = this.createScanInput(options)
     const iterator = pagedIterator<DocumentClient.ScanInput, T>(
       options,
-      (options) => this.buildScan(options),
+      ({ cursor, pageSize }) => ({
+        ...scanInput,
+        ExclusiveStartKey: cursor,
+        Limit: pageSize
+      }),
       (input) => this.config.db.scan(input).promise(),
       this.config.jayz
     )
@@ -69,18 +79,15 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private buildScan(
-    options: IteratorOptions
-  ): DynamoDB.DocumentClient.ScanInput {
+  private createScanInput(iteratorOptions?: IteratorOptions) {
     const { table, consistentRead, parallel } = this.config
     const { expression, attributeNames, attributeValues } = this.build()
     const filterExp = expression !== "" ? expression : undefined
-
     const includeAttributeNames = filterExp !== undefined
     const includeAttributeValues =
       filterExp !== undefined && Object.values(attributeValues).length > 0
 
-    const scan = {
+    return {
       TableName: table.tableName,
       ConsistentRead: consistentRead,
       ExpressionAttributeNames: includeAttributeNames
@@ -90,13 +97,10 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         ? attributeValues
         : undefined,
       FilterExpression: filterExp,
-      ExclusiveStartKey: options.cursor,
-      Limit: options.pageSize,
+      ExclusiveStartKey: iteratorOptions?.cursor,
+      Limit: iteratorOptions?.pageSize,
       Segment: parallel?.segmentId,
       TotalSegments: parallel?.totalSegments
     }
-
-    this.reset()
-    return scan
   }
 }

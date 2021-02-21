@@ -2,11 +2,13 @@ import { JayZ } from "@ginger.io/jay-z"
 import {
   aMusicianWithTwoSongs,
   ModelType,
+  Musician,
   MusicianModel,
   MusicianPartition,
+  Song,
   SongModel
 } from "./models"
-import { createJayZ, createSongs, setup } from "./util"
+import { createJayZ, create25Songs, setup } from "./util"
 
 describe("Beyonce.query", () => {
   it("should return empty arrays when no models found when querying", async () => {
@@ -19,7 +21,7 @@ describe("Beyonce.query", () => {
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
         consistentRead: true
       })
-      .buildQuery({})
+      .createQueryInput({})
 
     expect(query).toMatchObject({
       ConsistentRead: true
@@ -36,6 +38,10 @@ describe("Beyonce.query", () => {
 
   it("should paginate query results", async () => {
     await testQueryWithPaginatedResults()
+  })
+
+  it("should filter and paginate query results", async () => {
+    await testPaginatedQueryWithFilter()
   })
 
   it("should query with multiple attribute filters", async () => {
@@ -68,7 +74,7 @@ describe("Beyonce.query with JayZ", () => {
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
         consistentRead: true
       })
-      .buildQuery({})
+      .createQueryInput({})
 
     expect(query).toMatchObject({
       ConsistentRead: true
@@ -88,6 +94,11 @@ describe("Beyonce.query with JayZ", () => {
   it("should paginate query results", async () => {
     const jayz = await createJayZ()
     await testQueryWithPaginatedResults(jayz)
+  })
+
+  it("should filter and paginate query results", async () => {
+    const jayz = await createJayZ()
+    await testPaginatedQueryWithFilter(jayz)
   })
 
   it("should query with multiple attribute filters", async () => {
@@ -119,7 +130,7 @@ async function testEmptyQuery(jayZ?: JayZ) {
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
-  const songs = await createSongs(db)
+  const songs = await create25Songs(db)
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
   expect(results.song.length).toEqual(songs.length)
 }
@@ -135,6 +146,33 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .exec()
 
   expect(result).toEqual({ musician: [], song: [song1, song2] })
+}
+
+async function testPaginatedQueryWithFilter(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  await create25Songs(db)
+  const musician = MusicianModel.create({
+    id: "1",
+    name: "ZZ Top",
+    divaRating: 10,
+    details: {}
+  })
+  await db.put(musician)
+
+  const iterator = db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .where("model", "=", ModelType.Musician)
+    .iterator()
+
+  const musiciansProcessed: Musician[] = []
+  const songsProcessed: Song[] = []
+  for await (const { items } of iterator) {
+    musiciansProcessed.push(...items.musician)
+    songsProcessed.push(...items.song)
+  }
+
+  expect(musiciansProcessed).toEqual([musician])
+  expect(songsProcessed.length).toEqual(0)
 }
 
 async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {

@@ -123,7 +123,7 @@ describe("Beyonce", () => {
       .query(MusicianModel.partitionKey({ id: "musician-1" }), {
         consistentRead: true
       })
-      .buildQuery({})
+      .createQueryInput({})
 
     expect(query).toMatchObject({
       ConsistentRead: true

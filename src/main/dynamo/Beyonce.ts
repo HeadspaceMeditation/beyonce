@@ -9,7 +9,7 @@ import {
   PartitionKeyAndSortKeyPrefix
 } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
-import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
+import { ScanBuilder, ParallelScanConfig } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"

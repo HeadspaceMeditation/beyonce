@@ -1,12 +1,19 @@
 import { DataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
 import { crypto_kdf_KEYBYTES, randombytes_buf } from "libsodium-wrappers"
-import { aMusicianWithTwoSongs, ModelType, Song, SongModel } from "./models"
+import {
+  aMusicianWithTwoSongs,
+  ModelType,
+  Musician,
+  MusicianModel,
+  Song,
+  SongModel
+} from "./models"
 import {
   createBeyonce,
   createDynamoDB,
   createJayZ,
-  createSongs,
+  create25Songs,
   setup
 } from "./util"
 
@@ -21,6 +28,10 @@ describe("Beyonce.scan", () => {
 
   it("should paginate scan results", async () => {
     await testScanWithPaginatedResults()
+  })
+
+  it("should filter paginated scan results", async () => {
+    await testScanWithFilteredPaginatedResults()
   })
 
   it("should scan with multiple attribute filters", async () => {
@@ -52,6 +63,11 @@ describe("Beyonce.scan with JayZ", () => {
     await testScanWithPaginatedResults(jayz)
   })
 
+  it("should filter paginated scan results", async () => {
+    const jayz = await createJayZ()
+    await testScanWithFilteredPaginatedResults(jayz)
+  })
+
   it("should scan with multiple attribute filters", async () => {
     const jayz = await createJayZ()
     await testScanWithCombinedAttributeFilters(jayz)
@@ -71,7 +87,7 @@ describe("Beyonce.scan with JayZ", () => {
     const jayz = await createJayZ()
     // Given some songs encrypted correctly with JayZ
     const db = await setup(jayz)
-    await createSongs(db, 25)
+    await create25Songs(db)
 
     // And one last song that is encrypted incorrectly (e.g. with a different key)
     const oneLastSong: Song = SongModel.create({
@@ -122,14 +138,40 @@ async function testEmptyScan(jayZ?: JayZ) {
 
 async function testScanWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
-  const songs = await createSongs(db)
+  const songs = await create25Songs(db)
   const results = await db.scan().exec()
   expect(results.song.length).toEqual(songs.length)
 }
 
+async function testScanWithFilteredPaginatedResults(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const songs = await create25Songs(db)
+  const musician = MusicianModel.create({
+    id: "zz-top",
+    divaRating: 10,
+    name: "ZZ Top",
+    details: {}
+  })
+
+  await db.put(musician)
+
+  const musiciansProcessed: Musician[] = []
+  const songsProcessed: Song[] = []
+  for await (const { items } of db
+    .scan<Musician | Song>() // type-system hack so we can assert we don't get Songs in the results
+    .where("model", "=", ModelType.Musician)
+    .iterator()) {
+    musiciansProcessed.push(...items.musician)
+    songsProcessed.push(...items.song)
+  }
+
+  expect(musiciansProcessed).toEqual([musician])
+  expect(songsProcessed.length).toEqual(0)
+}
+
 async function testParallelScan(jayZ?: JayZ) {
   const db = await setup(jayZ)
-  const songs = await createSongs(db)
+  const songs = await create25Songs(db)
 
   const segment1 = db
     .scan<Song>({ parallel: { segmentId: 0, totalSegments: 2 } })
