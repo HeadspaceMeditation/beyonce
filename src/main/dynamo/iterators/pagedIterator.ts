@@ -1,17 +1,11 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
-import { CompositeError } from "../CompositeError"
-import { groupModelsByType } from "./groupModelsByType"
-import { GroupedModels, TaggedModel } from "./types"
-import { decryptOrPassThroughItem } from "./util"
-
-export type Cursor = Record<string, any>
-
-export type IteratorOptions = {
-  cursor?: Cursor
-  pageSize?: number
-}
+import { CompositeError } from "../../CompositeError"
+import { groupModelsByType } from "../groupModelsByType"
+import { GroupedModels, TaggedModel } from "../types"
+import { decryptOrPassThroughItem } from "../util"
+import { InternalIteratorOptions } from "./types"
 
 export type RawDynamoDBPage = {
   LastEvaluatedKey?: DocumentClient.Key
@@ -22,17 +16,6 @@ export type PageResults<T extends TaggedModel> = {
   items: T[]
   errors: Error[]
   lastEvaluatedKey?: DynamoDB.DocumentClient.Key
-}
-
-export type PaginatedQueryResults<T extends TaggedModel> = AsyncGenerator<
-  QueryResults<T>,
-  QueryResults<T>
->
-
-export type QueryResults<T extends TaggedModel> = {
-  items: GroupedModels<T>
-  errors: Error[]
-  cursor?: Cursor
 }
 
 export async function groupAllPages<T extends TaggedModel>(
@@ -55,13 +38,13 @@ export async function groupAllPages<T extends TaggedModel>(
 }
 
 export async function* pagedIterator<T, U extends TaggedModel>(
-  options: IteratorOptions,
-  buildOperation: (opts: IteratorOptions) => T,
+  options: InternalIteratorOptions,
+  buildOperation: (opts: InternalIteratorOptions) => T,
   executeOperation: (op: T) => Promise<RawDynamoDBPage>,
   jayz?: JayZ
 ): AsyncGenerator<PageResults<U>, PageResults<U>> {
   let pendingOperation: T | undefined = buildOperation(options)
-  let cursor: Cursor | undefined
+  let { lastEvaluatedKey } = options
 
   while (pendingOperation !== undefined) {
     const items: U[] = []
@@ -72,8 +55,8 @@ export async function* pagedIterator<T, U extends TaggedModel>(
       )
 
       if (response.LastEvaluatedKey !== undefined) {
-        cursor = response.LastEvaluatedKey
-        pendingOperation = buildOperation({ ...options, cursor })
+        lastEvaluatedKey = response.LastEvaluatedKey
+        pendingOperation = buildOperation({ ...options, lastEvaluatedKey })
       } else {
         pendingOperation = undefined
       }
@@ -90,10 +73,10 @@ export async function* pagedIterator<T, U extends TaggedModel>(
       })
 
       await Promise.all(itemPromises)
-      yield { items, lastEvaluatedKey: cursor, errors }
+      yield { items, lastEvaluatedKey, errors }
     } catch (error) {
       errors.push(error)
-      yield { items: [], lastEvaluatedKey: cursor, errors }
+      yield { items: [], lastEvaluatedKey, errors }
     }
   }
 

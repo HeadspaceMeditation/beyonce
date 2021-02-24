@@ -1,14 +1,19 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
+import { ready } from "libsodium-wrappers"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
+import { groupAllPages, pagedIterator } from "./iterators/pagedIterator"
 import {
-  groupAllPages,
+  InternalIteratorOptions,
   IteratorOptions,
-  pagedIterator,
-  PaginatedQueryResults
-} from "./pagedIterator"
+  PaginatedIteratorResults
+} from "./iterators/types"
+import {
+  maybeSerializeCursor,
+  toInternalIteratorOptions
+} from "./iterators/util"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
@@ -38,10 +43,10 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   async exec(): Promise<GroupedModels<T>> {
     const scanInput = this.createScanInput()
     const iterator = pagedIterator<DocumentClient.ScanInput, T>(
-      {},
-      ({ cursor, pageSize }) => ({
+      { lastEvaluatedKey: undefined },
+      ({ lastEvaluatedKey, pageSize }) => ({
         ...scanInput,
-        ExclusiveStartKey: cursor,
+        ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
       (input) => this.config.db.scan(input).promise(),
@@ -51,24 +56,26 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     return groupAllPages(iterator, this.modelTags)
   }
 
-  async *iterator(options: IteratorOptions = {}): PaginatedQueryResults<T> {
-    const scanInput = this.createScanInput(options)
+  async *iterator(options: IteratorOptions = {}): PaginatedIteratorResults<T> {
+    const iteratorOptions = toInternalIteratorOptions(options)
+    const scanInput = this.createScanInput(iteratorOptions)
     const iterator = pagedIterator<DocumentClient.ScanInput, T>(
-      options,
-      ({ cursor, pageSize }) => ({
+      iteratorOptions,
+      ({ lastEvaluatedKey, pageSize }) => ({
         ...scanInput,
-        ExclusiveStartKey: cursor,
+        ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
       (input) => this.config.db.scan(input).promise(),
       this.config.jayz
     )
 
+    await ready
     for await (const response of iterator) {
       yield {
         items: groupModelsByType(response.items, this.modelTags),
         errors: response.errors,
-        cursor: response.lastEvaluatedKey
+        cursor: maybeSerializeCursor(response.lastEvaluatedKey)
       }
     }
 
@@ -79,7 +86,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private createScanInput(iteratorOptions?: IteratorOptions) {
+  private createScanInput(iteratorOptions?: InternalIteratorOptions) {
     const { table, consistentRead, parallel } = this.config
     const { expression, attributeNames, attributeValues } = this.build()
     const filterExp = expression !== "" ? expression : undefined
@@ -97,7 +104,7 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         ? attributeValues
         : undefined,
       FilterExpression: filterExp,
-      ExclusiveStartKey: iteratorOptions?.cursor,
+      ExclusiveStartKey: iteratorOptions?.lastEvaluatedKey,
       Limit: iteratorOptions?.pageSize,
       Segment: parallel?.segmentId,
       TotalSegments: parallel?.totalSegments
