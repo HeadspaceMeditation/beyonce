@@ -19,21 +19,21 @@ import {
   MaybeEncryptedItem
 } from "./util"
 
-export type Options = {
+export interface Options {
   jayz?: JayZ
   xRayTracingEnabled?: boolean
   consistentReads?: boolean
 }
 
-export type GetOptions = {
+export interface GetOptions {
   consistentRead?: boolean
 }
 
-export type QueryOptions = {
+export interface QueryOptions {
   consistentRead?: boolean
 }
 
-export type ScanOptions = {
+export interface ScanOptions {
   consistentRead?: boolean
   parallel?: ParallelScanConfig
 }

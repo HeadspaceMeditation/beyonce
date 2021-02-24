@@ -18,7 +18,7 @@ import { PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
-type TableQueryConfig<T extends TaggedModel> = {
+interface TableQueryConfig<T extends TaggedModel> {
   db: DynamoDB.DocumentClient
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
@@ -26,7 +26,7 @@ type TableQueryConfig<T extends TaggedModel> = {
   consistentRead?: boolean
 }
 
-type GSIQueryConfig<T extends TaggedModel> = {
+interface GSIQueryConfig<T extends TaggedModel> {
   db: DynamoDB.DocumentClient
   table: Table
   gsiName: string
