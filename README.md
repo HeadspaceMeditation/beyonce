@@ -359,7 +359,7 @@ const batchResults = await beyonce.batchGet({
 ### BatchPutWithTransaction
 
 ```TypeScript
-// Batch put several items in a transaction
+// Batch put or delete several items in a transaction
 const author1 = AuthorModel.create({
   id: "1",
   name: "Jane Austen"
@@ -370,7 +370,7 @@ const author2 = AuthorModel.create({
   name: "Charles Dickens"
 })
 
-await beyonce.batchPutWithTransaction({ items: [author1, author2] })
+await beyonce.executeTransaction({ putItems: [author1], deleteItems: [Author.key({ id: author2.id })] })
 ```
 
 ## Consistent Reads

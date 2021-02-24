@@ -9,7 +9,7 @@ import {
   PartitionKeyAndSortKeyPrefix
 } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
-import { ScanBuilder, ParallelScanConfig } from "./ScanBuilder"
+import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
@@ -269,22 +269,56 @@ export class Beyonce {
   }
 
   /** Write multiple items into Dynamo using a transaction.
+   *
+   *  @deprecated -- use executeTransaction
    */
   async batchPutWithTransaction<T extends TaggedModel>(params: {
     items: T[]
   }): Promise<void> {
     const { items } = params
-    const maybeEncryptedItemPromises = items.map(async (item) => {
+    await this.executeTransaction({ putItems: items })
+  }
+
+  /** Perform N Dynamo operations in an atomic transaction */
+  async executeTransaction<T extends TaggedModel>(params: {
+    putItems?: T[]
+    deleteItems?: PartitionAndSortKey<T>[]
+  }): Promise<void> {
+    const { putItems = [], deleteItems = [] } = params
+    const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
+    const maybeEncryptedPutPromises = putItems.map(async (item) => {
       const maybeEncryptedItem = await this.maybeEncryptItem(item)
-      return {
-        Put: { TableName: this.table.tableName, Item: maybeEncryptedItem }
-      }
+      requests.push(this.toTransactPut(maybeEncryptedItem))
     })
 
-    const maybeEncryptedItems = await Promise.all(maybeEncryptedItemPromises)
-    await this.client
-      .transactWrite({ TransactItems: maybeEncryptedItems })
-      .promise()
+    deleteItems.forEach((key) => requests.push(this.toTransactDelete(key)))
+    await Promise.all(maybeEncryptedPutPromises)
+    await this.client.transactWrite({ TransactItems: requests }).promise()
+  }
+
+  private toTransactPut<T extends TaggedModel>(
+    item: MaybeEncryptedItem<T>
+  ): DynamoDB.DocumentClient.TransactWriteItem {
+    return {
+      Put: {
+        TableName: this.table.tableName,
+        Item: item
+      }
+    }
+  }
+
+  private toTransactDelete<T extends TaggedModel>(
+    key: PartitionAndSortKey<T>
+  ): DynamoDB.DocumentClient.TransactWriteItem {
+    return {
+      Delete: {
+        TableName: this.table.tableName,
+        Key: {
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey
+        }
+      }
+    }
   }
 
   private async maybeEncryptItem<T extends TaggedModel>(
