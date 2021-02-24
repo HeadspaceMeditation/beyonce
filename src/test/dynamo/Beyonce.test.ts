@@ -117,6 +117,10 @@ describe("Beyonce", () => {
     await testPutAndDeleteItem()
   })
 
+  it("should put and delete in the same transaction", async () => {
+    await testPutAndDeleteItemInTransaction()
+  })
+
   it("should set consistent read on queries", async () => {
     const db = await setup()
     const query = await (db as any)
@@ -207,7 +211,13 @@ describe("Beyonce", () => {
   })
 
   it("should put and delete an item using pk + sk with jayZ", async () => {
-    await testPutAndDeleteItem()
+    const jayZ = await createJayZ()
+    await testPutAndDeleteItem(jayZ)
+  })
+
+  it("should put and delete in the same transaction with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndDeleteItemInTransaction(jayZ)
   })
 
   it("should batchGet items with jayZ", async () => {
@@ -271,6 +281,25 @@ async function testPutAndDeleteItem(jayZ?: JayZ) {
   expect(await db.get(key)).toEqual(musician)
   await db.delete(key)
   expect(await db.get(key)).toEqual(undefined)
+}
+
+async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await db.executeTransaction({ putItems: [musician, song1] })
+
+  await db.executeTransaction({
+    putItems: [song2],
+    deleteItems: [SongModel.key({ musicianId: song1.musicianId, id: song1.id })]
+  })
+
+  expect(
+    await db.get(SongModel.key({ musicianId: song2.musicianId, id: song2.id }))
+  ).toEqual(song2)
+
+  expect(
+    await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))
+  ).toEqual(undefined)
 }
 
 async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
@@ -413,8 +442,8 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
     mp3: Buffer.from("fake-data", "utf8")
   })
 
-  await db.batchPutWithTransaction({
-    items: [santana, slash, santanasSong, slashesSong]
+  await db.executeTransaction({
+    putItems: [santana, slash, santanasSong, slashesSong]
   })
 
   // Now when we query our inverted index, pk and sk are reversed,
@@ -432,7 +461,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await db.batchPutWithTransaction({ items: [musician, song1, song2] })
+  await db.executeTransaction({ putItems: [musician, song1, song2] })
 
   const results = await db
     .query(MusicianPartition.key({ id: musician.id }))

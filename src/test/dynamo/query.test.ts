@@ -247,7 +247,7 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await db.batchPutWithTransaction({ items: [musician, song1, song2] })
+  await db.executeTransaction({ putItems: [musician, song1, song2] })
 
   const result = await db
     .query(MusicianPartition.key({ id: musician.id }))

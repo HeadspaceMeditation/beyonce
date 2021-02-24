@@ -17,7 +17,7 @@ import {
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
-type ScanConfig<T extends TaggedModel> = {
+interface ScanConfig<T extends TaggedModel> {
   db: DynamoDB.DocumentClient
   table: Table
   jayz?: JayZ
@@ -25,7 +25,7 @@ type ScanConfig<T extends TaggedModel> = {
   parallel?: ParallelScanConfig
 }
 
-export type ParallelScanConfig = {
+export interface ParallelScanConfig {
   segmentId: number // 0-indexed -- i.e. first segment id is 0, not 1
   totalSegments: number
 }
