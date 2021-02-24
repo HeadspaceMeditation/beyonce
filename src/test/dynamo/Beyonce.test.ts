@@ -211,7 +211,8 @@ describe("Beyonce", () => {
   })
 
   it("should put and delete an item using pk + sk with jayZ", async () => {
-    await testPutAndDeleteItem()
+    const jayZ = await createJayZ()
+    await testPutAndDeleteItem(jayZ)
   })
 
   it("should put and delete in the same transaction with jayZ", async () => {
