@@ -45,6 +45,10 @@ describe("Beyonce.scan", () => {
   it("should parallel scan", async () => {
     await testParallelScan()
   })
+
+  it("should return undefined cursor when there are no more records to scan", async () => {
+    await testScanWithPaginatedResultsReturnUndefinedCursor()
+  })
 })
 
 describe("Beyonce.scan with JayZ", () => {
@@ -127,6 +131,11 @@ describe("Beyonce.scan with JayZ", () => {
     expect(errors).toEqual([
       new Error("wrong secret key for the given ciphertext")
     ])
+  })
+
+  it("should return undefined cursor when there are no more records to scan", async () => {
+    const jayz = await createJayZ()
+    await testScanWithPaginatedResultsReturnUndefinedCursor(jayz)
   })
 })
 
@@ -245,4 +254,27 @@ async function testScanWithLimit(jayZ?: JayZ) {
     .next()
 
   expect(response2.items).toEqual({ musician: [], song: [song1] })
+}
+
+async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const { value: response1 } = await db.scan().iterator({ pageSize: 3 }).next()
+
+  expect(response1.items).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
+
+  const { value: response2 } = await db
+    .scan()
+    .iterator({
+      cursor: response1.cursor,
+      pageSize: 1
+    })
+    .next()
+
+  expect(response2.items).toEqual({ musician: [], song: [] })
 }
