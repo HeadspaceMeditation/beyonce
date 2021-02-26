@@ -277,4 +277,5 @@ async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
     .next()
 
   expect(response2.items).toEqual({ musician: [], song: [] })
+  expect(response2.cursor).toBeUndefined()
 }
