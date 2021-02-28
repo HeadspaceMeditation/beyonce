@@ -44,7 +44,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
   jayz?: JayZ
 ): AsyncGenerator<PageResults<U>, PageResults<U>> {
   let pendingOperation: T | undefined = buildOperation(options)
-  let { lastEvaluatedKey } = options
+  let lastEvaluatedKey = options.lastEvaluatedKey
 
   while (pendingOperation !== undefined) {
     const items: U[] = []
@@ -58,6 +58,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
         lastEvaluatedKey = response.LastEvaluatedKey
         pendingOperation = buildOperation({ ...options, lastEvaluatedKey })
       } else {
+        lastEvaluatedKey = undefined
         pendingOperation = undefined
       }
 
