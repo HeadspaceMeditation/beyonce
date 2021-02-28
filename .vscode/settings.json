@@ -2,6 +2,7 @@
     "prettier.semi": false,
     "prettier.trailingComma": "none",
     "editor.formatOnSave": true,
+    "jest.autoEnable": false,
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
