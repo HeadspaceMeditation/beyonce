@@ -1,9 +1,6 @@
 import { GroupedModels, TaggedModel } from "./types"
 
-export function groupModelsByType<T extends TaggedModel>(
-  models: T[],
-  modelTags: T["model"][]
-): GroupedModels<T> {
+export function groupModelsByType<T extends TaggedModel>(models: T[], modelTags: T["model"][]): GroupedModels<T> {
   const groups = {} as GroupedModels<T>
 
   modelTags.forEach((tag) => {

@@ -1,8 +1,6 @@
 import { EncryptedJayZItem, JayZ } from "@ginger.io/jay-z"
 
-export type MaybeEncryptedItem<T> =
-  | EncryptedJayZItem<T & Record<string, string>, string>
-  | (T & Record<string, string>)
+export type MaybeEncryptedItem<T> = EncryptedJayZItem<T & Record<string, string>, string> | (T & Record<string, string>)
 
 export async function encryptOrPassThroughItem<T extends Record<string, any>>(
   jayz: JayZ | undefined,
@@ -10,9 +8,7 @@ export async function encryptOrPassThroughItem<T extends Record<string, any>>(
   encryptionBlacklist: Set<string>
 ): Promise<MaybeEncryptedItem<T>> {
   if (jayz !== undefined) {
-    const fieldsToEncrypt = Object.keys(item).filter(
-      (_) => !encryptionBlacklist.has(_)
-    )
+    const fieldsToEncrypt = Object.keys(item).filter((_) => !encryptionBlacklist.has(_))
 
     await jayz.ready
     return jayz.encryptItem({

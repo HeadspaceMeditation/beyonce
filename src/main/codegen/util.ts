@@ -1,7 +1,4 @@
-export function groupBy<T extends { [key: string]: any }, U extends keyof T>(
-  data: T[],
-  key: U
-): [string, T[]][] {
+export function groupBy<T extends { [key: string]: any }, U extends keyof T>(data: T[], key: U): [string, T[]][] {
   const groupedItems: { [key: string]: T[] } = {}
 
   data.forEach((item) => {

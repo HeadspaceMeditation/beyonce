@@ -11,30 +11,22 @@ export class UpdateItemExpressionBuilder {
   private removeStatements: string[] = []
 
   set(attributePath: string[], value: string): this {
-    const attrPlaceholders = attributePath.map((attr) =>
-      this.addAttributeName(attr)
-    )
+    const attrPlaceholders = attributePath.map((attr) => this.addAttributeName(attr))
     const valuePlaceholder = this.addAttributeValue(value)
 
-    this.setStatements.push(
-      `${attrPlaceholders.join(".")} = ${valuePlaceholder}`
-    )
+    this.setStatements.push(`${attrPlaceholders.join(".")} = ${valuePlaceholder}`)
 
     return this
   }
 
   remove(attributePath: string[]): this {
-    const attrPlaceholders = attributePath.map((attr) =>
-      this.addAttributeName(attr)
-    )
+    const attrPlaceholders = attributePath.map((attr) => this.addAttributeName(attr))
 
     this.removeStatements.push(attrPlaceholders.join("."))
     return this
   }
 
-  buildKeyConditionExpression<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>
-  ): string {
+  buildKeyConditionExpression<T extends TaggedModel>(key: PartitionAndSortKey<T>): string {
     const pkPlaceholder = this.addAttributeName(key.partitionKeyName)
     const pkValuePlaceholder = this.addAttributeValue(key.partitionKey)
     const keyConditionExpression = [`${pkPlaceholder} = ${pkValuePlaceholder}`]
@@ -42,9 +34,7 @@ export class UpdateItemExpressionBuilder {
     const { sortKeyName, sortKey } = key
     const skPlaceholder = this.addAttributeName(sortKeyName)
     const skValuePlaceholder = this.addAttributeValue(sortKey)
-    keyConditionExpression.push(
-      `begins_with(${skPlaceholder}, ${skValuePlaceholder})`
-    )
+    keyConditionExpression.push(`begins_with(${skPlaceholder}, ${skValuePlaceholder})`)
 
     return keyConditionExpression.join(" AND ")
   }
@@ -65,7 +55,7 @@ export class UpdateItemExpressionBuilder {
     return {
       expression: expression.join(" "),
       attributeNames,
-      attributeValues,
+      attributeValues
     }
   }
 

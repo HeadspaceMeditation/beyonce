@@ -1,21 +1,8 @@
 import { DataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import crypto from "crypto"
 import { crypto_kdf_KEYBYTES, randombytes_buf } from "libsodium-wrappers"
-import {
-  aMusicianWithTwoSongs,
-  ModelType,
-  Musician,
-  MusicianModel,
-  Song,
-  SongModel
-} from "./models"
-import {
-  createBeyonce,
-  createDynamoDB,
-  createJayZ,
-  create25Songs,
-  setup
-} from "./util"
+import { aMusicianWithTwoSongs, ModelType, Musician, MusicianModel, Song, SongModel } from "./models"
+import { createBeyonce, createDynamoDB, createJayZ, create25Songs, setup } from "./util"
 
 describe("Beyonce.scan", () => {
   it("should return empty arrays when no models found during scan", async () => {
@@ -110,10 +97,7 @@ describe("Beyonce.scan with JayZ", () => {
       decryptDataKey: async (key) => key
     }
 
-    const badBeyonce = createBeyonce(
-      createDynamoDB(),
-      new JayZ({ keyProvider })
-    )
+    const badBeyonce = createBeyonce(createDynamoDB(), new JayZ({ keyProvider }))
 
     await badBeyonce.put(oneLastSong)
 
@@ -128,9 +112,7 @@ describe("Beyonce.scan with JayZ", () => {
     }
 
     expect(songs.length).toEqual(25)
-    expect(errors).toEqual([
-      new Error("wrong secret key for the given ciphertext")
-    ])
+    expect(errors).toEqual([new Error("wrong secret key for the given ciphertext")])
   })
 
   it("should return undefined cursor when there are no more records to scan", async () => {
@@ -208,10 +190,7 @@ async function testScanWithFilter(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db
-    .scan()
-    .where("model", "=", ModelType.Song)
-    .exec()
+  const result = await db.scan().where("model", "=", ModelType.Song).exec()
 
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
@@ -238,10 +217,7 @@ async function testScanWithLimit(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const { value: response1 } = await db
-    .scan()
-    .iterator({ pageSize: 1 })
-    .next()
+  const { value: response1 } = await db.scan().iterator({ pageSize: 1 }).next()
 
   expect(response1.items).toEqual({ musician: [musician], song: [] })
 

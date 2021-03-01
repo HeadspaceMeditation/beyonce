@@ -1,11 +1,7 @@
 import { TaggedModel } from "./types"
 
 export class PartitionKey<T extends TaggedModel> {
-  constructor(
-    readonly partitionKeyName: string,
-    readonly partitionKey: string,
-    readonly modelTags: T["model"][]
-  ) {}
+  constructor(readonly partitionKeyName: string, readonly partitionKey: string, readonly modelTags: T["model"][]) {}
 }
 
 export class PartitionKeyAndSortKeyPrefix<T extends TaggedModel> {

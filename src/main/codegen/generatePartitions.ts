@@ -8,13 +8,7 @@ export function generatePartitions(partitions: Partition[]): string {
   return generatedPartitions.join("\n")
 }
 
-function generatePartition(
-  tableName: string,
-  partitionName: string,
-  models: Model[]
-): string {
+function generatePartition(tableName: string, partitionName: string, models: Model[]): string {
   const modelNames = models.map(({ name }) => `${name}Model`)
-  return `export const ${partitionName}Partition = ${tableName}Table.partition([${modelNames.join(
-    ", "
-  )}])`
+  return `export const ${partitionName}Partition = ${tableName}Table.partition([${modelNames.join(", ")}])`
 }
