@@ -64,10 +64,10 @@ export async function create25Songs(db: Beyonce): Promise<Song[]> {
   // Batch these to avoid DynamoDB local throwing errors about exceeding
   // the max payload size
   await Promise.all([
-    db.executeTransaction({ putItems: songs.slice(0, 5) }),
-    db.executeTransaction({ putItems: songs.slice(5, 10) }),
-    db.executeTransaction({ putItems: songs.slice(10, 15) }),
-    db.executeTransaction({ putItems: songs.slice(15) })
+    db.batchWriteWithTransaction({ putItems: songs.slice(0, 5) }),
+    db.batchWriteWithTransaction({ putItems: songs.slice(5, 10) }),
+    db.batchWriteWithTransaction({ putItems: songs.slice(10, 15) }),
+    db.batchWriteWithTransaction({ putItems: songs.slice(15) })
   ])
   return songs
 }
