@@ -356,10 +356,13 @@ const batchResults = await beyonce.batchGet({
 // { author: Author[], book: Book[] }
 ```
 
-### BatchPutWithTransaction
+### BatchWrite
+
+You can batch put/delete records using `batchWrite`. If any operations can't be processed,
+you'll get a populated `unprocessedPuts` array and/or an `unprocessedDeletes` array back.
 
 ```TypeScript
-// Batch put or delete several items in a transaction
+// Batch put or delete several items at once
 const author1 = AuthorModel.create({
   id: "1",
   name: "Jane Austen"
@@ -370,7 +373,19 @@ const author2 = AuthorModel.create({
   name: "Charles Dickens"
 })
 
-await beyonce.executeTransaction({ putItems: [author1], deleteItems: [Author.key({ id: author2.id })] })
+const {
+  unprocessedPuts,
+  unprocessedDeletes
+} = await beyonce.batchWrite({ putItems: [author1], deleteItems: [Author.key({ id: author2.id })] })
+```
+
+#### BatchWriteWithTransaction
+
+If you'd like to batch pute/delete records in an atomic transaction, you can use `batchWriteWithTransaction`.
+And all operations will either succeed, or fail.
+
+```TypeScript
+await beyonce.batchWriteWithTransaction({ putItems: [author1], deleteItems: [Author.key({ id: author2.id })] })
 ```
 
 ## Consistent Reads
