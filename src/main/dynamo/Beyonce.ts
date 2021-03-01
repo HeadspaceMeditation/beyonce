@@ -270,13 +270,13 @@ export class Beyonce {
 
   /** Write multiple items into Dynamo using a transaction.
    *
-   *  @deprecated -- use executeTransaction
+   *  @deprecated -- use batchWriteWithTransaction
    */
   async batchPutWithTransaction<T extends TaggedModel>(params: {
     items: T[]
   }): Promise<void> {
     const { items } = params
-    await this.executeTransaction({ putItems: items })
+    await this.batchWriteWithTransaction({ putItems: items })
   }
 
   async batchWrite<T extends TaggedModel>(params: {
@@ -332,7 +332,7 @@ export class Beyonce {
   }
 
   /** Perform N Dynamo operations in an atomic transaction */
-  async executeTransaction<T extends TaggedModel>(params: {
+  async batchWriteWithTransaction<T extends TaggedModel>(params: {
     putItems?: T[]
     deleteItems?: PartitionAndSortKey<T>[]
   }): Promise<void> {
