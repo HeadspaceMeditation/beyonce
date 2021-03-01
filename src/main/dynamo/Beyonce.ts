@@ -95,6 +95,63 @@ export class Beyonce {
     }
   }
 
+  /** Write an item into Dynamo */
+  async put<T extends TaggedModel>(item: T): Promise<void> {
+    const maybeEncryptedItem = await this.maybeEncryptItem(item)
+    await this.client
+      .put({
+        TableName: this.table.tableName,
+        Item: maybeEncryptedItem
+      })
+      .promise()
+  }
+
+  /** Performs a (partial) update on an existing item in Dynamo.
+   *  Partial updates do not work with JayZ encryption and this method
+   *  will throw an error if you attempt to use it with JayZ enabled.
+   */
+  async update<T extends TaggedModel>(
+    key: PartitionAndSortKey<T>,
+    updateFunc: (lens: T) => void
+  ): Promise<T> {
+    if (this.jayz) {
+      throw new Error(
+        "You can't perform partial updates on items with JayZ encryption enabled"
+      )
+    }
+
+    const expBuilder = new UpdateItemExpressionBuilder()
+    const proxy = updateItemProxy<T>(expBuilder)
+    updateFunc(proxy)
+    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
+    const { expression, attributeNames, attributeValues } = expBuilder.build()
+
+    const hasValues = Object.keys(attributeValues).length > 0
+
+    const result = await this.client
+      .update({
+        TableName: this.table.tableName,
+        ConditionExpression: keyConditionExp,
+        Key: {
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey
+        },
+        UpdateExpression: expression,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
+        ReturnValues: "ALL_NEW" // return item after update applied
+      })
+      .promise()
+
+    if (result.Attributes !== undefined) {
+      return result.Attributes as T
+    } else {
+      throw new Error(
+        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
+      )
+    }
+  }
+
   async delete<T extends TaggedModel>(
     key: PartitionAndSortKey<T>
   ): Promise<void> {
@@ -164,6 +221,75 @@ export class Beyonce {
     }
   }
 
+  async batchWrite<T extends TaggedModel>(params: {
+    putItems?: T[]
+    deleteItems?: PartitionAndSortKey<T>[]
+  }): Promise<{
+    unprocessedPuts: T[]
+    unprocessedDeletes: PartitionAndSortKey<T>[]
+  }> {
+    const { tableName, partitionKeyName, sortKeyName } = this.table
+    const { putItems = [], deleteItems = [] } = params
+    const requests: DynamoDB.DocumentClient.WriteRequest[] = []
+
+    const maybeEncryptedPutPromises = putItems.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItem(item)
+      requests.push({ PutRequest: { Item: maybeEncryptedItem } })
+    })
+
+    const deleteItemsByKey: { [key: string]: PartitionAndSortKey<T> } = {}
+    deleteItems.forEach((key) => {
+      deleteItemsByKey[`${key.partitionKey}-${key.sortKey}`] = key
+      requests.push({
+        DeleteRequest: {
+          Key: {
+            [partitionKeyName]: key.partitionKey,
+            [sortKeyName]: key.sortKey
+          }
+        }
+      })
+    })
+
+    await Promise.all(maybeEncryptedPutPromises)
+    const { UnprocessedItems } = await this.client
+      .batchWrite({ RequestItems: { [tableName]: requests } })
+      .promise()
+
+    const unprocessedPuts: T[] = []
+    const unprocessedDeletes: PartitionAndSortKey<T>[] = []
+    if (UnprocessedItems && UnprocessedItems[tableName]) {
+      UnprocessedItems[tableName].forEach(({ PutRequest, DeleteRequest }) => {
+        if (PutRequest) {
+          unprocessedPuts.push(PutRequest.Item as T)
+        } else if (DeleteRequest) {
+          const { Key: key } = DeleteRequest
+          unprocessedDeletes.push(
+            deleteItemsByKey[`${key[partitionKeyName]}-${key[sortKeyName]}`]
+          )
+        }
+      })
+    }
+
+    return { unprocessedPuts, unprocessedDeletes }
+  }
+
+  /** Perform N Dynamo operations in an atomic transaction */
+  async batchWriteWithTransaction<T extends TaggedModel>(params: {
+    putItems?: T[]
+    deleteItems?: PartitionAndSortKey<T>[]
+  }): Promise<void> {
+    const { putItems = [], deleteItems = [] } = params
+    const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
+    const maybeEncryptedPutPromises = putItems.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItem(item)
+      requests.push(this.toTransactPut(maybeEncryptedItem))
+    })
+
+    deleteItems.forEach((key) => requests.push(this.toTransactDelete(key)))
+    await Promise.all(maybeEncryptedPutPromises)
+    await this.client.transactWrite({ TransactItems: requests }).promise()
+  }
+
   query<T extends TaggedModel>(
     key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>,
     options: QueryOptions = {}
@@ -209,91 +335,6 @@ export class Beyonce {
       jayz: this.jayz,
       ...options
     })
-  }
-
-  /** Write an item into Dynamo */
-  async put<T extends TaggedModel>(item: T): Promise<void> {
-    const maybeEncryptedItem = await this.maybeEncryptItem(item)
-    await this.client
-      .put({
-        TableName: this.table.tableName,
-        Item: maybeEncryptedItem
-      })
-      .promise()
-  }
-
-  /** Performs a (partial) update on an existing item in Dynamo.
-   *  Partial updates do not work with JayZ encryption and this method
-   *  will throw an error if you attempt to use it with JayZ enabled.
-   */
-  async update<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>,
-    updateFunc: (lens: T) => void
-  ): Promise<T> {
-    if (this.jayz) {
-      throw new Error(
-        "You can't perform partial updates on items with JayZ encryption enabled"
-      )
-    }
-
-    const expBuilder = new UpdateItemExpressionBuilder()
-    const proxy = updateItemProxy<T>(expBuilder)
-    updateFunc(proxy)
-    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
-    const { expression, attributeNames, attributeValues } = expBuilder.build()
-
-    const hasValues = Object.keys(attributeValues).length > 0
-
-    const result = await this.client
-      .update({
-        TableName: this.table.tableName,
-        ConditionExpression: keyConditionExp,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        },
-        UpdateExpression: expression,
-        ExpressionAttributeNames: attributeNames,
-        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
-        ReturnValues: "ALL_NEW" // return item after update applied
-      })
-      .promise()
-
-    if (result.Attributes !== undefined) {
-      return result.Attributes as T
-    } else {
-      throw new Error(
-        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
-      )
-    }
-  }
-
-  /** Write multiple items into Dynamo using a transaction.
-   *
-   *  @deprecated -- use executeTransaction
-   */
-  async batchPutWithTransaction<T extends TaggedModel>(params: {
-    items: T[]
-  }): Promise<void> {
-    const { items } = params
-    await this.executeTransaction({ putItems: items })
-  }
-
-  /** Perform N Dynamo operations in an atomic transaction */
-  async executeTransaction<T extends TaggedModel>(params: {
-    putItems?: T[]
-    deleteItems?: PartitionAndSortKey<T>[]
-  }): Promise<void> {
-    const { putItems = [], deleteItems = [] } = params
-    const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
-    const maybeEncryptedPutPromises = putItems.map(async (item) => {
-      const maybeEncryptedItem = await this.maybeEncryptItem(item)
-      requests.push(this.toTransactPut(maybeEncryptedItem))
-    })
-
-    deleteItems.forEach((key) => requests.push(this.toTransactDelete(key)))
-    await Promise.all(maybeEncryptedPutPromises)
-    await this.client.transactWrite({ TransactItems: requests }).promise()
   }
 
   private toTransactPut<T extends TaggedModel>(

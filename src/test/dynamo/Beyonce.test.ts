@@ -176,6 +176,10 @@ describe("Beyonce", () => {
     await testEmptyBatchGet()
   })
 
+  it("should write multiple items with empty fields at once", async () => {
+    await testPutAndRetrieveForItemWithEmptyFields()
+  })
+
   // GSIs
   it("should query GSI by model", async () => {
     await testGSIByModel()
@@ -185,8 +189,12 @@ describe("Beyonce", () => {
     await testInvertedIndexGSI()
   })
 
-  it("should write multiple items at once", async () => {
+  it("should write multiple items at once using transaction", async () => {
     await testBatchWriteWithTransaction()
+  })
+
+  it("should write multiple items at once ", async () => {
+    await testBatchWrite()
   })
 
   // With JayZ encryption
@@ -240,9 +248,19 @@ describe("Beyonce", () => {
     await testInvertedIndexGSI(jayZ)
   })
 
-  it("should write multiple items at once with jayZ", async () => {
+  it("should write multiple items at once in a transaction with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchWriteWithTransaction(jayZ)
+  })
+
+  it("should write multiple items at once with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testBatchWrite(jayZ)
+  })
+
+  it("should write multiple items with empty fields at once with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testPutAndRetrieveForItemWithEmptyFields(jayZ)
   })
 })
 
@@ -253,6 +271,22 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
   expect(result).toEqual(musician)
+}
+
+async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  song1.genre = undefined
+  song2.genre = null
+  await db.batchWrite({ putItems: [musician, song1, song2] })
+
+  const result = await db.get(MusicianModel.key({ id: musician.id }))
+  expect(
+    await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))
+  ).toEqual(song1)
+  expect(
+    await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))
+  ).toEqual(song2)
 }
 
 async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
@@ -286,9 +320,9 @@ async function testPutAndDeleteItem(jayZ?: JayZ) {
 async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await db.executeTransaction({ putItems: [musician, song1] })
+  await db.batchWriteWithTransaction({ putItems: [musician, song1] })
 
-  await db.executeTransaction({
+  await db.batchWriteWithTransaction({
     putItems: [song2],
     deleteItems: [SongModel.key({ musicianId: song1.musicianId, id: song1.id })]
   })
@@ -442,7 +476,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
     mp3: Buffer.from("fake-data", "utf8")
   })
 
-  await db.executeTransaction({
+  await db.batchWriteWithTransaction({
     putItems: [santana, slash, santanasSong, slashesSong]
   })
 
@@ -461,7 +495,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await db.executeTransaction({ putItems: [musician, song1, song2] })
+  await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 
   const results = await db
     .query(MusicianPartition.key({ id: musician.id }))
@@ -471,6 +505,26 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   expect(results).toEqual({
     musician: [musician],
     song: [song1, song2]
+  })
+}
+
+async function testBatchWrite(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await db.put(song2)
+  await db.batchWrite({
+    putItems: [musician, song1],
+    deleteItems: [SongModel.key({ id: song2.id, musicianId: song2.musicianId })]
+  })
+
+  const results = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .exec()
+
+  sortById(results.song)
+  expect(results).toEqual({
+    musician: [musician],
+    song: [song1]
   })
 }
 
