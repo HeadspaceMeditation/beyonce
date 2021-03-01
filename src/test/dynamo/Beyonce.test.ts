@@ -274,19 +274,19 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
 }
 
 async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
-  const db = await setup(jayZ);
-  const [musician, song1, song2] = aMusicianWithTwoSongs();
-  song1.genre = undefined;
-  song2.genre = null;
-  await db.batchPut({ items: [musician, song1, song2] });
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  song1.genre = undefined
+  song2.genre = null
+  await db.batchWrite({ putItems: [musician, song1, song2] })
 
-  const result = await db.get(MusicianModel.key({ id: musician.id }));
+  const result = await db.get(MusicianModel.key({ id: musician.id }))
   expect(
     await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))
-  ).toEqual(song1);
+  ).toEqual(song1)
   expect(
     await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))
-  ).toEqual(song2);
+  ).toEqual(song2)
 }
 
 async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
@@ -511,8 +511,8 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
 async function testBatchWrite(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
-  await db.batchPut({
-    items: [musician, song1, song2]
+  await db.batchWrite({
+    putItems: [musician, song1, song2]
   })
 
   const results = await db
