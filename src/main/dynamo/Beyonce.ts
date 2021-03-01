@@ -95,6 +95,63 @@ export class Beyonce {
     }
   }
 
+  /** Write an item into Dynamo */
+  async put<T extends TaggedModel>(item: T): Promise<void> {
+    const maybeEncryptedItem = await this.maybeEncryptItem(item)
+    await this.client
+      .put({
+        TableName: this.table.tableName,
+        Item: maybeEncryptedItem
+      })
+      .promise()
+  }
+
+  /** Performs a (partial) update on an existing item in Dynamo.
+   *  Partial updates do not work with JayZ encryption and this method
+   *  will throw an error if you attempt to use it with JayZ enabled.
+   */
+  async update<T extends TaggedModel>(
+    key: PartitionAndSortKey<T>,
+    updateFunc: (lens: T) => void
+  ): Promise<T> {
+    if (this.jayz) {
+      throw new Error(
+        "You can't perform partial updates on items with JayZ encryption enabled"
+      )
+    }
+
+    const expBuilder = new UpdateItemExpressionBuilder()
+    const proxy = updateItemProxy<T>(expBuilder)
+    updateFunc(proxy)
+    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
+    const { expression, attributeNames, attributeValues } = expBuilder.build()
+
+    const hasValues = Object.keys(attributeValues).length > 0
+
+    const result = await this.client
+      .update({
+        TableName: this.table.tableName,
+        ConditionExpression: keyConditionExp,
+        Key: {
+          [this.table.partitionKeyName]: key.partitionKey,
+          [this.table.sortKeyName]: key.sortKey
+        },
+        UpdateExpression: expression,
+        ExpressionAttributeNames: attributeNames,
+        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
+        ReturnValues: "ALL_NEW" // return item after update applied
+      })
+      .promise()
+
+    if (result.Attributes !== undefined) {
+      return result.Attributes as T
+    } else {
+      throw new Error(
+        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
+      )
+    }
+  }
+
   async delete<T extends TaggedModel>(
     key: PartitionAndSortKey<T>
   ): Promise<void> {
@@ -161,110 +218,6 @@ export class Beyonce {
       return groupModelsByType(jsonItems, modelTags)
     } else {
       return groupModelsByType<ExtractKeyType<T>>([], modelTags)
-    }
-  }
-
-  query<T extends TaggedModel>(
-    key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>,
-    options: QueryOptions = {}
-  ): QueryBuilder<T> {
-    const { table, jayz } = this
-
-    const useConsistentRead =
-      options.consistentRead !== undefined
-        ? options.consistentRead
-        : this.consistentReads
-
-    return new QueryBuilder<T>({
-      db: this.client,
-      table,
-      key,
-      jayz: jayz,
-      consistentRead: useConsistentRead
-    })
-  }
-
-  queryGSI<T extends TaggedModel>(
-    gsiName: string,
-    gsiKey: PartitionKey<T>,
-    options: QueryOptions = {}
-  ): QueryBuilder<T> {
-    const { table, jayz } = this
-    return new QueryBuilder<T>({
-      db: this.client,
-      table,
-      gsiName,
-      gsiKey,
-      jayz,
-      consistentRead: options.consistentRead
-    })
-  }
-
-  scan<T extends TaggedModel = TaggedModel>(
-    options: ScanOptions = {}
-  ): ScanBuilder<T> {
-    return new ScanBuilder<T>({
-      db: this.client,
-      table: this.table,
-      jayz: this.jayz,
-      ...options
-    })
-  }
-
-  /** Write an item into Dynamo */
-  async put<T extends TaggedModel>(item: T): Promise<void> {
-    const maybeEncryptedItem = await this.maybeEncryptItem(item)
-    await this.client
-      .put({
-        TableName: this.table.tableName,
-        Item: maybeEncryptedItem
-      })
-      .promise()
-  }
-
-  /** Performs a (partial) update on an existing item in Dynamo.
-   *  Partial updates do not work with JayZ encryption and this method
-   *  will throw an error if you attempt to use it with JayZ enabled.
-   */
-  async update<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>,
-    updateFunc: (lens: T) => void
-  ): Promise<T> {
-    if (this.jayz) {
-      throw new Error(
-        "You can't perform partial updates on items with JayZ encryption enabled"
-      )
-    }
-
-    const expBuilder = new UpdateItemExpressionBuilder()
-    const proxy = updateItemProxy<T>(expBuilder)
-    updateFunc(proxy)
-    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
-    const { expression, attributeNames, attributeValues } = expBuilder.build()
-
-    const hasValues = Object.keys(attributeValues).length > 0
-
-    const result = await this.client
-      .update({
-        TableName: this.table.tableName,
-        ConditionExpression: keyConditionExp,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        },
-        UpdateExpression: expression,
-        ExpressionAttributeNames: attributeNames,
-        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
-        ReturnValues: "ALL_NEW" // return item after update applied
-      })
-      .promise()
-
-    if (result.Attributes !== undefined) {
-      return result.Attributes as T
-    } else {
-      throw new Error(
-        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
-      )
     }
   }
 
@@ -335,6 +288,53 @@ export class Beyonce {
     deleteItems.forEach((key) => requests.push(this.toTransactDelete(key)))
     await Promise.all(maybeEncryptedPutPromises)
     await this.client.transactWrite({ TransactItems: requests }).promise()
+  }
+
+  query<T extends TaggedModel>(
+    key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>,
+    options: QueryOptions = {}
+  ): QueryBuilder<T> {
+    const { table, jayz } = this
+
+    const useConsistentRead =
+      options.consistentRead !== undefined
+        ? options.consistentRead
+        : this.consistentReads
+
+    return new QueryBuilder<T>({
+      db: this.client,
+      table,
+      key,
+      jayz: jayz,
+      consistentRead: useConsistentRead
+    })
+  }
+
+  queryGSI<T extends TaggedModel>(
+    gsiName: string,
+    gsiKey: PartitionKey<T>,
+    options: QueryOptions = {}
+  ): QueryBuilder<T> {
+    const { table, jayz } = this
+    return new QueryBuilder<T>({
+      db: this.client,
+      table,
+      gsiName,
+      gsiKey,
+      jayz,
+      consistentRead: options.consistentRead
+    })
+  }
+
+  scan<T extends TaggedModel = TaggedModel>(
+    options: ScanOptions = {}
+  ): ScanBuilder<T> {
+    return new ScanBuilder<T>({
+      db: this.client,
+      table: this.table,
+      jayz: this.jayz,
+      ...options
+    })
   }
 
   private toTransactPut<T extends TaggedModel>(
