@@ -3,10 +3,7 @@ import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionB
 /** A recursive proxy used to dynamically build a DynamoDB update expression
  *  as the proxied attributes are accessed and/or set.
  */
-export function updateItemProxy<T extends {}>(
-  expBuilder: UpdateItemExpressionBuilder,
-  attrPath: string[] = []
-): T {
+export function updateItemProxy<T extends {}>(expBuilder: UpdateItemExpressionBuilder, attrPath: string[] = []): T {
   return new Proxy({} as any, {
     get(target, prop, receiver) {
       attrPath.push(prop.toString())
@@ -23,6 +20,6 @@ export function updateItemProxy<T extends {}>(
       attrPath.push(prop.toString())
       expBuilder.remove(attrPath)
       return true
-    },
+    }
   })
 }

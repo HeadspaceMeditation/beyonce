@@ -26,7 +26,7 @@ export interface Song {
   musicianId: string
   id: string
   title: string
-  genre?:string|null
+  genre?: string | null
   mp3: Buffer
 }
 

@@ -21,7 +21,4 @@ export interface IteratorResults<T extends TaggedModel> {
   cursor?: Cursor
 }
 
-export type PaginatedIteratorResults<T extends TaggedModel> = AsyncGenerator<
-  IteratorResults<T>,
-  IteratorResults<T>
->
+export type PaginatedIteratorResults<T extends TaggedModel> = AsyncGenerator<IteratorResults<T>, IteratorResults<T>>

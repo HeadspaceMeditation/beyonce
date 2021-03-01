@@ -36,12 +36,9 @@ describe("Beyonce", () => {
     const [musician, _, __] = aMusicianWithTwoSongs()
     await db.put(musician)
 
-    const updated = await db.update(
-      MusicianModel.key({ id: musician.id }),
-      (musician) => {
-        musician.name = "Gary Moore"
-      }
-    )
+    const updated = await db.update(MusicianModel.key({ id: musician.id }), (musician) => {
+      musician.name = "Gary Moore"
+    })
 
     expect(updated).toEqual({ ...musician, name: "Gary Moore" })
 
@@ -54,12 +51,9 @@ describe("Beyonce", () => {
     const [musician, _, __] = aMusicianWithTwoSongs()
     await db.put(musician)
 
-    const updated = await db.update(
-      MusicianModel.key({ id: musician.id }),
-      (musician) => {
-        musician.details.description = "scottish blues dude"
-      }
-    )
+    const updated = await db.update(MusicianModel.key({ id: musician.id }), (musician) => {
+      musician.details.description = "scottish blues dude"
+    })
 
     expect(updated).toEqual({
       ...musician,
@@ -73,12 +67,9 @@ describe("Beyonce", () => {
     const musician = { ...m, details: { description: "rasta man" } }
     await db.put(musician)
 
-    const updated = await db.update(
-      MusicianModel.key({ id: musician.id }),
-      (musician) => {
-        delete musician.details.description
-      }
-    )
+    const updated = await db.update(MusicianModel.key({ id: musician.id }), (musician) => {
+      delete musician.details.description
+    })
 
     expect(updated).toEqual({
       ...musician,
@@ -281,12 +272,8 @@ async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
   await db.batchWrite({ putItems: [musician, song1, song2] })
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
-  expect(
-    await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))
-  ).toEqual(song1)
-  expect(
-    await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))
-  ).toEqual(song2)
+  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))).toEqual(song1)
+  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))).toEqual(song2)
 }
 
 async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
@@ -327,13 +314,9 @@ async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
     deleteItems: [SongModel.key({ musicianId: song1.musicianId, id: song1.id })]
   })
 
-  expect(
-    await db.get(SongModel.key({ musicianId: song2.musicianId, id: song2.id }))
-  ).toEqual(song2)
+  expect(await db.get(SongModel.key({ musicianId: song2.musicianId, id: song2.id }))).toEqual(song2)
 
-  expect(
-    await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))
-  ).toEqual(undefined)
+  expect(await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))).toEqual(undefined)
 }
 
 async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
@@ -344,10 +327,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
     sortKey: string
   }
 
-  const PersonModel = table
-    .model<Person>("person")
-    .partitionKey("Person", "first", "last")
-    .sortKey("Person", "sortKey")
+  const PersonModel = table.model<Person>("person").partitionKey("Person", "first", "last").sortKey("Person", "sortKey")
 
   const db = await setup(jayZ)
   const model = PersonModel.create({
@@ -357,9 +337,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
   })
   await db.put(model)
 
-  const result = await db.get(
-    PersonModel.key({ first: "Bob", last: "Smith", sortKey: "sortKey-123" })
-  )
+  const result = await db.get(PersonModel.key({ first: "Bob", last: "Smith", sortKey: "sortKey-123" }))
 
   expect(result).toEqual(model)
 }
@@ -385,9 +363,7 @@ async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
   })
   await db.put(model)
 
-  const result = await db.get(
-    LineItemModel.key({ id: "l1", orderId: "o1", timestamp: "456" })
-  )
+  const result = await db.get(LineItemModel.key({ id: "l1", orderId: "o1", timestamp: "456" }))
   expect(result).toEqual(model)
 }
 
@@ -434,9 +410,7 @@ async function testGSIByModel(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db
-    .queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song))
-    .exec()
+  const result = await db.queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song)).exec()
 
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
@@ -482,12 +456,7 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
 
   // Now when we query our inverted index, pk and sk are reversed,
   // so song id: 1 => [santanasSong, slashesSong]
-  const { song: songs } = await db
-    .queryGSI(
-      invertedIndexGSI.name,
-      invertedIndexGSI.key(`${ModelType.Song}-1`)
-    )
-    .exec()
+  const { song: songs } = await db.queryGSI(invertedIndexGSI.name, invertedIndexGSI.key(`${ModelType.Song}-1`)).exec()
 
   expect(songs).toEqual([santanasSong, slashesSong])
 }
@@ -497,9 +466,7 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 
-  const results = await db
-    .query(MusicianPartition.key({ id: musician.id }))
-    .exec()
+  const results = await db.query(MusicianPartition.key({ id: musician.id })).exec()
 
   sortById(results.song)
   expect(results).toEqual({
@@ -517,9 +484,7 @@ async function testBatchWrite(jayZ?: JayZ) {
     deleteItems: [SongModel.key({ id: song2.id, musicianId: song2.musicianId })]
   })
 
-  const results = await db
-    .query(MusicianPartition.key({ id: musician.id }))
-    .exec()
+  const results = await db.query(MusicianPartition.key({ id: musician.id })).exec()
 
   sortById(results.song)
   expect(results).toEqual({

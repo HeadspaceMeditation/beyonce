@@ -3,21 +3,13 @@ import { DynamoDB } from "aws-sdk"
 import { captureAWSClient } from "aws-xray-sdk"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
-import {
-  PartitionAndSortKey,
-  PartitionKey,
-  PartitionKeyAndSortKeyPrefix
-} from "./keys"
+import { PartitionAndSortKey, PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { QueryBuilder } from "./QueryBuilder"
 import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
-import {
-  decryptOrPassThroughItem,
-  encryptOrPassThroughItem,
-  MaybeEncryptedItem
-} from "./util"
+import { decryptOrPassThroughItem, encryptOrPassThroughItem, MaybeEncryptedItem } from "./util"
 
 export interface Options {
   jayz?: JayZ
@@ -46,11 +38,7 @@ export class Beyonce {
   private jayz?: JayZ
   private consistentReads: boolean
 
-  constructor(
-    private table: Table<string, string>,
-    dynamo: DynamoDB,
-    options: Options = {}
-  ) {
+  constructor(private table: Table<string, string>, dynamo: DynamoDB, options: Options = {}) {
     this.client = new DynamoDB.DocumentClient({ service: dynamo })
     if (options.xRayTracingEnabled) {
       // hack per: https://github.com/aws/aws-xray-sdk-node/issues/23#issuecomment-509745488
@@ -69,14 +57,8 @@ export class Beyonce {
   }
 
   /** Retrieve a single Item out of Dynamo */
-  async get<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>,
-    options: GetOptions = {}
-  ): Promise<T | undefined> {
-    const useConsistentRead =
-      options.consistentRead !== undefined
-        ? options.consistentRead
-        : this.consistentReads
+  async get<T extends TaggedModel>(key: PartitionAndSortKey<T>, options: GetOptions = {}): Promise<T | undefined> {
+    const useConsistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
 
     const { Item: item } = await this.client
       .get({
@@ -110,14 +92,9 @@ export class Beyonce {
    *  Partial updates do not work with JayZ encryption and this method
    *  will throw an error if you attempt to use it with JayZ enabled.
    */
-  async update<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>,
-    updateFunc: (lens: T) => void
-  ): Promise<T> {
+  async update<T extends TaggedModel>(key: PartitionAndSortKey<T>, updateFunc: (lens: T) => void): Promise<T> {
     if (this.jayz) {
-      throw new Error(
-        "You can't perform partial updates on items with JayZ encryption enabled"
-      )
+      throw new Error("You can't perform partial updates on items with JayZ encryption enabled")
     }
 
     const expBuilder = new UpdateItemExpressionBuilder()
@@ -146,15 +123,11 @@ export class Beyonce {
     if (result.Attributes !== undefined) {
       return result.Attributes as T
     } else {
-      throw new Error(
-        `Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`
-      )
+      throw new Error(`Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`)
     }
   }
 
-  async delete<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>
-  ): Promise<void> {
+  async delete<T extends TaggedModel>(key: PartitionAndSortKey<T>): Promise<void> {
     await this.client
       .delete({
         TableName: this.table.tableName,
@@ -171,15 +144,9 @@ export class Beyonce {
     keys: T[]
     consistentRead?: boolean
   }): Promise<GroupedModels<ExtractKeyType<T>>> {
-    const useConsistentRead =
-      params.consistentRead !== undefined
-        ? params.consistentRead
-        : this.consistentReads
+    const useConsistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
 
-    const {
-      Responses: responses,
-      UnprocessedKeys: unprocessedKeys
-    } = await this.client
+    const { Responses: responses, UnprocessedKeys: unprocessedKeys } = await this.client
       .batchGet({
         RequestItems: {
           [this.table.tableName]: {
@@ -193,13 +160,8 @@ export class Beyonce {
       })
       .promise()
 
-    if (
-      unprocessedKeys !== undefined &&
-      Object.keys(unprocessedKeys).length > 0
-    ) {
-      throw new Error(
-        `Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`
-      )
+    if (unprocessedKeys !== undefined && Object.keys(unprocessedKeys).length > 0) {
+      throw new Error(`Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`)
     }
 
     const modelTags = params.keys.map((_) => _.modelTag)
@@ -207,10 +169,7 @@ export class Beyonce {
     if (responses !== undefined) {
       const items = responses[this.table.tableName]
       const jsonItemPromises = items.map(async (item) => {
-        const maybeDecryptedItem = await decryptOrPassThroughItem(
-          this.jayz,
-          item
-        )
+        const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
         return maybeDecryptedItem as ExtractKeyType<T>
       })
 
@@ -251,9 +210,7 @@ export class Beyonce {
     })
 
     await Promise.all(maybeEncryptedPutPromises)
-    const { UnprocessedItems } = await this.client
-      .batchWrite({ RequestItems: { [tableName]: requests } })
-      .promise()
+    const { UnprocessedItems } = await this.client.batchWrite({ RequestItems: { [tableName]: requests } }).promise()
 
     const unprocessedPuts: T[] = []
     const unprocessedDeletes: PartitionAndSortKey<T>[] = []
@@ -263,9 +220,7 @@ export class Beyonce {
           unprocessedPuts.push(PutRequest.Item as T)
         } else if (DeleteRequest) {
           const { Key: key } = DeleteRequest
-          unprocessedDeletes.push(
-            deleteItemsByKey[`${key[partitionKeyName]}-${key[sortKeyName]}`]
-          )
+          unprocessedDeletes.push(deleteItemsByKey[`${key[partitionKeyName]}-${key[sortKeyName]}`])
         }
       })
     }
@@ -296,10 +251,7 @@ export class Beyonce {
   ): QueryBuilder<T> {
     const { table, jayz } = this
 
-    const useConsistentRead =
-      options.consistentRead !== undefined
-        ? options.consistentRead
-        : this.consistentReads
+    const useConsistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
 
     return new QueryBuilder<T>({
       db: this.client,
@@ -326,9 +278,7 @@ export class Beyonce {
     })
   }
 
-  scan<T extends TaggedModel = TaggedModel>(
-    options: ScanOptions = {}
-  ): ScanBuilder<T> {
+  scan<T extends TaggedModel = TaggedModel>(options: ScanOptions = {}): ScanBuilder<T> {
     return new ScanBuilder<T>({
       db: this.client,
       table: this.table,
@@ -337,9 +287,7 @@ export class Beyonce {
     })
   }
 
-  private toTransactPut<T extends TaggedModel>(
-    item: MaybeEncryptedItem<T>
-  ): DynamoDB.DocumentClient.TransactWriteItem {
+  private toTransactPut<T extends TaggedModel>(item: MaybeEncryptedItem<T>): DynamoDB.DocumentClient.TransactWriteItem {
     return {
       Put: {
         TableName: this.table.tableName,
@@ -362,15 +310,9 @@ export class Beyonce {
     }
   }
 
-  private async maybeEncryptItem<T extends TaggedModel>(
-    item: T
-  ): Promise<MaybeEncryptedItem<T>> {
+  private async maybeEncryptItem<T extends TaggedModel>(item: T): Promise<MaybeEncryptedItem<T>> {
     const { jayz, table } = this
 
-    return await encryptOrPassThroughItem(
-      jayz,
-      item,
-      table.getEncryptionBlacklist()
-    )
+    return await encryptOrPassThroughItem(jayz, item, table.getEncryptionBlacklist())
   }
 }

@@ -6,9 +6,7 @@ export function generateModels(models: Model[]) {
 }
 
 function generateModel(model: Model): string {
-  const [pkPrefix, ...pkComponents] = model.keys.partitionKey.map(
-    formatKeyComponent
-  )
+  const [pkPrefix, ...pkComponents] = model.keys.partitionKey.map(formatKeyComponent)
 
   const [skPrefix, ...skComponents] = model.keys.sortKey.map(formatKeyComponent)
 

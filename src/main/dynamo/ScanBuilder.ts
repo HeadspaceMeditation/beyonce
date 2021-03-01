@@ -5,15 +5,8 @@ import { ready } from "libsodium-wrappers"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { groupAllPages, pagedIterator } from "./iterators/pagedIterator"
-import {
-  InternalIteratorOptions,
-  IteratorOptions,
-  PaginatedIteratorResults
-} from "./iterators/types"
-import {
-  maybeSerializeCursor,
-  toInternalIteratorOptions
-} from "./iterators/util"
+import { InternalIteratorOptions, IteratorOptions, PaginatedIteratorResults } from "./iterators/types"
+import { maybeSerializeCursor, toInternalIteratorOptions } from "./iterators/util"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
@@ -31,9 +24,7 @@ export interface ParallelScanConfig {
 }
 
 /** Builds and executes parameters for a DynamoDB Scan operation */
-export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
-  T
-> {
+export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T> {
   private modelTags: string[] = this.config.table.getModelTags()
 
   constructor(private config: ScanConfig<T>) {
@@ -91,18 +82,13 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     const { expression, attributeNames, attributeValues } = this.build()
     const filterExp = expression !== "" ? expression : undefined
     const includeAttributeNames = filterExp !== undefined
-    const includeAttributeValues =
-      filterExp !== undefined && Object.values(attributeValues).length > 0
+    const includeAttributeValues = filterExp !== undefined && Object.values(attributeValues).length > 0
 
     return {
       TableName: table.tableName,
       ConsistentRead: consistentRead,
-      ExpressionAttributeNames: includeAttributeNames
-        ? attributeNames
-        : undefined,
-      ExpressionAttributeValues: includeAttributeValues
-        ? attributeValues
-        : undefined,
+      ExpressionAttributeNames: includeAttributeNames ? attributeNames : undefined,
+      ExpressionAttributeValues: includeAttributeValues ? attributeValues : undefined,
       FilterExpression: filterExp,
       ExclusiveStartKey: iteratorOptions?.lastEvaluatedKey,
       Limit: iteratorOptions?.pageSize,

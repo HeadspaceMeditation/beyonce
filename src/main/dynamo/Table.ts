@@ -12,12 +12,7 @@ export class Table<PK extends string = string, SK extends string = string> {
   private encryptionBlacklist: Set<string>
   private gsis: GSI<string, string, any>[] = []
 
-  constructor(config: {
-    name: string
-    partitionKeyName: PK
-    sortKeyName: SK
-    encryptionBlacklist?: string[]
-  }) {
+  constructor(config: { name: string; partitionKeyName: PK; sortKeyName: SK; encryptionBlacklist?: string[] }) {
     this.tableName = config.name
     this.partitionKeyName = config.partitionKeyName
     this.sortKeyName = config.sortKeyName
@@ -27,7 +22,7 @@ export class Table<PK extends string = string, SK extends string = string> {
       "__jayz__metadata",
       this.partitionKeyName,
       this.sortKeyName,
-      ...(config.encryptionBlacklist ?? []),
+      ...(config.encryptionBlacklist ?? [])
     ])
   }
 
@@ -36,9 +31,7 @@ export class Table<PK extends string = string, SK extends string = string> {
     return new PartitionKeyBuilder(this, modelType)
   }
 
-  partition<T extends Model<any, any, any>, U extends Model<any, any, any>>(
-    models: [T, ...U[]]
-  ): Partition<T, U> {
+  partition<T extends Model<any, any, any>, U extends Model<any, any, any>>(models: [T, ...U[]]): Partition<T, U> {
     return new Partition(models)
   }
 
@@ -60,21 +53,17 @@ export class Table<PK extends string = string, SK extends string = string> {
     return this.modelTags
   }
 
-  asCreateTableInput(
-    billingMode: DynamoDB.Types.BillingMode
-  ): DynamoDB.Types.CreateTableInput {
+  asCreateTableInput(billingMode: DynamoDB.Types.BillingMode): DynamoDB.Types.CreateTableInput {
     const attributeSet = new Set([
       this.partitionKeyName,
       this.sortKeyName,
       "model",
-      ...this.gsis.flatMap((_) => [_.partitionKeyName, _.sortKeyName]),
+      ...this.gsis.flatMap((_) => [_.partitionKeyName, _.sortKeyName])
     ])
 
-    const attributeDefinitions: DynamoDB.Types.AttributeDefinitions = Array.from(
-      attributeSet
-    ).map((attr) => ({
+    const attributeDefinitions: DynamoDB.Types.AttributeDefinitions = Array.from(attributeSet).map((attr) => ({
       AttributeName: attr,
-      AttributeType: "S",
+      AttributeType: "S"
     }))
 
     return {
@@ -82,24 +71,22 @@ export class Table<PK extends string = string, SK extends string = string> {
 
       KeySchema: [
         { AttributeName: this.partitionKeyName, KeyType: "HASH" },
-        { AttributeName: this.sortKeyName, KeyType: "RANGE" },
+        { AttributeName: this.sortKeyName, KeyType: "RANGE" }
       ],
 
       AttributeDefinitions: attributeDefinitions,
-      GlobalSecondaryIndexes: this.gsis.map(
-        ({ name, partitionKeyName, sortKeyName }) => ({
-          IndexName: name,
-          KeySchema: [
-            { AttributeName: partitionKeyName, KeyType: "HASH" },
-            { AttributeName: sortKeyName, KeyType: "RANGE" },
-          ],
-          Projection: {
-            ProjectionType: "ALL",
-          },
-        })
-      ),
+      GlobalSecondaryIndexes: this.gsis.map(({ name, partitionKeyName, sortKeyName }) => ({
+        IndexName: name,
+        KeySchema: [
+          { AttributeName: partitionKeyName, KeyType: "HASH" },
+          { AttributeName: sortKeyName, KeyType: "RANGE" }
+        ],
+        Projection: {
+          ProjectionType: "ALL"
+        }
+      })),
 
-      BillingMode: billingMode,
+      BillingMode: billingMode
     }
   }
 }
