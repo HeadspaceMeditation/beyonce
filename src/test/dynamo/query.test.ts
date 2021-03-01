@@ -52,6 +52,10 @@ describe("Beyonce.query", () => {
     await testQueryWithLimit()
   })
 
+  it("should return undefined cursor when there are no more records to query", async () => {
+    await testPaginatedQueryReturnUndefinedCursor()
+  })
+
   it("should find the highest sort key", async () => {
     await testQueryWithReverseAndLimit()
   })
@@ -109,6 +113,11 @@ describe("Beyonce.query with JayZ", () => {
   it("should set maxRecordsToProcess", async () => {
     const jayz = await createJayZ()
     await testQueryWithLimit(jayz)
+  })
+
+  it("should return undefined cursor when there are no more records to query", async () => {
+    const jayz = await createJayZ()
+    await testPaginatedQueryReturnUndefinedCursor(jayz)
   })
 
   it("should find the highest sort key", async () => {
@@ -240,6 +249,33 @@ async function testQueryWithLimit(jayZ?: JayZ) {
 
   expect(response3.items).toEqual({ musician: [], song: [song2] })
   expect(response3.cursor).toEqual(undefined)
+}
+
+async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const { value: response1 } = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .iterator({ pageSize: 3 })
+    .next()
+
+  expect(response1.items).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
+
+  const { value: response2 } = await db
+    .query(MusicianPartition.key({ id: musician.id }))
+    .iterator({
+      cursor: response1.cursor,
+      pageSize: 1
+    })
+    .next()
+
+  expect(response2.items).toEqual({ musician: [], song: [] })
+  expect(response2.cursor).toBeUndefined()
 }
 
 async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
