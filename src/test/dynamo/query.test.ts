@@ -1,13 +1,5 @@
 import { JayZ } from "@ginger.io/jay-z"
-import {
-  aMusicianWithTwoSongs,
-  ModelType,
-  Musician,
-  MusicianModel,
-  MusicianPartition,
-  Song,
-  SongModel
-} from "./models"
+import { aMusicianWithTwoSongs, ModelType, Musician, MusicianModel, MusicianPartition, Song, SongModel } from "./models"
 import { createJayZ, create25Songs, setup } from "./util"
 
 describe("Beyonce.query", () => {
@@ -189,9 +181,7 @@ async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
-  const result = await db
-    .query(SongModel.partitionKey({ musicianId: musician.id }))
-    .exec()
+  const result = await db.query(SongModel.partitionKey({ musicianId: musician.id })).exec()
 
   expect(result).toEqual({ song: [song1, song2] })
 }
@@ -222,10 +212,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
   const key = MusicianPartition.key({ id: musician.id })
 
-  const { value: response1 } = await db
-    .query(key)
-    .iterator({ pageSize: 1 })
-    .next()
+  const { value: response1 } = await db.query(key).iterator({ pageSize: 1 }).next()
 
   expect(response1.items).toEqual({ musician: [musician], song: [] })
 
@@ -297,9 +284,7 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 
-  const result = await db
-    .query(MusicianPartition.key({ id: musician.id }))
-    .exec()
+  const result = await db.query(MusicianPartition.key({ id: musician.id })).exec()
   expect(result).toEqual({
     musician: [musician],
     song: [song1, song2]

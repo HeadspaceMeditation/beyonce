@@ -26,13 +26,9 @@ function generateEncryptionBlacklist(table: Table): string {
       const [, ...pkComponents] = model.keys.partitionKey
       const [, ...skComponents] = model.keys.sortKey
 
-      pkComponents
-        .map(formatKeyComponent)
-        .forEach((_) => encryptionBlacklistSet.add(_))
+      pkComponents.map(formatKeyComponent).forEach((_) => encryptionBlacklistSet.add(_))
 
-      skComponents
-        .map(formatKeyComponent)
-        .forEach((_) => encryptionBlacklistSet.add(_))
+      skComponents.map(formatKeyComponent).forEach((_) => encryptionBlacklistSet.add(_))
     })
 
   table.gsis.forEach(({ partitionKey, sortKey }) => {

@@ -269,8 +269,7 @@ tables:
         sortKey: $id
 `)
 
-  expect(result)
-    .toContain(`export const modelByIdGSI = LibraryTable.gsi("modelById")
+  expect(result).toContain(`export const modelByIdGSI = LibraryTable.gsi("modelById")
   .models([AuthorModel, BookModel])
   .partitionKey("model")
   .sortKey("id")
@@ -308,8 +307,7 @@ tables:
         sortKey: $id
 `)
 
-  expect(result)
-    .toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
+  expect(result).toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
   .models([AuthorModel, BookModel])
   .partitionKey("name")
 `)
@@ -345,8 +343,7 @@ tables:
         sortKey: $pk
 `)
 
-  expect(result)
-    .toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
+  expect(result).toContain(`const byNameAndIdGSI = LibraryTable.gsi("byNameAndId")
   .models([AuthorModel, BookModel])
   .partitionKey("sk")
   .sortKey("pk")`)
@@ -371,9 +368,7 @@ tables:
 `)
 
   const lines = result.split("\n").map((_) => _.trim())
-  expect(lines).toContainEqual(
-    `import { BestNameEvah } from \"@cool.io/some/sweet/package\"`
-  )
+  expect(lines).toContainEqual(`import { BestNameEvah } from \"@cool.io/some/sweet/package\"`)
 
   expect(lines).toContainEqual(`name: BestNameEvah`)
 })

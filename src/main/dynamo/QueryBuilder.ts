@@ -5,15 +5,8 @@ import { ready } from "libsodium-wrappers"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { groupAllPages, pagedIterator } from "./iterators/pagedIterator"
-import {
-  InternalIteratorOptions,
-  IteratorOptions,
-  PaginatedIteratorResults
-} from "./iterators/types"
-import {
-  maybeSerializeCursor,
-  toInternalIteratorOptions
-} from "./iterators/util"
+import { InternalIteratorOptions, IteratorOptions, PaginatedIteratorResults } from "./iterators/types"
+import { maybeSerializeCursor, toInternalIteratorOptions } from "./iterators/util"
 import { PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
 import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
@@ -36,9 +29,7 @@ interface GSIQueryConfig<T extends TaggedModel> {
 }
 
 /** Builds and executes parameters for a DynamoDB Query operation */
-export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
-  T
-> {
+export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T> {
   private scanIndexForward: boolean = true
   private modelTags: string[] = getModelTags(this.config)
 
@@ -97,9 +88,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private createQueryInput(
-    options: InternalIteratorOptions
-  ): DynamoDB.DocumentClient.QueryInput {
+  private createQueryInput(options: InternalIteratorOptions): DynamoDB.DocumentClient.QueryInput {
     if (isTableQuery(this.config)) {
       const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForTable(this.config)
@@ -148,9 +137,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
       const { sortKeyName, sortKeyPrefix } = key
       const skPlaceholder = this.addAttributeName(sortKeyName)
       const skValuePlaceholder = this.addAttributeValue(sortKeyPrefix)
-      keyConditionExpression.push(
-        `begins_with(${skPlaceholder}, ${skValuePlaceholder})`
-      )
+      keyConditionExpression.push(`begins_with(${skPlaceholder}, ${skValuePlaceholder})`)
     }
 
     return keyConditionExpression.join(" AND ")
@@ -177,9 +164,7 @@ function isPartitionKeyWithSortKeyPrefix<T extends TaggedModel>(
   return (key as any).sortKeyPrefix !== undefined
 }
 
-function getModelTags<T extends TaggedModel>(
-  config: TableQueryConfig<T> | GSIQueryConfig<T>
-): T["model"][] {
+function getModelTags<T extends TaggedModel>(config: TableQueryConfig<T> | GSIQueryConfig<T>): T["model"][] {
   const key = isTableQuery(config) ? config.key : config.gsiKey
   return isPartitionKeyWithSortKeyPrefix(key) ? [key.modelTag] : key.modelTags
 }

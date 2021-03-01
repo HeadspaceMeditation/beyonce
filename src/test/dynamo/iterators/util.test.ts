@@ -1,8 +1,5 @@
 import { ready } from "libsodium-wrappers"
-import {
-  maybeDeserializeCursor,
-  maybeSerializeCursor
-} from "../../../main/dynamo/iterators/util"
+import { maybeDeserializeCursor, maybeSerializeCursor } from "../../../main/dynamo/iterators/util"
 
 describe("iterator utils", () => {
   beforeAll(async () => await ready)
@@ -17,9 +14,7 @@ describe("iterator utils", () => {
   })
 
   it("should deserialize a cursor into a lastEvaluatedKey", () => {
-    const lastEvaluatedKey = maybeDeserializeCursor(
-      "eyJwayI6IkJvYiIsInNrIjoiTWFybGV5In0"
-    )
+    const lastEvaluatedKey = maybeDeserializeCursor("eyJwayI6IkJvYiIsInNrIjoiTWFybGV5In0")
     expect(lastEvaluatedKey).toEqual({ pk: "Bob", sk: "Marley" })
   })
 

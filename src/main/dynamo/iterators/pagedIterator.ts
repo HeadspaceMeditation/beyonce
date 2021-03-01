@@ -25,10 +25,7 @@ export async function groupAllPages<T extends TaggedModel>(
   const results: T[] = []
   for await (const { items, errors } of iterator) {
     if (errors.length > 0) {
-      throw new CompositeError(
-        "Error(s) encountered trying to process interator page",
-        errors
-      )
+      throw new CompositeError("Error(s) encountered trying to process interator page", errors)
     }
 
     results.push(...items)
@@ -50,9 +47,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
     const items: U[] = []
     const errors: Error[] = []
     try {
-      const response: DynamoDB.DocumentClient.QueryOutput = await executeOperation(
-        pendingOperation
-      )
+      const response: DynamoDB.DocumentClient.QueryOutput = await executeOperation(pendingOperation)
 
       if (response.LastEvaluatedKey !== undefined) {
         lastEvaluatedKey = response.LastEvaluatedKey
