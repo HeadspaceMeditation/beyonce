@@ -268,34 +268,6 @@ export class Beyonce {
     }
   }
 
-  /** Write multiple items into Dynamo.
-   */
-  async batchPut<T extends TaggedModel>(params: {
-    items: T[]
-  }): Promise<{ unprocessedItems: T[] }> {
-    const { tableName } = this.table
-    const itemPromises = params.items.map(async (item) => {
-      const maybeEncryptedItem = await this.maybeEncryptItem(item)
-      return { PutRequest: { Item: maybeEncryptedItem } }
-    })
-
-    const itemsToWrite = await Promise.all(itemPromises)
-    const { UnprocessedItems } = await this.client
-      .batchWrite({ RequestItems: { [tableName]: itemsToWrite } })
-      .promise()
-
-    const unprocessedItems: T[] = []
-    if (UnprocessedItems && UnprocessedItems[tableName]) {
-      UnprocessedItems[tableName].forEach(({ PutRequest }) => {
-        if (PutRequest !== undefined) {
-          unprocessedItems.push(PutRequest.Item as T)
-        }
-      })
-    }
-
-    return { unprocessedItems }
-  }
-
   /** Write multiple items into Dynamo using a transaction.
    *
    *  @deprecated -- use executeTransaction
@@ -305,6 +277,58 @@ export class Beyonce {
   }): Promise<void> {
     const { items } = params
     await this.executeTransaction({ putItems: items })
+  }
+
+  async batchWrite<T extends TaggedModel>(params: {
+    putItems?: T[]
+    deleteItems?: PartitionAndSortKey<T>[]
+  }): Promise<{
+    unprocessedPuts: T[]
+    unprocessedDeletes: PartitionAndSortKey<T>[]
+  }> {
+    const { tableName, partitionKeyName, sortKeyName } = this.table
+    const { putItems = [], deleteItems = [] } = params
+    const requests: DynamoDB.DocumentClient.WriteRequest[] = []
+
+    const maybeEncryptedPutPromises = putItems.map(async (item) => {
+      const maybeEncryptedItem = await this.maybeEncryptItem(item)
+      requests.push({ PutRequest: { Item: maybeEncryptedItem } })
+    })
+
+    const deleteItemsByKey: { [key: string]: PartitionAndSortKey<T> } = {}
+    deleteItems.forEach((key) => {
+      deleteItemsByKey[`${key.partitionKey}-${key.sortKey}`] = key
+      requests.push({
+        DeleteRequest: {
+          Key: {
+            [partitionKeyName]: key.partitionKey,
+            [sortKeyName]: key.sortKey
+          }
+        }
+      })
+    })
+
+    await Promise.all(maybeEncryptedPutPromises)
+    const { UnprocessedItems } = await this.client
+      .batchWrite({ RequestItems: { [tableName]: requests } })
+      .promise()
+
+    const unprocessedPuts: T[] = []
+    const unprocessedDeletes: PartitionAndSortKey<T>[] = []
+    if (UnprocessedItems && UnprocessedItems[tableName]) {
+      UnprocessedItems[tableName].forEach(({ PutRequest, DeleteRequest }) => {
+        if (PutRequest) {
+          unprocessedPuts.push(PutRequest.Item as T)
+        } else if (DeleteRequest) {
+          const { Key: key } = DeleteRequest
+          unprocessedDeletes.push(
+            deleteItemsByKey[`${key[partitionKeyName]}-${key[sortKeyName]}`]
+          )
+        }
+      })
+    }
+
+    return { unprocessedPuts, unprocessedDeletes }
   }
 
   /** Perform N Dynamo operations in an atomic transaction */
