@@ -338,6 +338,10 @@ These options mirror the underlying [DynamoDB API](https://docs.aws.amazon.com/a
 
 ### BatchGet
 
+You can retrieve records in bulk via `batchGet`. DynamoDB allows retrieving a maximum of 100 items per
+`batchGet` query. So, if you ask for more than **100 keys** in a single Beyonce `batchGet` call, Beyonce will automatically split
+DynamoDB calls into N concurrent requests and join the results for you.
+
 ```TypeScript
 // Batch get several items
 const batchResults = await beyonce.batchGet({
