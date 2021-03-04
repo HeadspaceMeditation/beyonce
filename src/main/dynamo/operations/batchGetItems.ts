@@ -1,25 +1,26 @@
 import { DynamoDB } from "aws-sdk"
-import { PartitionAndSortKey } from "./keys"
-import { Table } from "./Table"
-import { TaggedModel } from "./types"
-import { UnprocessedKeyCollector } from "./UnprocessedKeyCollector"
+import { PartitionAndSortKey } from "../keys"
+import { Table } from "../Table"
+import { TaggedModel } from "../types"
+import { UnprocessedKeyCollector } from "../UnprocessedKeyCollector"
+import { BaseParams } from "./BaseParams"
 
-export interface BatchGetParams<T extends PartitionAndSortKey<TaggedModel>> {
+export interface BatchGetItemsParams<T extends PartitionAndSortKey<TaggedModel>> extends BaseParams {
   table: Table<string, string>
   client: DynamoDB.DocumentClient
   keys: T[]
   consistentRead?: boolean
 }
 
-export interface BatchGetResult<T extends PartitionAndSortKey<TaggedModel>> {
+export interface BatchGetItemsResult<T extends PartitionAndSortKey<TaggedModel>> {
   items: DynamoDB.DocumentClient.AttributeMap[]
   unprocessedKeys: T[]
 }
 
 /** Performs a "raw" batchGet operation in Dynamo */
-export async function batchGet<T extends PartitionAndSortKey<TaggedModel>>(
-  params: BatchGetParams<T>
-): Promise<BatchGetResult<T>> {
+export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
+  params: BatchGetItemsParams<T>
+): Promise<BatchGetItemsResult<T>> {
   const { table, client, consistentRead } = params
   const { tableName, partitionKeyName, sortKeyName } = table
   const results = await client

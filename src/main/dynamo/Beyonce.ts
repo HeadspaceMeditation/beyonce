@@ -1,10 +1,16 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { captureAWSClient } from "aws-xray-sdk"
-import { batchGet } from "./batchGet"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { PartitionAndSortKey, PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
+import { batchGetItems } from "./operations/batchGetItems"
+import { batchWriteItems } from "./operations/batchWriteItems"
+import { deleteItem } from "./operations/deleteItem"
+import { getItem } from "./operations/getItem"
+import { putItem } from "./operations/putItem"
+import { transactWriteItems } from "./operations/transactWriteItems"
+import { updateItem } from "./operations/updateItem"
 import { QueryBuilder } from "./QueryBuilder"
 import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
@@ -59,20 +65,10 @@ export class Beyonce {
 
   /** Retrieve a single Item out of Dynamo */
   async get<T extends TaggedModel>(key: PartitionAndSortKey<T>, options: GetOptions = {}): Promise<T | undefined> {
-    const useConsistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
+    const consistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
+    const { item } = await getItem({ table: this.table, client: this.client, key, consistentRead })
 
-    const { Item: item } = await this.client
-      .get({
-        TableName: this.table.tableName,
-        ConsistentRead: useConsistentRead,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        }
-      })
-      .promise()
-
-    if (item !== undefined) {
+    if (item) {
       const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
       return maybeDecryptedItem as T
     }
@@ -81,12 +77,7 @@ export class Beyonce {
   /** Write an item into Dynamo */
   async put<T extends TaggedModel>(item: T): Promise<void> {
     const maybeEncryptedItem = await this.maybeEncryptItem(item)
-    await this.client
-      .put({
-        TableName: this.table.tableName,
-        Item: maybeEncryptedItem
-      })
-      .promise()
+    await putItem({ table: this.table, client: this.client, item: maybeEncryptedItem })
   }
 
   /** Performs a (partial) update on an existing item in Dynamo.
@@ -101,43 +92,21 @@ export class Beyonce {
     const expBuilder = new UpdateItemExpressionBuilder()
     const proxy = updateItemProxy<T>(expBuilder)
     updateFunc(proxy)
-    const keyConditionExp = expBuilder.buildKeyConditionExpression(key)
-    const { expression, attributeNames, attributeValues } = expBuilder.build()
+    const keyConditionExpression = expBuilder.buildKeyConditionExpression(key)
 
-    const hasValues = Object.keys(attributeValues).length > 0
+    const { item } = await updateItem({
+      table: this.table,
+      client: this.client,
+      key,
+      keyConditionExpression,
+      updateExpression: expBuilder.build()
+    })
 
-    const result = await this.client
-      .update({
-        TableName: this.table.tableName,
-        ConditionExpression: keyConditionExp,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        },
-        UpdateExpression: expression,
-        ExpressionAttributeNames: attributeNames,
-        ExpressionAttributeValues: hasValues ? attributeValues : undefined,
-        ReturnValues: "ALL_NEW" // return item after update applied
-      })
-      .promise()
-
-    if (result.Attributes !== undefined) {
-      return result.Attributes as T
-    } else {
-      throw new Error(`Item pk: ${key.partitionKey}, sk: ${key.sortKey} not found`)
-    }
+    return item
   }
 
   async delete<T extends TaggedModel>(key: PartitionAndSortKey<T>): Promise<void> {
-    await this.client
-      .delete({
-        TableName: this.table.tableName,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        }
-      })
-      .promise()
+    await deleteItem({ table: this.table, client: this.client, key })
   }
 
   /** BatchGet items */
@@ -184,45 +153,10 @@ export class Beyonce {
     unprocessedPuts: T[]
     unprocessedDeletes: PartitionAndSortKey<T>[]
   }> {
-    const { tableName, partitionKeyName, sortKeyName } = this.table
     const { putItems = [], deleteItems = [] } = params
-    const requests: DynamoDB.DocumentClient.WriteRequest[] = []
-
-    const maybeEncryptedPutPromises = putItems.map(async (item) => {
-      const maybeEncryptedItem = await this.maybeEncryptItem(item)
-      requests.push({ PutRequest: { Item: maybeEncryptedItem } })
-    })
-
-    const deleteItemsByKey: { [key: string]: PartitionAndSortKey<T> } = {}
-    deleteItems.forEach((key) => {
-      deleteItemsByKey[`${key.partitionKey}-${key.sortKey}`] = key
-      requests.push({
-        DeleteRequest: {
-          Key: {
-            [partitionKeyName]: key.partitionKey,
-            [sortKeyName]: key.sortKey
-          }
-        }
-      })
-    })
-
-    await Promise.all(maybeEncryptedPutPromises)
-    const { UnprocessedItems } = await this.client.batchWrite({ RequestItems: { [tableName]: requests } }).promise()
-
-    const unprocessedPuts: T[] = []
-    const unprocessedDeletes: PartitionAndSortKey<T>[] = []
-    if (UnprocessedItems && UnprocessedItems[tableName]) {
-      UnprocessedItems[tableName].forEach(({ PutRequest, DeleteRequest }) => {
-        if (PutRequest) {
-          unprocessedPuts.push(PutRequest.Item as T)
-        } else if (DeleteRequest) {
-          const { Key: key } = DeleteRequest
-          unprocessedDeletes.push(deleteItemsByKey[`${key[partitionKeyName]}-${key[sortKeyName]}`])
-        }
-      })
-    }
-
-    return { unprocessedPuts, unprocessedDeletes }
+    const maybeEncryptedPutPromises = putItems.map((item) => this.maybeEncryptItem(item))
+    const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
+    return await batchWriteItems({ table: this.table, client: this.client, putItems: maybeEncryptedItems, deleteItems })
   }
 
   /** Perform N Dynamo operations in an atomic transaction */
@@ -231,15 +165,9 @@ export class Beyonce {
     deleteItems?: PartitionAndSortKey<T>[]
   }): Promise<void> {
     const { putItems = [], deleteItems = [] } = params
-    const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
-    const maybeEncryptedPutPromises = putItems.map(async (item) => {
-      const maybeEncryptedItem = await this.maybeEncryptItem(item)
-      requests.push(this.toTransactPut(maybeEncryptedItem))
-    })
-
-    deleteItems.forEach((key) => requests.push(this.toTransactDelete(key)))
-    await Promise.all(maybeEncryptedPutPromises)
-    await this.client.transactWrite({ TransactItems: requests }).promise()
+    const maybeEncryptedPutPromises = putItems.map(async (item) => this.maybeEncryptItem(item))
+    const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
+    await transactWriteItems({ table: this.table, client: this.client, putItems: maybeEncryptedItems, deleteItems })
   }
 
   query<T extends TaggedModel>(
@@ -289,7 +217,7 @@ export class Beyonce {
   }): Promise<{ items: ExtractKeyType<T>[]; unprocessedKeys: T[] }> {
     const consistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
 
-    const { items, unprocessedKeys } = await batchGet({
+    const { items, unprocessedKeys } = await batchGetItems({
       table: this.table,
       client: this.client,
       consistentRead,
@@ -304,32 +232,8 @@ export class Beyonce {
     return { items: await Promise.all(jsonItemPromises), unprocessedKeys }
   }
 
-  private toTransactPut<T extends TaggedModel>(item: MaybeEncryptedItem<T>): DynamoDB.DocumentClient.TransactWriteItem {
-    return {
-      Put: {
-        TableName: this.table.tableName,
-        Item: item
-      }
-    }
-  }
-
-  private toTransactDelete<T extends TaggedModel>(
-    key: PartitionAndSortKey<T>
-  ): DynamoDB.DocumentClient.TransactWriteItem {
-    return {
-      Delete: {
-        TableName: this.table.tableName,
-        Key: {
-          [this.table.partitionKeyName]: key.partitionKey,
-          [this.table.sortKeyName]: key.sortKey
-        }
-      }
-    }
-  }
-
   private async maybeEncryptItem<T extends TaggedModel>(item: T): Promise<MaybeEncryptedItem<T>> {
     const { jayz, table } = this
-
     return await encryptOrPassThroughItem(jayz, item, table.getEncryptionBlacklist())
   }
 }
