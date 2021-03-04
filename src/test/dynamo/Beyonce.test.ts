@@ -1,5 +1,6 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
+import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
   aMusicianWithTwoSongs,
@@ -12,8 +13,7 @@ import {
   SongModel,
   table
 } from "./models"
-import { create25Songs, createJayZ, setup } from "./util"
-import crypto from "crypto"
+import { createJayZ, setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -133,6 +133,10 @@ describe("Beyonce", () => {
 
   it("should batchGet more than 100 items by chunking requests", async () => {
     await testChunkedBatchGet()
+  })
+
+  it("should batchGet items and return unprocessedKeys", async () => {
+    await testBatchGetWithUnprocessedKeys()
   })
 
   it("should support a consistentRead option on batchGet", async () => {
@@ -392,11 +396,13 @@ async function testBatchGet(jayZ?: JayZ) {
     ]
   })
 
-  sortById(results.song)
-  expect(results).toEqual({
+  sortById(results.items.song)
+  expect(results.items).toEqual({
     musician: [musician],
     song: [song1, song2]
   })
+
+  expect(results.unprocessedKeys).toEqual([])
 }
 
 async function testChunkedBatchGet(jayZ?: JayZ) {
@@ -426,7 +432,38 @@ async function testChunkedBatchGet(jayZ?: JayZ) {
     keys: songs.map(({ id, musicianId }) => SongModel.key({ id, musicianId }))
   })
 
-  expect(sortById(results.song)).toEqual(songs)
+  expect(sortById(results.items.song)).toEqual(songs)
+  expect(results.unprocessedKeys).toEqual([])
+}
+
+async function testBatchGetWithUnprocessedKeys() {
+  const db = await setup()
+
+  // Assume every "song" is ~400KB
+  const mp3 = crypto.randomBytes(400_000)
+  const songs: Song[] = [...Array(50).keys()].map((songId) =>
+    SongModel.create({
+      musicianId: "1",
+      id: songId.toString(),
+      title: `Song ${songId}`,
+      mp3
+    })
+  )
+  await Promise.all([db.batchWrite({ putItems: songs.slice(0, 25) }), db.batchWrite({ putItems: songs.slice(25, 50) })])
+
+  // DynamoDB can retrieve 16MB of data per batchGet
+  // so 16MB / ~400KB = ~40 items returned in a single batchGet call
+  const results1 = await db.batchGet({
+    keys: songs.map((s) => SongModel.key({ id: s.id, musicianId: s.musicianId }))
+  })
+
+  // So we have some leftover to retreive
+  expect(results1.unprocessedKeys.length).toBeGreaterThan(0)
+
+  // And then if we do 1 more batchGet, we should get all of them
+  const results2 = await db.batchGet({ keys: results1.unprocessedKeys })
+  const retrievedSongs = [...results1.items.song, ...results2.items.song]
+  expect(retrievedSongs.length).toEqual(50)
 }
 
 async function testEmptyBatchGet(jayZ?: JayZ) {
@@ -440,7 +477,7 @@ async function testEmptyBatchGet(jayZ?: JayZ) {
     ]
   })
 
-  expect(results).toEqual({
+  expect(results.items).toEqual({
     musician: [],
     song: []
   })

@@ -1,6 +1,7 @@
 import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { captureAWSClient } from "aws-xray-sdk"
+import { batchGet } from "./batchGet"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
 import { PartitionAndSortKey, PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
@@ -143,7 +144,7 @@ export class Beyonce {
   async batchGet<T extends PartitionAndSortKey<TaggedModel>>(params: {
     keys: T[]
     consistentRead?: boolean
-  }): Promise<GroupedModels<ExtractKeyType<T>>> {
+  }): Promise<{ items: GroupedModels<ExtractKeyType<T>>; unprocessedKeys: T[] }> {
     const { keys, consistentRead } = params
 
     if (keys.length === 0) {
@@ -151,7 +152,7 @@ export class Beyonce {
     }
 
     const modelTags = keys.map((_) => _.modelTag)
-    const requestsInFlight: Promise<ExtractKeyType<T>[]>[] = []
+    const requestsInFlight: Promise<{ items: ExtractKeyType<T>[]; unprocessedKeys: T[] }>[] = []
 
     // Chunk keys into N concurrent requests
     // as DynamoDB has a max of 100 keys per batchGet requests
@@ -166,8 +167,14 @@ export class Beyonce {
     }
 
     const results = await Promise.all(requestsInFlight)
-    const flattenedResults = results.flat()
-    return groupModelsByType(flattenedResults, modelTags)
+    const items: ExtractKeyType<T>[] = []
+    const unprocessedKeys: T[] = []
+    results.forEach((result) => {
+      items.push(...result.items)
+      unprocessedKeys.push(...result.unprocessedKeys)
+    })
+
+    return { items: groupModelsByType(items, modelTags), unprocessedKeys }
   }
 
   async batchWrite<T extends TaggedModel>(params: {
@@ -240,7 +247,6 @@ export class Beyonce {
     options: QueryOptions = {}
   ): QueryBuilder<T> {
     const { table, jayz } = this
-
     const useConsistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
 
     return new QueryBuilder<T>({
@@ -280,37 +286,22 @@ export class Beyonce {
   private async doSingleBatchGet<T extends PartitionAndSortKey<TaggedModel>>(params: {
     keys: T[]
     consistentRead?: boolean
-  }): Promise<ExtractKeyType<T>[]> {
-    const useConsistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
-    const { Responses: responses, UnprocessedKeys: unprocessedKeys } = await this.client
-      .batchGet({
-        RequestItems: {
-          [this.table.tableName]: {
-            ConsistentRead: useConsistentRead,
-            Keys: params.keys.map(({ partitionKey, sortKey }) => ({
-              [this.table.partitionKeyName]: partitionKey,
-              [this.table.sortKeyName]: sortKey
-            }))
-          }
-        }
-      })
-      .promise()
+  }): Promise<{ items: ExtractKeyType<T>[]; unprocessedKeys: T[] }> {
+    const consistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
 
-    if (unprocessedKeys !== undefined && Object.keys(unprocessedKeys).length > 0) {
-      throw new Error(`Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`)
-    }
+    const { items, unprocessedKeys } = await batchGet({
+      table: this.table,
+      client: this.client,
+      consistentRead,
+      keys: params.keys
+    })
 
-    if (responses !== undefined) {
-      const items = responses[this.table.tableName]
-      const jsonItemPromises = items.map(async (item) => {
-        const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
-        return maybeDecryptedItem as ExtractKeyType<T>
-      })
+    const jsonItemPromises = items.map(async (item) => {
+      const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
+      return maybeDecryptedItem as ExtractKeyType<T>
+    })
 
-      return await Promise.all(jsonItemPromises)
-    } else {
-      return []
-    }
+    return { items: await Promise.all(jsonItemPromises), unprocessedKeys }
   }
 
   private toTransactPut<T extends TaggedModel>(item: MaybeEncryptedItem<T>): DynamoDB.DocumentClient.TransactWriteItem {
