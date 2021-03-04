@@ -144,40 +144,30 @@ export class Beyonce {
     keys: T[]
     consistentRead?: boolean
   }): Promise<GroupedModels<ExtractKeyType<T>>> {
-    const useConsistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
+    const { keys, consistentRead } = params
 
-    const { Responses: responses, UnprocessedKeys: unprocessedKeys } = await this.client
-      .batchGet({
-        RequestItems: {
-          [this.table.tableName]: {
-            ConsistentRead: useConsistentRead,
-            Keys: params.keys.map(({ partitionKey, sortKey }) => ({
-              [this.table.partitionKeyName]: partitionKey,
-              [this.table.sortKeyName]: sortKey
-            }))
-          }
-        }
-      })
-      .promise()
-
-    if (unprocessedKeys !== undefined && Object.keys(unprocessedKeys).length > 0) {
-      throw new Error(`Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`)
+    if (keys.length === 0) {
+      groupModelsByType<ExtractKeyType<T>>([], [])
     }
 
-    const modelTags = params.keys.map((_) => _.modelTag)
+    const modelTags = keys.map((_) => _.modelTag)
+    const requestsInFlight: Promise<ExtractKeyType<T>[]>[] = []
 
-    if (responses !== undefined) {
-      const items = responses[this.table.tableName]
-      const jsonItemPromises = items.map(async (item) => {
-        const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
-        return maybeDecryptedItem as ExtractKeyType<T>
-      })
-
-      const jsonItems = await Promise.all(jsonItemPromises)
-      return groupModelsByType(jsonItems, modelTags)
-    } else {
-      return groupModelsByType<ExtractKeyType<T>>([], modelTags)
+    // Chunk keys into N concurrent requests
+    // as DynamoDB has a max of 100 keys per batchGet requests
+    const batchSize = 100
+    let batchStartIndex = 0
+    let batchEndIndex = batchSize
+    while (batchStartIndex < keys.length) {
+      const batchedKeys = keys.slice(batchStartIndex, batchEndIndex)
+      requestsInFlight.push(this.doSingleBatchGet({ keys: batchedKeys, consistentRead }))
+      batchStartIndex = batchEndIndex
+      batchEndIndex += batchSize
     }
+
+    const results = await Promise.all(requestsInFlight)
+    const flattenedResults = results.flat()
+    return groupModelsByType(flattenedResults, modelTags)
   }
 
   async batchWrite<T extends TaggedModel>(params: {
@@ -285,6 +275,42 @@ export class Beyonce {
       jayz: this.jayz,
       ...options
     })
+  }
+
+  private async doSingleBatchGet<T extends PartitionAndSortKey<TaggedModel>>(params: {
+    keys: T[]
+    consistentRead?: boolean
+  }): Promise<ExtractKeyType<T>[]> {
+    const useConsistentRead = params.consistentRead !== undefined ? params.consistentRead : this.consistentReads
+    const { Responses: responses, UnprocessedKeys: unprocessedKeys } = await this.client
+      .batchGet({
+        RequestItems: {
+          [this.table.tableName]: {
+            ConsistentRead: useConsistentRead,
+            Keys: params.keys.map(({ partitionKey, sortKey }) => ({
+              [this.table.partitionKeyName]: partitionKey,
+              [this.table.sortKeyName]: sortKey
+            }))
+          }
+        }
+      })
+      .promise()
+
+    if (unprocessedKeys !== undefined && Object.keys(unprocessedKeys).length > 0) {
+      throw new Error(`Some keys didn't process: ${JSON.stringify(unprocessedKeys)}`)
+    }
+
+    if (responses !== undefined) {
+      const items = responses[this.table.tableName]
+      const jsonItemPromises = items.map(async (item) => {
+        const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
+        return maybeDecryptedItem as ExtractKeyType<T>
+      })
+
+      return await Promise.all(jsonItemPromises)
+    } else {
+      return []
+    }
   }
 
   private toTransactPut<T extends TaggedModel>(item: MaybeEncryptedItem<T>): DynamoDB.DocumentClient.TransactWriteItem {

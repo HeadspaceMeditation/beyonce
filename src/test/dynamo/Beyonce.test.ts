@@ -8,10 +8,12 @@ import {
   ModelType,
   MusicianModel,
   MusicianPartition,
+  Song,
   SongModel,
   table
 } from "./models"
-import { createJayZ, setup } from "./util"
+import { create25Songs, createJayZ, setup } from "./util"
+import crypto from "crypto"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -129,6 +131,10 @@ describe("Beyonce", () => {
     await testBatchGet()
   })
 
+  it("should batchGet more than 100 items by chunking requests", async () => {
+    await testChunkedBatchGet()
+  })
+
   it("should support a consistentRead option on batchGet", async () => {
     await setup()
     const [musician, _, __] = aMusicianWithTwoSongs()
@@ -222,6 +228,11 @@ describe("Beyonce", () => {
   it("should batchGet items with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchGet(jayZ)
+  })
+
+  it("should batchGet more than 100 items by chunking requests with jayZ", async () => {
+    const jayZ = await createJayZ()
+    await testChunkedBatchGet(jayZ)
   })
 
   it("should return empty arrays when no items found during batchGet with jayZ", async () => {
@@ -386,6 +397,36 @@ async function testBatchGet(jayZ?: JayZ) {
     musician: [musician],
     song: [song1, song2]
   })
+}
+
+async function testChunkedBatchGet(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const mp3 = crypto.randomBytes(1)
+  const songs: Song[] = [...Array(150).keys()].map((songId) =>
+    SongModel.create({
+      musicianId: "1",
+      id: songId.toString().padStart(3, "0"),
+      title: `Song ${songId}`,
+      mp3
+    })
+  )
+
+  await Promise.all([
+    db.batchWrite({ putItems: songs.slice(0, 20) }),
+    db.batchWrite({ putItems: songs.slice(20, 40) }),
+    db.batchWrite({ putItems: songs.slice(40, 60) }),
+    db.batchWrite({ putItems: songs.slice(60, 80) }),
+    db.batchWrite({ putItems: songs.slice(80, 100) }),
+    db.batchWrite({ putItems: songs.slice(100, 120) }),
+    db.batchWrite({ putItems: songs.slice(120, 140) }),
+    db.batchWrite({ putItems: songs.slice(140, 150) })
+  ])
+
+  const results = await db.batchGet({
+    keys: songs.map(({ id, musicianId }) => SongModel.key({ id, musicianId }))
+  })
+
+  expect(sortById(results.song)).toEqual(songs)
 }
 
 async function testEmptyBatchGet(jayZ?: JayZ) {
