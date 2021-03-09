@@ -344,7 +344,7 @@ DynamoDB calls into N concurrent requests and join the results for you.
 
 ```TypeScript
 // Batch get several items
-const batchResults = await beyonce.batchGet({
+const { items, unprocessedKeys } = await beyonce.batchGet({
   keys: [
     // Get 2 authors
     AuthorModel.key({ id: "1" }),
@@ -356,8 +356,17 @@ const batchResults = await beyonce.batchGet({
   ]
 })
 
+
 // And the return type is:
 // { author: Author[], book: Book[] }
+const { Author, Book } = items
+```
+
+If the `unprocessedKeys` array isn't empty, you can retry
+via:
+
+```TypeScript
+await beyonce.batchGet({ keys: unprocessedKeys })
 ```
 
 ### BatchWrite
