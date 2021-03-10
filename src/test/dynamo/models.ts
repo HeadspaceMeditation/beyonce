@@ -64,19 +64,27 @@ export function aMusicianWithTwoSongs(): [Musician, Song, Song] {
     }
   })
 
-  const song1 = SongModel.create({
+  const song1 = aSong({
     musicianId: "1",
     id: "2",
-    title: "Buffalo Soldier",
-    mp3: Buffer.from("fake-data", "utf8")
+    title: "Buffalo Soldier"
   })
 
-  const song2 = SongModel.create({
+  const song2 = aSong({
     musicianId: "1",
     id: "3",
-    title: "No Woman, No Cry",
-    mp3: Buffer.from("fake-data", "utf8")
+    title: "No Woman, No Cry"
   })
 
   return [musician, song1, song2]
+}
+
+export function aSong(partial?: Partial<Song>): Song {
+  return SongModel.create({
+    musicianId: "1",
+    id: "1",
+    title: "No Woman, No Cry",
+    mp3: Buffer.from("fake-data", "utf8"),
+    ...partial
+  })
 }
