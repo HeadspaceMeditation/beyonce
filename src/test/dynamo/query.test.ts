@@ -1,6 +1,16 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { aMusicianWithTwoSongs, ModelType, Musician, MusicianModel, MusicianPartition, Song, SongModel } from "./models"
-import { createJayZ, create25Songs, setup } from "./util"
+import { ready } from "libsodium-wrappers"
+import {
+  aMusicianWithTwoSongs,
+  aSong,
+  ModelType,
+  Musician,
+  MusicianModel,
+  MusicianPartition,
+  Song,
+  SongModel
+} from "./models"
+import { createJayZ, create25Songs, setup, createRandomDelayDataKeyProvider } from "./util"
 
 describe("Beyonce.query", () => {
   it("should return empty arrays when no models found when querying", async () => {
@@ -30,6 +40,10 @@ describe("Beyonce.query", () => {
 
   it("should paginate query results", async () => {
     await testQueryWithPaginatedResults()
+  })
+
+  it("should paginate query results in sorted order", async () => {
+    await testQueryWithSortedPaginatedResults()
   })
 
   it("should filter and paginate query results", async () => {
@@ -92,6 +106,14 @@ describe("Beyonce.query with JayZ", () => {
     await testQueryWithPaginatedResults(jayz)
   })
 
+  it("should paginate query results in sorted order when data key provider resolves promises out of order", async () => {
+    // We use a key provider here with a random delay to simulate decryption promises resolving
+    // out of order when processing (ordered) results returned from Dynamo
+    const keyProvider = await createRandomDelayDataKeyProvider()
+    const jayz = await createJayZ(keyProvider)
+    await testQueryWithSortedPaginatedResults(jayz)
+  })
+
   it("should filter and paginate query results", async () => {
     const jayz = await createJayZ()
     await testPaginatedQueryWithFilter(jayz)
@@ -134,6 +156,24 @@ async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   const songs = await create25Songs(db)
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
   expect(results.song.length).toEqual(songs.length)
+}
+
+async function testQueryWithSortedPaginatedResults(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+  const song1 = aSong({ musicianId: "1", id: `${new Date("1/1/2000").toISOString()}` })
+  const song2 = aSong({ musicianId: "1", id: `${new Date("1/2/2000").toISOString()}` })
+  const song3 = aSong({ musicianId: "1", id: `${new Date("1/3/2000").toISOString()}` })
+  const song4 = aSong({ musicianId: "1", id: `${new Date("1/4/2000").toISOString()}` })
+  const song5 = aSong({ musicianId: "1", id: `${new Date("1/5/2000").toISOString()}` })
+  await db.batchWrite({ putItems: [song1, song2, song3, song4, song5] })
+
+  const results = await db
+    .query(MusicianPartition.key({ id: "1" }))
+    .reverse()
+    .iterator()
+    .next()
+
+  expect(results.value.items.song).toEqual([song5, song4, song3, song2, song1])
 }
 
 async function testQueryWithFilter(jayZ?: JayZ) {

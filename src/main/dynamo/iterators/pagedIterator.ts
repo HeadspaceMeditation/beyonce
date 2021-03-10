@@ -58,17 +58,24 @@ export async function* pagedIterator<T, U extends TaggedModel>(
       }
 
       const itemsToDecrypt = response.Items ?? []
-
       const itemPromises = itemsToDecrypt.map(async (item) => {
         try {
           const maybeDecryptedItem = await decryptOrPassThroughItem(jayz, item)
-          items.push(maybeDecryptedItem as U)
+          return { item: maybeDecryptedItem as U }
         } catch (error) {
+          return { error }
+        }
+      })
+
+      const results = await Promise.all(itemPromises)
+      results.forEach(({ item, error }) => {
+        if (item) {
+          items.push(item)
+        } else if (error) {
           errors.push(error)
         }
       })
 
-      await Promise.all(itemPromises)
       yield { items, lastEvaluatedKey, errors }
     } catch (error) {
       errors.push(error)
