@@ -33,5 +33,30 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
     })
   )
 
-  await client.transactWrite({ TransactItems: requests }).promise()
+  const response = client.transactWrite({ TransactItems: requests })
+
+  // If a transaction is cancelled (i.e. fails), the AWS sdk sticks the reasons in the response
+  // body, but not the exception. So when errors occur, we extract the reasons (if present)
+  //  See: https://github.com/aws/aws-sdk-js/issues/2464#issuecomment-503524701
+  let transactionCancellationReasons: any[] | undefined
+  response.on("extractError", ({ error, httpResponse }) => {
+    try {
+      if (error) {
+        const { CancellationReasons } = JSON.parse(httpResponse.body.toString())
+        if (CancellationReasons) {
+          transactionCancellationReasons = CancellationReasons
+        }
+      }
+    } catch (e) {} // no op
+  })
+
+  try {
+    await response.promise()
+  } catch (e) {
+    if (transactionCancellationReasons) {
+      throw new Error(`${e.message}. Cancellation Reasons: ${JSON.stringify(transactionCancellationReasons)}`)
+    } else {
+      throw e
+    }
+  }
 }
