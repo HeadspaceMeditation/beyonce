@@ -161,13 +161,20 @@ export class Beyonce {
 
   /** Perform N Dynamo operations in an atomic transaction */
   async batchWriteWithTransaction<T extends TaggedModel>(params: {
+    clientRequestToken?: string
     putItems?: T[]
     deleteItems?: PartitionAndSortKey<T>[]
   }): Promise<void> {
-    const { putItems = [], deleteItems = [] } = params
+    const { clientRequestToken, putItems = [], deleteItems = [] } = params
     const maybeEncryptedPutPromises = putItems.map(async (item) => this.maybeEncryptItem(item))
     const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
-    await transactWriteItems({ table: this.table, client: this.client, putItems: maybeEncryptedItems, deleteItems })
+    await transactWriteItems({
+      table: this.table,
+      client: this.client,
+      clientRequestToken,
+      putItems: maybeEncryptedItems,
+      deleteItems
+    })
   }
 
   query<T extends TaggedModel>(
