@@ -400,6 +400,8 @@ And all operations will either succeed, or fail.
 ```TypeScript
 await beyonce.batchWriteWithTransaction({ putItems: [author1], deleteItems: [Author.key({ id: author2.id })] })
 ```
+You can also pass a string `clientRequestToken` to `batchWriteWithTransaction` to force your operations to
+be idempotent, per the [AWS docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html#transaction-apis-txwriteitems-idempotency).
 
 ## Consistent Reads
 

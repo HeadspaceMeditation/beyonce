@@ -1,16 +1,18 @@
 import { DynamoDB } from "aws-sdk"
+import { v4 as generateUUID } from "uuid"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
 import { MaybeEncryptedItem } from "../util"
 import { BaseParams } from "./BaseParams"
 
 export interface TransactWriteItemParams<T extends TaggedModel> extends BaseParams {
+  clientRequestToken?: string
   putItems?: MaybeEncryptedItem<T>[]
   deleteItems?: PartitionAndSortKey<T>[]
 }
 
 export async function transactWriteItems<T extends TaggedModel>(params: TransactWriteItemParams<T>): Promise<void> {
-  const { table, client, putItems = [], deleteItems = [] } = params
+  const { table, client, clientRequestToken = generateUUID(), putItems = [], deleteItems = [] } = params
   const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
   putItems.forEach((item) => {
     requests.push({
@@ -33,7 +35,7 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
     })
   )
 
-  const response = client.transactWrite({ TransactItems: requests })
+  const response = client.transactWrite({ TransactItems: requests, ClientRequestToken: clientRequestToken })
 
   // If a transaction is cancelled (i.e. fails), the AWS sdk sticks the reasons in the response
   // body, but not the exception. So when errors occur, we extract the reasons (if present)
