@@ -131,6 +131,10 @@ describe("Beyonce", () => {
     await testBatchGet()
   })
 
+  it("should batchGet items with duplicate keys", async () => {
+    await testBatchGetWithDuplicateKeys()
+  })
+
   it("should batchGet more than 100 items by chunking requests", async () => {
     await testChunkedBatchGet()
   })
@@ -232,6 +236,11 @@ describe("Beyonce", () => {
   it("should batchGet items with jayZ", async () => {
     const jayZ = await createJayZ()
     await testBatchGet(jayZ)
+  })
+
+  it("should batchGet items with jayZ: with duplicate keys", async () => {
+    const jayZ = await createJayZ()
+    await testBatchGetWithDuplicateKeys(jayZ)
   })
 
   it("should batchGet more than 100 items by chunking requests with jayZ", async () => {
@@ -392,6 +401,30 @@ async function testBatchGet(jayZ?: JayZ) {
     keys: [
       MusicianModel.key({ id: musician.id }),
       SongModel.key({ musicianId: musician.id, id: song1.id }),
+      SongModel.key({ musicianId: musician.id, id: song2.id })
+    ]
+  })
+
+  sortById(results.items.song)
+  expect(results.items).toEqual({
+    musician: [musician],
+    song: [song1, song2]
+  })
+
+  expect(results.unprocessedKeys).toEqual([])
+}
+
+async function testBatchGetWithDuplicateKeys(jayZ?: JayZ) {
+  const db = await setup(jayZ)
+
+  const [musician, song1, song2] = aMusicianWithTwoSongs()
+  await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
+
+  const results = await db.batchGet({
+    keys: [
+      MusicianModel.key({ id: musician.id }),
+      SongModel.key({ musicianId: musician.id, id: song1.id }),
+      SongModel.key({ musicianId: musician.id, id: song2.id }),
       SongModel.key({ musicianId: musician.id, id: song2.id })
     ]
   })

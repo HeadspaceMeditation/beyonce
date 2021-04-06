@@ -22,16 +22,13 @@ export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
   params: BatchGetItemsParams<T>
 ): Promise<BatchGetItemsResult<T>> {
   const { table, client, consistentRead } = params
-  const { tableName, partitionKeyName, sortKeyName } = table
+  const { tableName } = table
   const results = await client
     .batchGet({
       RequestItems: {
         [tableName]: {
           ConsistentRead: consistentRead,
-          Keys: params.keys.map(({ partitionKey, sortKey }) => ({
-            [partitionKeyName]: partitionKey,
-            [sortKeyName]: sortKey
-          }))
+          Keys: screenKeysForDuplicates(params.keys, table)
         }
       }
     })
@@ -47,4 +44,20 @@ export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
   } else {
     return { items: [], unprocessedKeys: [] }
   }
+}
+
+function screenKeysForDuplicates<T extends PartitionAndSortKey<TaggedModel>>(keys: T[], table: Table<string, string>) {
+  const dynamoKeyMap: Record<string, boolean> = {}
+  const uniqueKeys: Array<Record<string, string>> = []
+  const { partitionKeyName, sortKeyName } = table
+  keys.forEach(({ partitionKey, sortKey }) => {
+    if (!dynamoKeyMap[`${partitionKey}-${sortKey}`]) {
+      dynamoKeyMap[`${partitionKey}-${sortKey}`] = true
+      uniqueKeys.push({
+        [partitionKeyName]: partitionKey,
+        [sortKeyName]: sortKey
+      })
+    }
+  })
+  return uniqueKeys
 }
