@@ -25,7 +25,7 @@ export class UnprocessedKeyCollector<T extends PartitionAndSortKey<TaggedModel>>
       this.unprocessedKeys.push(beyonceKey)
     } else {
       throw new Error(
-        `UnprocessedKeysCollector: you tried to add an unprocesssed key: ${unprocessedKey} that was not inlcuded in the input key set`
+        `UnprocessedKeysCollector: you tried to add an unprocessed key: ${unprocessedKey} that was not included in the input key set`
       )
     }
   }
