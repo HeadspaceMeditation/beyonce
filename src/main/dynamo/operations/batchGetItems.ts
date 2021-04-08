@@ -28,7 +28,7 @@ export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
       RequestItems: {
         [tableName]: {
           ConsistentRead: consistentRead,
-          Keys: screenKeysForDuplicates(params.keys, table)
+          Keys: mapToKeysAndRemoveDuplicate(params.keys, table)
         }
       }
     })
@@ -46,7 +46,10 @@ export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
   }
 }
 
-function screenKeysForDuplicates<T extends PartitionAndSortKey<TaggedModel>>(keys: T[], table: Table<string, string>) {
+function mapToKeysAndRemoveDuplicate<T extends PartitionAndSortKey<TaggedModel>>(
+  keys: T[],
+  table: Table
+): Array<Record<string, string>> {
   const dynamoKeyMap: Record<string, boolean> = {}
   const uniqueKeys: Array<Record<string, string>> = []
   const { partitionKeyName, sortKeyName } = table
