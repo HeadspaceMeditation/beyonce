@@ -1,9 +1,60 @@
+import { CreateTableCommand, DeleteTableCommand, DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb"
 import { DataKey, DataKeyProvider, FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
 import crypto from "crypto"
 import { crypto_kdf_KEYBYTES, from_base64, randombytes_buf, ready, to_base64 } from "libsodium-wrappers"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import { Song, SongModel, table } from "./models"
+
+/** Jest's toEqual(...) matcher doesn't know how to compare a Uint8Array and a Node Buffer.
+ *  This can happen when the input object is a Buffer, and the result object is a Uint8Array because
+ *  the DynamoDB client deserializes binary fields as Uint8Arrays
+ *
+ *  So this custom toDeepEqual(...) matcher makes that work (+ does a deep equality check of other types too)
+ */
+
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toDeepEqual(expected: any): R
+    }
+  }
+}
+
+expect.extend({
+  toDeepEqual(received: any, expected: any) {
+    let index = 0
+    let pass = true
+    const valuesToCheck = [[received, expected]]
+
+    while (index < valuesToCheck.length) {
+      const [value1, value2] = valuesToCheck[index]
+
+      if (value1 === undefined || value1 === null || value2 === undefined || value2 === null) {
+        pass = pass && value1 === value2
+      } else if (value1.equals && typeof value1.equals === "function") {
+        pass = pass && value1.equals(value2)
+      } else if (value2.equals && typeof value2.equals === "function") {
+        pass = pass && value2.equals(value1)
+      } else if (typeof value1 !== "object") {
+        pass = pass && this.equals(value1, value2)
+      } else {
+        for (const key in value1) {
+          valuesToCheck.push([value1[key], value2[key]])
+        }
+      }
+
+      index++
+    }
+
+    return {
+      pass,
+      message: () =>
+        [`Expected: ${this.utils.printExpected(expected)}`, `Received: ${this.utils.printExpected(received)}`].join(
+          "\n"
+        )
+    }
+  }
+})
 
 export const port = 8000
 const isRunningOnCI = process.env.CI_BUILD_ID !== undefined
@@ -17,24 +68,24 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
   // DynamoDB Local runs as an external http server, so we need to clear
   // the table from previous test runs
-  const { TableNames: tables } = await client.listTables().promise()
+  const { TableNames: tables } = await client.send(new ListTablesCommand({}))
   if (tables !== undefined && tables.indexOf(tableName) !== -1) {
-    await client.deleteTable({ TableName: tableName }).promise()
+    await client.send(new DeleteTableCommand({ TableName: tableName }))
   }
 
-  await client.createTable(table.asCreateTableInput("PAY_PER_REQUEST")).promise()
+  await client.send(new CreateTableCommand(table.asCreateTableInput("PAY_PER_REQUEST")))
 
   return createBeyonce(client, jayz)
 }
 
-export function createDynamoDB(): DynamoDB {
-  return new DynamoDB({
+export function createDynamoDB(): DynamoDBClient {
+  return new DynamoDBClient({
     endpoint,
     region: "us-west-2" // silly, but still need to specify region for LocalDynamo
   })
 }
 
-export function createBeyonce(db: DynamoDB, jayz?: JayZ): Beyonce {
+export function createBeyonce(db: DynamoDBClient, jayz?: JayZ): Beyonce {
   return new Beyonce(table, db, { jayz })
 }
 
