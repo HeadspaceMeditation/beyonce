@@ -12,8 +12,9 @@
     "./src"
   ],
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.47.0",
+    "@aws-sdk/lib-dynamodb": "^3.47.0",
     "@ginger.io/jay-z": "0.0.14",
-    "aws-sdk": "^2.853.0",
     "aws-xray-sdk": "^3.2.0",
     "fast-json-stable-stringify": "^2.1.0",
     "js-yaml": "^3.13.1",
