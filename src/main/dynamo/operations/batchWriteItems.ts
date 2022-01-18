@@ -1,4 +1,4 @@
-import { DynamoDB } from "aws-sdk"
+import { BatchWriteCommand, BatchWriteCommandInput } from "@aws-sdk/lib-dynamodb"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
 import { UnprocessedKeyCollector } from "../UnprocessedKeyCollector"
@@ -20,14 +20,14 @@ export async function batchWriteItems<T extends TaggedModel>(
 ): Promise<BatchWriteItemResult<T>> {
   const { table, client, putItems = [], deleteItems = [] } = params
   const { tableName, partitionKeyName, sortKeyName } = table
-  const requests: DynamoDB.DocumentClient.WriteRequest[] = []
+  const requests: BatchWriteCommandInput["RequestItems"] = { [tableName]: [] }
 
   putItems.forEach((item) => {
-    requests.push({ PutRequest: { Item: item } })
+    requests[tableName].push({ PutRequest: { Item: item } })
   })
 
   deleteItems.forEach((key) => {
-    requests.push({
+    requests[tableName].push({
       DeleteRequest: {
         Key: {
           [partitionKeyName]: key.partitionKey,
@@ -37,7 +37,7 @@ export async function batchWriteItems<T extends TaggedModel>(
     })
   })
 
-  const results = await client.batchWrite({ RequestItems: { [tableName]: requests } }).promise()
+  const results = await client.send(new BatchWriteCommand({ RequestItems: requests }))
   const unprocessedPuts: T[] = []
   const unprocessedDeleteKeys = new UnprocessedKeyCollector(table, deleteItems)
 
@@ -45,7 +45,7 @@ export async function batchWriteItems<T extends TaggedModel>(
     results.UnprocessedItems[tableName].forEach(({ PutRequest, DeleteRequest }) => {
       if (PutRequest) {
         unprocessedPuts.push(PutRequest.Item as T)
-      } else if (DeleteRequest) {
+      } else if (DeleteRequest && DeleteRequest.Key) {
         unprocessedDeleteKeys.add(DeleteRequest.Key)
       }
     })

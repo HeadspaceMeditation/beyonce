@@ -111,8 +111,8 @@ describe("Beyonce.scan with JayZ", () => {
       }
     }
 
-    expect(songs.length).toEqual(25)
-    expect(errors).toEqual([new Error("wrong secret key for the given ciphertext")])
+    expect(songs.length).toDeepEqual(25)
+    expect(errors).toDeepEqual([new Error("wrong secret key for the given ciphertext")])
   })
 
   it("should return undefined cursor when there are no more records to scan", async () => {
@@ -124,14 +124,14 @@ describe("Beyonce.scan with JayZ", () => {
 async function testEmptyScan(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const result = await db.scan().exec()
-  expect(result).toEqual({ musician: [], song: [] })
+  expect(result).toDeepEqual({ musician: [], song: [] })
 }
 
 async function testScanWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const songs = await create25Songs(db)
   const results = await db.scan().exec()
-  expect(results.song.length).toEqual(songs.length)
+  expect(results.song.length).toDeepEqual(songs.length)
 }
 
 async function testScanWithFilteredPaginatedResults(jayZ?: JayZ) {
@@ -156,8 +156,8 @@ async function testScanWithFilteredPaginatedResults(jayZ?: JayZ) {
     songsProcessed.push(...items.song)
   }
 
-  expect(musiciansProcessed).toEqual([musician])
-  expect(songsProcessed.length).toEqual(0)
+  expect(musiciansProcessed).toDeepEqual([musician])
+  expect(songsProcessed.length).toDeepEqual(0)
 }
 
 async function testParallelScan(jayZ?: JayZ) {
@@ -182,7 +182,7 @@ async function testParallelScan(jayZ?: JayZ) {
     results.push(...items.song)
   }
 
-  expect(results.length).toEqual(songs.length)
+  expect(results.length).toDeepEqual(songs.length)
 }
 
 async function testScanWithFilter(jayZ?: JayZ) {
@@ -192,7 +192,7 @@ async function testScanWithFilter(jayZ?: JayZ) {
 
   const result = await db.scan().where("model", "=", ModelType.Song).exec()
 
-  expect(result).toEqual({ musician: [], song: [song1, song2] })
+  expect(result).toDeepEqual({ musician: [], song: [song1, song2] })
 }
 
 async function testScanWithCombinedAttributeFilters(jayZ?: JayZ) {
@@ -209,7 +209,7 @@ async function testScanWithCombinedAttributeFilters(jayZ?: JayZ) {
     .orAttributeNotExists("mp3")
     .exec()
 
-  expect(result).toEqual({ musician: [musician], song: [song1, song2] })
+  expect(result).toDeepEqual({ musician: [musician], song: [song1, song2] })
 }
 
 async function testScanWithLimit(jayZ?: JayZ) {
@@ -219,7 +219,7 @@ async function testScanWithLimit(jayZ?: JayZ) {
 
   const { value: response1 } = await db.scan().iterator({ pageSize: 1 }).next()
 
-  expect(response1.items).toEqual({ musician: [musician], song: [] })
+  expect(response1.items).toDeepEqual({ musician: [musician], song: [] })
 
   const { value: response2 } = await db
     .scan()
@@ -229,7 +229,7 @@ async function testScanWithLimit(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ musician: [], song: [song1] })
+  expect(response2.items).toDeepEqual({ musician: [], song: [song1] })
 }
 
 async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
@@ -239,7 +239,7 @@ async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
 
   const { value: response1 } = await db.scan().iterator({ pageSize: 3 }).next()
 
-  expect(response1.items).toEqual({
+  expect(response1.items).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })
@@ -252,6 +252,6 @@ async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ musician: [], song: [] })
+  expect(response2.items).toDeepEqual({ musician: [], song: [] })
   expect(response2.cursor).toBeUndefined()
 }

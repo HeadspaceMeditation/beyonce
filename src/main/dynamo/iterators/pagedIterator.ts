@@ -1,5 +1,5 @@
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { CompositeError } from "../../CompositeError"
 import { groupModelsByType } from "../groupModelsByType"
@@ -15,7 +15,7 @@ export type RawDynamoDBPage = {
 export type PageResults<T extends TaggedModel> = {
   items: T[]
   errors: Error[]
-  lastEvaluatedKey?: DynamoDB.DocumentClient.Key
+  lastEvaluatedKey?: { [key: string]: NativeAttributeValue }
 }
 
 export async function groupAllPages<T extends TaggedModel>(
@@ -47,7 +47,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
     const items: U[] = []
     const errors: Error[] = []
     try {
-      const response: DynamoDB.DocumentClient.QueryOutput = await executeOperation(pendingOperation)
+      const response = await executeOperation(pendingOperation)
 
       if (response.LastEvaluatedKey !== undefined) {
         lastEvaluatedKey = response.LastEvaluatedKey
@@ -72,13 +72,13 @@ export async function* pagedIterator<T, U extends TaggedModel>(
         if (item) {
           items.push(item)
         } else if (error) {
-          errors.push(error)
+          errors.push(error as Error)
         }
       })
 
       yield { items, lastEvaluatedKey, errors }
     } catch (error) {
-      errors.push(error)
+      errors.push(error as Error)
       yield { items: [], lastEvaluatedKey, errors }
     }
   }

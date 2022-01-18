@@ -1,5 +1,5 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
 import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
@@ -42,10 +42,10 @@ describe("Beyonce", () => {
       musician.name = "Gary Moore"
     })
 
-    expect(updated).toEqual({ ...musician, name: "Gary Moore" })
+    expect(updated).toDeepEqual({ ...musician, name: "Gary Moore" })
 
     const reRead = await db.get(MusicianModel.key({ id: musician.id }))
-    expect(reRead).toEqual({ ...musician, name: "Gary Moore" })
+    expect(reRead).toDeepEqual({ ...musician, name: "Gary Moore" })
   })
 
   it("should update a nested item attribute", async () => {
@@ -57,7 +57,7 @@ describe("Beyonce", () => {
       musician.details.description = "scottish blues dude"
     })
 
-    expect(updated).toEqual({
+    expect(updated).toDeepEqual({
       ...musician,
       details: { description: "scottish blues dude" }
     })
@@ -73,7 +73,7 @@ describe("Beyonce", () => {
       delete musician.details.description
     })
 
-    expect(updated).toEqual({
+    expect(updated).toDeepEqual({
       ...musician,
       details: {}
     })
@@ -83,27 +83,32 @@ describe("Beyonce", () => {
     await setup()
     const [musician, _, __] = aMusicianWithTwoSongs()
 
-    const mockGet = jest.fn(() => ({
-      promise: () =>
-        Promise.resolve({
-          Item: musician
-        })
-    }))
+    const mockSend = jest.fn(() =>
+      Promise.resolve({
+        Item: musician
+      })
+    )
 
-    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.get = mockGet
+    const db = new Beyonce(table, new DynamoDBClient({ region: "us-west-2" }))
+    ;(db as any).client.send = mockSend
 
     await db.get(MusicianModel.key({ id: musician.id }), {
       consistentRead: true
     })
-    expect(mockGet).toHaveBeenCalledWith({
-      TableName: table.tableName,
-      Key: {
-        pk: "musician-1",
-        sk: "musician-1"
-      },
-      ConsistentRead: true
-    })
+    expect(mockSend.mock.calls).toMatchObject([
+      [
+        {
+          input: {
+            TableName: table.tableName,
+            Key: {
+              pk: "musician-1",
+              sk: "musician-1"
+            },
+            ConsistentRead: true
+          }
+        }
+      ]
+    ])
   })
 
   it("should put and delete an item using pk + sk", async () => {
@@ -147,34 +152,39 @@ describe("Beyonce", () => {
     await setup()
     const [musician, _, __] = aMusicianWithTwoSongs()
 
-    const mockGet = jest.fn(() => ({
-      promise: () =>
-        Promise.resolve({
-          Item: musician
-        })
-    }))
+    const mockSend = jest.fn(() =>
+      Promise.resolve({
+        Item: musician
+      })
+    )
 
-    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.batchGet = mockGet
+    const db = new Beyonce(table, new DynamoDBClient({ region: "us-west-2" }))
+    ;(db as any).client.send = mockSend
 
     await db.batchGet({
       keys: [MusicianModel.key({ id: musician.id })],
       consistentRead: true
     })
 
-    expect(mockGet).toHaveBeenCalledWith({
-      RequestItems: {
-        [table.tableName]: {
-          ConsistentRead: true,
-          Keys: [
-            {
-              pk: "musician-1",
-              sk: "musician-1"
+    expect(mockSend.mock.calls).toMatchObject([
+      [
+        {
+          input: {
+            RequestItems: {
+              [table.tableName]: {
+                ConsistentRead: true,
+                Keys: [
+                  {
+                    pk: "musician-1",
+                    sk: "musician-1"
+                  }
+                ]
+              }
             }
-          ]
+          }
         }
-      }
-    })
+      ]
+    ])
   })
 
   it("should return empty arrays when no items found during batchGet", async () => {
@@ -285,7 +295,7 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
   await db.put(musician)
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
-  expect(result).toEqual(musician)
+  expect(result).toDeepEqual(musician)
 }
 
 async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
@@ -296,8 +306,8 @@ async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
   await db.batchWrite({ putItems: [musician, song1, song2] })
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
-  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))).toEqual(song1)
-  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))).toEqual(song2)
+  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song1.id }))).toDeepEqual(song1)
+  expect(await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))).toDeepEqual(song2)
 }
 
 async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
@@ -313,7 +323,7 @@ async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
   await db.put(musician)
 
   const result = await db.get(MusicianModel.key({ id: musician.id }))
-  expect(result).toEqual(musician)
+  expect(result).toDeepEqual(musician)
 }
 
 async function testPutAndDeleteItem(jayZ?: JayZ) {
@@ -323,9 +333,9 @@ async function testPutAndDeleteItem(jayZ?: JayZ) {
 
   const key = MusicianModel.key({ id: musician.id })
 
-  expect(await db.get(key)).toEqual(musician)
+  expect(await db.get(key)).toDeepEqual(musician)
   await db.delete(key)
-  expect(await db.get(key)).toEqual(undefined)
+  expect(await db.get(key)).toDeepEqual(undefined)
 }
 
 async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
@@ -338,9 +348,9 @@ async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
     deleteItems: [SongModel.key({ musicianId: song1.musicianId, id: song1.id })]
   })
 
-  expect(await db.get(SongModel.key({ musicianId: song2.musicianId, id: song2.id }))).toEqual(song2)
+  expect(await db.get(SongModel.key({ musicianId: song2.musicianId, id: song2.id }))).toDeepEqual(song2)
 
-  expect(await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))).toEqual(undefined)
+  expect(await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))).toDeepEqual(undefined)
 }
 
 async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
@@ -363,7 +373,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
 
   const result = await db.get(PersonModel.key({ first: "Bob", last: "Smith", sortKey: "sortKey-123" }))
 
-  expect(result).toEqual(model)
+  expect(result).toDeepEqual(model)
 }
 
 async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
@@ -388,7 +398,7 @@ async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
   await db.put(model)
 
   const result = await db.get(LineItemModel.key({ id: "l1", orderId: "o1", timestamp: "456" }))
-  expect(result).toEqual(model)
+  expect(result).toDeepEqual(model)
 }
 
 async function testBatchGet(jayZ?: JayZ) {
@@ -406,12 +416,12 @@ async function testBatchGet(jayZ?: JayZ) {
   })
 
   sortById(results.items.song)
-  expect(results.items).toEqual({
+  expect(results.items).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })
 
-  expect(results.unprocessedKeys).toEqual([])
+  expect(results.unprocessedKeys).toDeepEqual([])
 }
 
 async function testBatchGetWithDuplicateKeys(jayZ?: JayZ) {
@@ -430,12 +440,12 @@ async function testBatchGetWithDuplicateKeys(jayZ?: JayZ) {
   })
 
   sortById(results.items.song)
-  expect(results.items).toEqual({
+  expect(results.items).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })
 
-  expect(results.unprocessedKeys).toEqual([])
+  expect(results.unprocessedKeys).toDeepEqual([])
 }
 
 async function testChunkedBatchGet(jayZ?: JayZ) {
@@ -465,8 +475,8 @@ async function testChunkedBatchGet(jayZ?: JayZ) {
     keys: songs.map(({ id, musicianId }) => SongModel.key({ id, musicianId }))
   })
 
-  expect(sortById(results.items.song)).toEqual(songs)
-  expect(results.unprocessedKeys).toEqual([])
+  expect(sortById(results.items.song)).toDeepEqual(songs)
+  expect(results.unprocessedKeys).toDeepEqual([])
 }
 
 async function testBatchGetWithUnprocessedKeys() {
@@ -496,7 +506,7 @@ async function testBatchGetWithUnprocessedKeys() {
   // And then if we do 1 more batchGet, we should get all of them
   const results2 = await db.batchGet({ keys: results1.unprocessedKeys })
   const retrievedSongs = [...results1.items.song, ...results2.items.song]
-  expect(retrievedSongs.length).toEqual(50)
+  expect(retrievedSongs.length).toDeepEqual(50)
 }
 
 async function testEmptyBatchGet(jayZ?: JayZ) {
@@ -510,7 +520,7 @@ async function testEmptyBatchGet(jayZ?: JayZ) {
     ]
   })
 
-  expect(results.items).toEqual({
+  expect(results.items).toDeepEqual({
     musician: [],
     song: []
   })
@@ -523,7 +533,7 @@ async function testGSIByModel(jayZ?: JayZ) {
 
   const result = await db.queryGSI(byModelAndIdGSI.name, byModelAndIdGSI.key(ModelType.Song)).exec()
 
-  expect(result).toEqual({ musician: [], song: [song1, song2] })
+  expect(result).toDeepEqual({ musician: [], song: [song1, song2] })
 }
 
 async function testInvertedIndexGSI(jayZ?: JayZ) {
@@ -551,14 +561,14 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
     musicianId: santana.id,
     id: "1",
     title: "A song where Slash and Santana play together",
-    mp3: Buffer.from("fake-data", "utf8")
+    mp3: Buffer.from([1, 2, 3])
   })
 
   const slashesSong = SongModel.create({
     musicianId: slash.id,
     id: "1", // note the same id as above
     title: "A song where Slash and Santana play together",
-    mp3: Buffer.from("fake-data", "utf8")
+    mp3: Buffer.from([1, 2, 3])
   })
 
   await db.batchWriteWithTransaction({
@@ -568,22 +578,20 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   // Now when we query our inverted index, pk and sk are reversed,
   // so song id: 1 => [santanasSong, slashesSong]
   const { song: songs } = await db.queryGSI(invertedIndexGSI.name, invertedIndexGSI.key(`${ModelType.Song}-1`)).exec()
-
-  expect(songs).toEqual([santanasSong, slashesSong])
+  expect(songs).toDeepEqual([santanasSong, slashesSong])
 }
 
 async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
-
   const results = await db.query(MusicianPartition.key({ id: musician.id })).exec()
-
   sortById(results.song)
-  expect(results).toEqual({
-    musician: [musician],
-    song: [song1, song2]
-  })
+
+  expect(results.musician).toDeepEqual([musician])
+  expect(results.song.length).toDeepEqual(2)
+  expect(song1.mp3.equals(results.song[0].mp3)).toDeepEqual(true)
+  expect(song2.mp3.equals(results.song[1].mp3)).toDeepEqual(true)
 }
 
 async function testBatchWrite(jayZ?: JayZ) {
@@ -598,10 +606,8 @@ async function testBatchWrite(jayZ?: JayZ) {
   const results = await db.query(MusicianPartition.key({ id: musician.id })).exec()
 
   sortById(results.song)
-  expect(results).toEqual({
-    musician: [musician],
-    song: [song1]
-  })
+  expect(results.musician).toDeepEqual([musician])
+  expect(song1.mp3.equals(results.song[0].mp3)).toDeepEqual(true)
 }
 
 function sortById<T extends { id: string }>(items: T[]): T[] {

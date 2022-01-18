@@ -1,5 +1,6 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
 import { captureAWSClient } from "aws-xray-sdk"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
@@ -41,12 +42,12 @@ export interface ScanOptions {
  * does auto mapping between JSON <=> DynamoDB Items
  */
 export class Beyonce {
-  private client: DynamoDB.DocumentClient
+  private client: DynamoDBDocumentClient
   private jayz?: JayZ
   private consistentReads: boolean
 
-  constructor(private table: Table<string, string>, dynamo: DynamoDB, options: Options = {}) {
-    this.client = new DynamoDB.DocumentClient({ service: dynamo })
+  constructor(private table: Table<string, string>, dynamo: DynamoDBClient, options: Options = {}) {
+    this.client = DynamoDBDocumentClient.from(dynamo, { marshallOptions: { removeUndefinedValues: true } })
     if (options.xRayTracingEnabled) {
       // hack per: https://github.com/aws/aws-xray-sdk-node/issues/23#issuecomment-509745488
       captureAWSClient((this.client as any).service)

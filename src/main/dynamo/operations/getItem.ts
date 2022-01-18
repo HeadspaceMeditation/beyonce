@@ -1,3 +1,4 @@
+import { GetCommand } from "@aws-sdk/lib-dynamodb"
 import { AttributeMap } from "aws-sdk/clients/dynamodb"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
@@ -14,8 +15,8 @@ export interface GetItemResult {
 
 export async function getItem<T extends TaggedModel>(params: GetItemParams<T>): Promise<GetItemResult> {
   const { table, client, key, consistentRead } = params
-  const results = await client
-    .get({
+  const results = await client.send(
+    new GetCommand({
       TableName: table.tableName,
       ConsistentRead: consistentRead,
       Key: {
@@ -23,7 +24,7 @@ export async function getItem<T extends TaggedModel>(params: GetItemParams<T>): 
         [table.sortKeyName]: key.sortKey
       }
     })
-    .promise()
+  )
 
   return { item: results.Item }
 }

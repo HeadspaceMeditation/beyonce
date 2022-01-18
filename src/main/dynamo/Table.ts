@@ -1,4 +1,4 @@
-import { DynamoDB } from "aws-sdk"
+import { AttributeDefinition, BillingMode, CreateTableCommandInput } from "@aws-sdk/client-dynamodb"
 import { GSI, GSIBuilder } from "./GSI"
 import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
@@ -53,7 +53,7 @@ export class Table<PK extends string = string, SK extends string = string> {
     return this.modelTags
   }
 
-  asCreateTableInput(billingMode: DynamoDB.Types.BillingMode): DynamoDB.Types.CreateTableInput {
+  asCreateTableInput(billingMode: BillingMode): CreateTableCommandInput {
     const attributeSet = new Set([
       this.partitionKeyName,
       this.sortKeyName,
@@ -61,7 +61,7 @@ export class Table<PK extends string = string, SK extends string = string> {
       ...this.gsis.flatMap((_) => [_.partitionKeyName, _.sortKeyName])
     ])
 
-    const attributeDefinitions: DynamoDB.Types.AttributeDefinitions = Array.from(attributeSet).map((attr) => ({
+    const attributeDefinitions: AttributeDefinition[] = Array.from(attributeSet).map((attr) => ({
       AttributeName: attr,
       AttributeType: "S"
     }))

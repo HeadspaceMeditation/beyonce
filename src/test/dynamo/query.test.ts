@@ -148,14 +148,14 @@ describe("Beyonce.query with JayZ", () => {
 async function testEmptyQuery(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const result = await db.query(MusicianPartition.key({ id: "foo-1" })).exec()
-  expect(result).toEqual({ musician: [], song: [] })
+  expect(result).toDeepEqual({ musician: [], song: [] })
 }
 
 async function testQueryWithPaginatedResults(jayZ?: JayZ) {
   const db = await setup(jayZ)
   const songs = await create25Songs(db)
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
-  expect(results.song.length).toEqual(songs.length)
+  expect(results.song.length).toDeepEqual(songs.length)
 }
 
 async function testQueryWithSortedPaginatedResults(jayZ?: JayZ) {
@@ -173,7 +173,7 @@ async function testQueryWithSortedPaginatedResults(jayZ?: JayZ) {
     .iterator()
     .next()
 
-  expect(results.value.items.song).toEqual([song5, song4, song3, song2, song1])
+  expect(results.value.items.song).toDeepEqual([song5, song4, song3, song2, song1])
 }
 
 async function testQueryWithFilter(jayZ?: JayZ) {
@@ -186,7 +186,7 @@ async function testQueryWithFilter(jayZ?: JayZ) {
     .where("model", "=", ModelType.Song)
     .exec()
 
-  expect(result).toEqual({ musician: [], song: [song1, song2] })
+  expect(result).toDeepEqual({ musician: [], song: [song1, song2] })
 }
 
 async function testPaginatedQueryWithFilter(jayZ?: JayZ) {
@@ -212,8 +212,8 @@ async function testPaginatedQueryWithFilter(jayZ?: JayZ) {
     songsProcessed.push(...items.song)
   }
 
-  expect(musiciansProcessed).toEqual([musician])
-  expect(songsProcessed.length).toEqual(0)
+  expect(musiciansProcessed).toDeepEqual([musician])
+  expect(songsProcessed.length).toDeepEqual(0)
 }
 
 async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
@@ -223,7 +223,7 @@ async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
 
   const result = await db.query(SongModel.partitionKey({ musicianId: musician.id })).exec()
 
-  expect(result).toEqual({ song: [song1, song2] })
+  expect(result).toDeepEqual({ song: [song1, song2] })
 }
 
 async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
@@ -240,7 +240,7 @@ async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
     .orAttributeNotExists("mp3")
     .exec()
 
-  expect(result).toEqual({
+  expect(result).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })
@@ -254,7 +254,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
 
   const { value: response1 } = await db.query(key).iterator({ pageSize: 1 }).next()
 
-  expect(response1.items).toEqual({ musician: [musician], song: [] })
+  expect(response1.items).toDeepEqual({ musician: [musician], song: [] })
 
   const { value: response2 } = await db
     .query(key)
@@ -264,7 +264,7 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ musician: [], song: [song1] })
+  expect(response2.items).toDeepEqual({ musician: [], song: [song1] })
 
   const { value: response3 } = await db
     .query(key)
@@ -274,8 +274,8 @@ async function testQueryWithLimit(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response3.items).toEqual({ musician: [], song: [song2] })
-  expect(response3.cursor).toEqual(undefined)
+  expect(response3.items).toDeepEqual({ musician: [], song: [song2] })
+  expect(response3.cursor).toDeepEqual(undefined)
 }
 
 async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
@@ -288,7 +288,7 @@ async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
     .iterator({ pageSize: 3 })
     .next()
 
-  expect(response1.items).toEqual({
+  expect(response1.items).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })
@@ -301,7 +301,7 @@ async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
     })
     .next()
 
-  expect(response2.items).toEqual({ musician: [], song: [] })
+  expect(response2.items).toDeepEqual({ musician: [], song: [] })
   expect(response2.cursor).toBeUndefined()
 }
 
@@ -316,7 +316,7 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
     .iterator({ pageSize: 1 })
     .next()
 
-  expect(value.items).toEqual({ musician: [], song: [song2] })
+  expect(value.items).toDeepEqual({ musician: [], song: [song2] })
 }
 
 async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
@@ -325,7 +325,7 @@ async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 
   const result = await db.query(MusicianPartition.key({ id: musician.id })).exec()
-  expect(result).toEqual({
+  expect(result).toDeepEqual({
     musician: [musician],
     song: [song1, song2]
   })

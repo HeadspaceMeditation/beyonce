@@ -1,7 +1,7 @@
-import { DynamoDB } from "aws-sdk"
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
 
-export type DynamoDBExpression = {
-  expression: DynamoDB.DocumentClient.ConditionExpression
-  attributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap
-  attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap
+export interface DynamoDBExpression {
+  expression: string
+  attributeNames: { [key: string]: string }
+  attributeValues: { [key: string]: NativeAttributeValue }
 }
