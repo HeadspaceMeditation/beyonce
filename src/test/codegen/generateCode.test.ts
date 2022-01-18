@@ -7,7 +7,7 @@ tables:
     models:
       Author:
         id: string
-        name: string 
+        name: string
     partitions:
       Authors:
         partitionKeyPrefix: Author
@@ -54,7 +54,7 @@ tables:
       Author:
         id: string
         name: string
-      
+
       Book:
         id: string
         authorId: string
@@ -131,7 +131,7 @@ tables:
           Author:
             partitionKey: [$id]
             sortKey: [Author, $userId]
-          
+
   Music:
     models:
       Musician:
@@ -206,7 +206,7 @@ tables:
       Author:
         id: string
         name: string
-      
+
       Book:
         id: string
         name: string
@@ -214,7 +214,7 @@ tables:
     partitions:
       Authors:
         partitionKeyPrefix: Author
-        models: 
+        models:
           Author:
             partitionKey: [$id]
             sortKey: [Author, $id]

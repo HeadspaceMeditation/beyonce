@@ -84,7 +84,7 @@ export function aSong(partial?: Partial<Song>): Song {
     musicianId: "1",
     id: "1",
     title: "No Woman, No Cry",
-    mp3: Buffer.from("fake-data", "utf8"),
+    mp3: Buffer.from([1, 2, 3]),
     ...partial
   })
 }
