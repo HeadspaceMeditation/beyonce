@@ -1,4 +1,4 @@
-import { DynamoDB } from "aws-sdk"
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
 import { PartitionAndSortKey } from "./keys"
 import { Table } from "./Table"
 import { TaggedModel } from "./types"
@@ -10,6 +10,7 @@ import { TaggedModel } from "./types"
  *  This makes it easy for the caller to re-submit the operation (e.g. batchGet) by directly
  *  passing the keys returned by Beyonce
  */
+
 export class UnprocessedKeyCollector<T extends PartitionAndSortKey<TaggedModel>> {
   private dynamoKeyToBeyonceKey: { [key: string]: T } = {}
   private unprocessedKeys: T[] = []
@@ -18,7 +19,7 @@ export class UnprocessedKeyCollector<T extends PartitionAndSortKey<TaggedModel>>
     inputKeys.forEach((key) => (this.dynamoKeyToBeyonceKey[`${key.partitionKey}-${key.sortKey}`] = key))
   }
 
-  add(unprocessedKey: DynamoDB.DocumentClient.Key): void {
+  add(unprocessedKey: { [key: string]: NativeAttributeValue }): void {
     const { partitionKeyName, sortKeyName } = this.table
     const beyonceKey = this.dynamoKeyToBeyonceKey[`${unprocessedKey[partitionKeyName]}-${unprocessedKey[sortKeyName]}`]
     if (beyonceKey) {
