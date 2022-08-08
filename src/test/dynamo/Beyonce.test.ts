@@ -198,6 +198,35 @@ describe("Beyonce", () => {
     await testBatchWriteWithTransaction()
   })
 
+  it("should cancel the transaction if matching record exists when mustBeUnique is true on put", async () => {
+    const jayZ = await createJayZ()
+    const db = await setup(jayZ)
+    const [musician, song1] = aMusicianWithTwoSongs()
+    await db.batchWriteWithTransaction({ putItems: [musician, song1] })
+
+    // Putting the same items again should succeed.
+    await db.batchWriteWithTransaction({ putItems: [musician, song1] })
+
+    // Putting the same items with `mustBeUnique: true` cancels the transaction.
+    await expect(
+      db.batchWriteWithTransaction({
+        putItems: [
+          { ...musician, name: "updated" },
+          { ...song1, name: "updated", mustBeUnique: true }
+        ]
+      })
+    ).rejects.toThrowError("ConditionalCheckFailed")
+
+    const results = await db.query(MusicianPartition.key({ id: musician.id })).exec()
+
+    // The original name of the musician and song should still be saved.
+    sortById(results.song)
+    expect(results).toEqual({
+      musician: [musician],
+      song: [song1]
+    })
+  })
+
   it("should write multiple items at once ", async () => {
     await testBatchWrite()
   })
