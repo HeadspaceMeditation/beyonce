@@ -159,14 +159,24 @@ export class Beyonce {
     return await batchWriteItems({ table: this.table, client: this.client, putItems: maybeEncryptedItems, deleteItems })
   }
 
-  /** Perform N Dynamo operations in an atomic transaction */
+  /**
+   * Perform N Dynamo operations in an atomic transaction.
+   *
+   * @param params.putItems Set `failIfNotUnique` to true on a record within putItems to cancel the transaction if a
+   *  record with the same partition key and sort key (if applicable) already exists.
+   */
   async batchWriteWithTransaction<T extends TaggedModel>(params: {
     clientRequestToken?: string
-    putItems?: T[]
+    putItems?: (T & { failIfNotUnique?: boolean })[]
     deleteItems?: PartitionAndSortKey<T>[]
   }): Promise<void> {
     const { clientRequestToken, putItems = [], deleteItems = [] } = params
-    const maybeEncryptedPutPromises = putItems.map(async (item) => this.maybeEncryptItem(item))
+    const maybeEncryptedPutPromises = putItems.map(async ({ failIfNotUnique, ...item }) => {
+      return {
+        item: await this.maybeEncryptItem(item as T),
+        failIfNotUnique
+      }
+    })
     const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
     await transactWriteItems({
       table: this.table,
