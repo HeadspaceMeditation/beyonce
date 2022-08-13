@@ -7,14 +7,14 @@ import { BaseParams } from "./BaseParams"
 
 export interface TransactWriteItemParams<T extends TaggedModel> extends BaseParams {
   clientRequestToken?: string
-  putItems?: { item: MaybeEncryptedItem<T>; mustBeUnique?: boolean }[]
+  putItems?: { item: MaybeEncryptedItem<T>; failIfNotUnique?: boolean }[]
   deleteItems?: PartitionAndSortKey<T>[]
 }
 
 export async function transactWriteItems<T extends TaggedModel>(params: TransactWriteItemParams<T>): Promise<void> {
   const { table, client, clientRequestToken = generateUUID(), putItems = [], deleteItems = [] } = params
   const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
-  putItems.forEach(({ item, mustBeUnique = false }) => {
+  putItems.forEach(({ item, failIfNotUnique = false }) => {
     requests.push({
       Put: {
         TableName: table.tableName,
@@ -24,7 +24,7 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
         // provided `item`, `attribute_not_exists` will evaluate to true. However, if an existing record matches the pk
         // and sk of the given `item`, attribute_not_exists(pk) will evaluate to false because every record has a pk.
         // In that case, the transaction will be cancelled due to the failing ConditionExpression.
-        ConditionExpression: mustBeUnique ? "attribute_not_exists(pk)" : undefined
+        ConditionExpression: failIfNotUnique ? "attribute_not_exists(pk)" : undefined
       }
     })
   })

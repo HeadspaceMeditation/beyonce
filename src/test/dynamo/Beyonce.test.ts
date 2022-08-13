@@ -198,7 +198,7 @@ describe("Beyonce", () => {
     await testBatchWriteWithTransaction()
   })
 
-  it("should cancel the transaction if matching record exists when mustBeUnique is true on put", async () => {
+  it("should cancel the transaction if matching record exists when failIfNotUnique is true on put", async () => {
     const jayZ = await createJayZ()
     const db = await setup(jayZ)
     const [musician, song1] = aMusicianWithTwoSongs()
@@ -207,12 +207,12 @@ describe("Beyonce", () => {
     // Putting the same items again should succeed.
     await db.batchWriteWithTransaction({ putItems: [musician, song1] })
 
-    // Putting the same items with `mustBeUnique: true` cancels the transaction.
+    // Putting the same items with `failIfNotUnique: true` cancels the transaction.
     await expect(
       db.batchWriteWithTransaction({
         putItems: [
           { ...musician, name: "updated" },
-          { ...song1, name: "updated", mustBeUnique: true }
+          { ...song1, name: "updated", failIfNotUnique: true }
         ]
       })
     ).rejects.toThrowError("ConditionalCheckFailed")
