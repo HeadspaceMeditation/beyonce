@@ -1,5 +1,4 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
@@ -13,7 +12,7 @@ import {
   SongModel,
   table
 } from "./models"
-import { createJayZ, setup } from "./util"
+import { createDynamoDB, createJayZ, setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -90,7 +89,7 @@ describe("Beyonce", () => {
         })
     }))
 
-    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
+    const db = new Beyonce(table, createDynamoDB())
     ;(db as any).client.send = mockGet
 
     await db.get(MusicianModel.key({ id: musician.id }), {
@@ -158,7 +157,7 @@ describe("Beyonce", () => {
         })
     }))
 
-    const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
+    const db = new Beyonce(table, createDynamoDB())
     ;(db as any).client.send = mockGet
 
     await db.batchGet({

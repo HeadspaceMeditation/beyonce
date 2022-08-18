@@ -30,7 +30,12 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 export function createDynamoDB(): DynamoDB {
   return new DynamoDB({
     endpoint,
-    region: "us-west-2" // silly, but still need to specify region for LocalDynamo
+    tls: false,
+    region: "local-env",
+    credentials: {
+      accessKeyId: "foo",
+      secretAccessKey: "baz",
+    },
   })
 }
 
