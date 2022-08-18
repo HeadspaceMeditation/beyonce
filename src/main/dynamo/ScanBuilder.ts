@@ -1,6 +1,5 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
-import { DocumentClient } from "aws-sdk/clients/dynamodb"
+import { DynamoDBDocumentClient, ScanCommand, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { ready } from "libsodium-wrappers"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
@@ -11,7 +10,7 @@ import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
 interface ScanConfig<T extends TaggedModel> {
-  db: DynamoDB.DocumentClient
+  db: DynamoDBDocumentClient
   table: Table
   jayz?: JayZ
   consistentRead?: boolean
@@ -33,14 +32,14 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T
 
   async exec(): Promise<GroupedModels<T>> {
     const scanInput = this.createScanInput()
-    const iterator = pagedIterator<DocumentClient.ScanInput, T>(
+    const iterator = pagedIterator<ScanCommandInput, T>(
       { lastEvaluatedKey: undefined },
       ({ lastEvaluatedKey, pageSize }) => ({
         ...scanInput,
         ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
-      (input) => this.config.db.scan(input).promise(),
+      (input) => this.config.db.send(new ScanCommand(input)),
       this.config.jayz
     )
 
@@ -50,14 +49,14 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T
   async *iterator(options: IteratorOptions = {}): PaginatedIteratorResults<T> {
     const iteratorOptions = toInternalIteratorOptions(options)
     const scanInput = this.createScanInput(iteratorOptions)
-    const iterator = pagedIterator<DocumentClient.ScanInput, T>(
+    const iterator = pagedIterator<ScanCommandInput, T>(
       iteratorOptions,
       ({ lastEvaluatedKey, pageSize }) => ({
         ...scanInput,
         ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
-      (input) => this.config.db.scan(input).promise(),
+      (input) => this.config.db.send(new ScanCommand(input)),
       this.config.jayz
     )
 

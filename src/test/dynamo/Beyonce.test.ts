@@ -1,5 +1,5 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import {
@@ -91,19 +91,23 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.get = mockGet
+    ;(db as any).client.send = mockGet
 
     await db.get(MusicianModel.key({ id: musician.id }), {
       consistentRead: true
     })
-    expect(mockGet).toHaveBeenCalledWith({
-      TableName: table.tableName,
-      Key: {
-        pk: "musician-1",
-        sk: "musician-1"
-      },
-      ConsistentRead: true
-    })
+    expect(mockGet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          TableName: table.tableName,
+          Key: {
+            pk: "musician-1",
+            sk: "musician-1"
+          },
+          ConsistentRead: true
+        }
+      })
+    )
   })
 
   it("should put and delete an item using pk + sk", async () => {
@@ -155,26 +159,29 @@ describe("Beyonce", () => {
     }))
 
     const db = new Beyonce(table, new DynamoDB({ region: "us-west-2" }))
-    ;(db as any).client.batchGet = mockGet
+    ;(db as any).client.send = mockGet
 
     await db.batchGet({
       keys: [MusicianModel.key({ id: musician.id })],
       consistentRead: true
     })
 
-    expect(mockGet).toHaveBeenCalledWith({
-      RequestItems: {
-        [table.tableName]: {
-          ConsistentRead: true,
-          Keys: [
-            {
-              pk: "musician-1",
-              sk: "musician-1"
+    expect(mockGet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          RequestItems: {
+            [table.tableName]: {
+              ConsistentRead: true,
+              Keys: [
+                {
+                  pk: "musician-1",
+                  sk: "musician-1"
+                }
+              ]
             }
-          ]
+          }
         }
-      }
-    })
+      }))
   })
 
   it("should return empty arrays when no items found during batchGet", async () => {

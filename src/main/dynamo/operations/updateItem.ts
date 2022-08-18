@@ -1,3 +1,4 @@
+import { UpdateCommand } from "@aws-sdk/lib-dynamodb"
 import { DynamoDBExpression } from "../expressions/DynamoDBExpression"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
@@ -18,7 +19,7 @@ export async function updateItem<T extends TaggedModel>(params: UpdateItemParams
   const { expression, attributeNames, attributeValues } = updateExpression
   const hasValues = Object.keys(attributeValues).length > 0
   const result = await client
-    .update({
+    .send( new UpdateCommand({
       TableName: table.tableName,
       ConditionExpression: keyConditionExpression,
       Key: {
@@ -29,8 +30,7 @@ export async function updateItem<T extends TaggedModel>(params: UpdateItemParams
       ExpressionAttributeNames: attributeNames,
       ExpressionAttributeValues: hasValues ? attributeValues : undefined,
       ReturnValues: "ALL_NEW" // return item after update applied
-    })
-    .promise()
+    }))
 
   if (result.Attributes !== undefined) {
     return { item: result.Attributes as T }

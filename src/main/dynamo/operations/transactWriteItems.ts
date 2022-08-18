@@ -1,4 +1,5 @@
-import { DynamoDB } from "aws-sdk"
+import { TransactWriteCommand } from "@aws-sdk/lib-dynamodb"
+import { TransactWriteItem } from "@aws-sdk/client-dynamodb"
 import { v4 as generateUUID } from "uuid"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
@@ -13,7 +14,7 @@ export interface TransactWriteItemParams<T extends TaggedModel> extends BasePara
 
 export async function transactWriteItems<T extends TaggedModel>(params: TransactWriteItemParams<T>): Promise<void> {
   const { table, client, clientRequestToken = generateUUID(), putItems = [], deleteItems = [] } = params
-  const requests: DynamoDB.DocumentClient.TransactWriteItem[] = []
+  const requests: TransactWriteItem[] = []
   putItems.forEach(({ item, failIfNotUnique = false }) => {
     requests.push({
       Put: {
@@ -33,6 +34,8 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
     requests.push({
       Delete: {
         TableName: table.tableName,
+        // @ts-ignore The type is incorrect for `Key`. It expects Record<string, AttributeValue>, but since we're using
+        //  a DynamoDBDocumentClient, it needs to be Record<string, string> instead.
         Key: {
           [table.partitionKeyName]: key.partitionKey,
           [table.sortKeyName]: key.sortKey
@@ -41,30 +44,15 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
     })
   )
 
-  const response = client.transactWrite({ TransactItems: requests, ClientRequestToken: clientRequestToken })
-
-  // If a transaction is cancelled (i.e. fails), the AWS sdk sticks the reasons in the response
-  // body, but not the exception. So when errors occur, we extract the reasons (if present)
-  //  See: https://github.com/aws/aws-sdk-js/issues/2464#issuecomment-503524701
-  let transactionCancellationReasons: any[] | undefined
-  response.on("extractError", ({ error, httpResponse }) => {
-    try {
-      if (error) {
-        const { CancellationReasons } = JSON.parse(httpResponse.body.toString())
-        if (CancellationReasons) {
-          transactionCancellationReasons = CancellationReasons
-        }
-      }
-    } catch (e) {} // no op
-  })
+  const response = client.send(new TransactWriteCommand({ TransactItems: requests, ClientRequestToken: clientRequestToken }))
 
   try {
-    await response.promise()
+    await response
   } catch (e) {
-    if (transactionCancellationReasons) {
-      throw new Error(`${e.message}. Cancellation Reasons: ${JSON.stringify(transactionCancellationReasons)}`)
-    } else {
-      throw e
+    if (e && e.CancellationReasons) {
+      throw new Error(`${e.message}. Cancellation Reasons: ${JSON.stringify(e.CancellationReasons)}`)
     }
+
+    throw e
   }
 }

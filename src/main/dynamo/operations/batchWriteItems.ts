@@ -1,4 +1,5 @@
-import { DynamoDB } from "aws-sdk"
+import { WriteRequest } from "@aws-sdk/client-dynamodb"
+import { BatchWriteCommand } from "@aws-sdk/lib-dynamodb"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
 import { UnprocessedKeyCollector } from "../UnprocessedKeyCollector"
@@ -20,7 +21,7 @@ export async function batchWriteItems<T extends TaggedModel>(
 ): Promise<BatchWriteItemResult<T>> {
   const { table, client, putItems = [], deleteItems = [] } = params
   const { tableName, partitionKeyName, sortKeyName } = table
-  const requests: DynamoDB.DocumentClient.WriteRequest[] = []
+  const requests: WriteRequest[] = []
 
   putItems.forEach((item) => {
     requests.push({ PutRequest: { Item: item } })
@@ -29,6 +30,8 @@ export async function batchWriteItems<T extends TaggedModel>(
   deleteItems.forEach((key) => {
     requests.push({
       DeleteRequest: {
+        // @ts-ignore The type is incorrect for `Key`. It expects Record<string, AttributeValue>, but since we're using
+        //  a DynamoDBDocumentClient, it needs to be Record<string, string> instead.
         Key: {
           [partitionKeyName]: key.partitionKey,
           [sortKeyName]: key.sortKey
@@ -37,7 +40,7 @@ export async function batchWriteItems<T extends TaggedModel>(
     })
   })
 
-  const results = await client.batchWrite({ RequestItems: { [tableName]: requests } }).promise()
+  const results = await client.send(new BatchWriteCommand({ RequestItems: { [tableName]: requests } }))
   const unprocessedPuts: T[] = []
   const unprocessedDeleteKeys = new UnprocessedKeyCollector(table, deleteItems)
 
@@ -45,7 +48,7 @@ export async function batchWriteItems<T extends TaggedModel>(
     results.UnprocessedItems[tableName].forEach(({ PutRequest, DeleteRequest }) => {
       if (PutRequest) {
         unprocessedPuts.push(PutRequest.Item as T)
-      } else if (DeleteRequest) {
+      } else if (DeleteRequest && DeleteRequest.Key) {
         unprocessedDeleteKeys.add(DeleteRequest.Key)
       }
     })

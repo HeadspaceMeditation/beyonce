@@ -1,5 +1,4 @@
-import { DocumentClient } from "aws-sdk/clients/dynamodb"
-import { GroupedModels, TaggedModel } from "../types"
+import { GroupedModels, Key, TaggedModel } from "../types"
 
 export type Cursor = string
 
@@ -11,7 +10,7 @@ export interface IteratorOptions {
 
 /** Iterator options intended for internal use (within this library) */
 export interface InternalIteratorOptions {
-  lastEvaluatedKey: DocumentClient.Key | undefined
+  lastEvaluatedKey: Key | undefined
   pageSize?: number
 }
 

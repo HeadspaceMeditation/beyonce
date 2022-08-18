@@ -132,7 +132,7 @@ Now you can write partition-aware, type safe queries with abandon:
 
 ```TypeScript
 import { Beyonce } from "@ginger.io/beyonce"
-import { DynamoDB } from "aws-sdk"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { LibraryTable } from "generated/models"
 
 const beyonce = new Beyonce(LibraryTable, dynamo)

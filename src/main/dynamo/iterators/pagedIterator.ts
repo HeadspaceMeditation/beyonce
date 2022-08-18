@@ -1,21 +1,15 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
-import { DocumentClient } from "aws-sdk/clients/dynamodb"
+import { QueryCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { CompositeError } from "../../CompositeError"
 import { groupModelsByType } from "../groupModelsByType"
-import { GroupedModels, TaggedModel } from "../types"
+import { GroupedModels, Key, TaggedModel } from "../types"
 import { decryptOrPassThroughItem } from "../util"
 import { InternalIteratorOptions } from "./types"
-
-export type RawDynamoDBPage = {
-  LastEvaluatedKey?: DocumentClient.Key
-  Items?: DocumentClient.ItemList
-}
 
 export type PageResults<T extends TaggedModel> = {
   items: T[]
   errors: Error[]
-  lastEvaluatedKey?: DynamoDB.DocumentClient.Key
+  lastEvaluatedKey?: Key
 }
 
 export async function groupAllPages<T extends TaggedModel>(
@@ -37,7 +31,7 @@ export async function groupAllPages<T extends TaggedModel>(
 export async function* pagedIterator<T, U extends TaggedModel>(
   options: InternalIteratorOptions,
   buildOperation: (opts: InternalIteratorOptions) => T,
-  executeOperation: (op: T) => Promise<RawDynamoDBPage>,
+  executeOperation: (op: T) => Promise<QueryCommandOutput>,
   jayz?: JayZ
 ): AsyncGenerator<PageResults<U>, PageResults<U>> {
   let pendingOperation: T | undefined = buildOperation(options)
@@ -47,7 +41,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
     const items: U[] = []
     const errors: Error[] = []
     try {
-      const response: DynamoDB.DocumentClient.QueryOutput = await executeOperation(pendingOperation)
+      const response: QueryCommandOutput = await executeOperation(pendingOperation)
 
       if (response.LastEvaluatedKey !== undefined) {
         lastEvaluatedKey = response.LastEvaluatedKey
