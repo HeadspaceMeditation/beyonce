@@ -3,7 +3,7 @@ import { QueryCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { CompositeError } from "../../CompositeError"
 import { groupModelsByType } from "../groupModelsByType"
 import { GroupedModels, Key, TaggedModel } from "../types"
-import { decryptOrPassThroughItem } from "../util"
+import { decryptOrPassThroughItem, formatDynamoDBItem } from "../util"
 import { InternalIteratorOptions } from "./types"
 
 export type PageResults<T extends TaggedModel> = {
@@ -21,8 +21,8 @@ export async function groupAllPages<T extends TaggedModel>(
     if (errors.length > 0) {
       throw new CompositeError("Error(s) encountered trying to process interator page", errors)
     }
-
-    results.push(...items)
+    const formattedItems = items.map(item => formatDynamoDBItem<T>(item))
+    results.push(...formattedItems)
   }
 
   return groupModelsByType(results, modelTags)

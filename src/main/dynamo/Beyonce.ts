@@ -17,7 +17,7 @@ import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
-import { decryptOrPassThroughItem, encryptOrPassThroughItem, MaybeEncryptedItem } from "./util"
+import { decryptOrPassThroughItem, encryptOrPassThroughItem, formatDynamoDBItem, MaybeEncryptedItem } from "./util"
 
 export interface Options {
   jayz?: JayZ
@@ -142,7 +142,8 @@ export class Beyonce {
     const items: ExtractKeyType<T>[] = []
     const unprocessedKeys: T[] = []
     results.forEach((result) => {
-      items.push(...result.items)
+      const formattedItems = result.items.map(item => item ? formatDynamoDBItem(item) : item)
+      items.push(...formattedItems)
       unprocessedKeys.push(...result.unprocessedKeys)
     })
 
