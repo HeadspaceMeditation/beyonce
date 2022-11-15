@@ -86,6 +86,22 @@ describe("ExpressionBuilder basic clauses", () => {
       }
     })
   })
+
+  it("should support BETWEEN clause", () => {
+    const result = exp().where("name", "=", "Bob Marley").andBetween("divaRating", "1", "3").build()
+    expect(result).toEqual({
+      "attributeNames": {
+        "#divaRating": "divaRating",
+        "#name": "name"
+      },
+      "attributeValues": {
+        ":v1": "Bob Marley",
+        ":v2": "1",
+        ":v3": "3"
+      },
+      "expression": "#name = :v1 AND #divaRating BETWEEN :v2 AND :v3"
+    })
+  });
 })
 
 describe("ExpressionBuilder attribute_exists and attribute_not_exists clauses", () => {
