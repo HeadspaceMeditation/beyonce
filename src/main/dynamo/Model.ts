@@ -57,7 +57,7 @@ export class Model<T extends TaggedModel, U extends keyof T, V extends keyof T> 
   }
 
   private buildKey(...components: string[]): string {
-    return components.join("-")
+    return components.join(this.table.delimiter)
   }
 }
 

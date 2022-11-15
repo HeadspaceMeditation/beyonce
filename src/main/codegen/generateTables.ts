@@ -7,6 +7,7 @@ export function generateTables(tables: Table[]): string {
     return `
       export const ${table.name}Table = new Table({
           name: "${table.name}",
+          delimiter: "${table.delimiter}",
           partitionKeyName: "${table.partitionKeyName}",
           sortKeyName: "${table.sortKeyName}",
           encryptionBlacklist: ${encryptionBlacklist}

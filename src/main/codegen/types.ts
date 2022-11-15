@@ -4,7 +4,9 @@ export type YAMLFile = {
   }
 }
 
+export type DelimiterType = "-" | "#"
 export type TableDefinition = {
+  delimiter: DelimiterType
   models: {
     [modelName: string]: ModelDefinition
   }
@@ -33,6 +35,7 @@ export type GSIDefinition = {
 
 export type Table = {
   name: string
+  delimiter: DelimiterType
   partitionKeyName: string
   sortKeyName: string
   partitions: Partition[]

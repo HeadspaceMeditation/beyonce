@@ -21,6 +21,7 @@ tables:
 
 export const LibraryTable = new Table({
   name: "Library",
+  delimiter: "-",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id"]
@@ -77,6 +78,77 @@ tables:
 
 export const LibraryTable = new Table({
   name: "Library",
+  delimiter: "-",
+  partitionKeyName: "pk",
+  sortKeyName: "sk",
+  encryptionBlacklist: ["id", "authorId"]
+})
+
+export enum ModelType {
+  Author = "Author",
+  Book = "Book"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+}
+
+export interface Book {
+  model: ModelType.Book
+  id: string
+  authorId: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
+
+export const BookModel = LibraryTable.model<Book>(ModelType.Book)
+  .partitionKey("Author", "authorId")
+  .sortKey("Book", "id")
+
+export type Model = Author | Book
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
+`)
+})
+
+it("should generate a tables with Pound sign limiter", () => {
+  const result = generateCode(`
+tables:
+  Library:
+    delimiter: "#"
+    models:
+      Author:
+        id: string
+        name: string
+      
+      Book:
+        id: string
+        authorId: string
+        name: string
+
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
+`)
+
+  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  delimiter: "#",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "authorId"]
@@ -152,6 +224,7 @@ tables:
 
 export const LibraryTable = new Table({
   name: "Library",
+  delimiter: "-",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "userId"]
@@ -159,6 +232,7 @@ export const LibraryTable = new Table({
 
 export const MusicTable = new Table({
   name: "Music",
+  delimiter: "-",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "musicianId"]
@@ -231,6 +305,7 @@ tables:
 
   expect(result).toContain(`export const LibraryTable = new Table({
   name: "Library",
+  delimiter: "-",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "model"]
@@ -377,6 +452,7 @@ it("should generate a complex key model", () => {
   const result = generateCode(`
 tables:
   ComplexLibrary:
+    delimiter: "#"
     models:
       ComplexAuthor:
         id: string
@@ -395,6 +471,7 @@ tables:
 
 export const ComplexLibraryTable = new Table({
   name: "ComplexLibrary",
+  delimiter: "#",
   partitionKeyName: "pk",
   sortKeyName: "sk",
   encryptionBlacklist: ["id", "name"]
