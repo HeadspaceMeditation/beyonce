@@ -27,6 +27,11 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
     return this
   }
 
+  andBetween(attribute: KeysOf<T>, start: any, end: any): this {
+    this.addBetweenCondition({attribute, start, end})
+    return this
+  }
+
   attributeExists(name: KeysOf<T>): this {
     const placeholder = this.addAttributeName(name)
     this.addStatement(`attribute_exists(${placeholder})`)
@@ -101,6 +106,19 @@ export class QueryExpressionBuilder<T extends TaggedModel> {
     }
 
     expression.push(attributePlaceholder, params.operator, valuePlaceholder)
+    this.addStatement(expression.join(" "))
+  }
+
+  private addBetweenCondition(params: {
+    attribute: string
+    start: any,
+    end: any,
+  }): void {
+    const attributePlaceholder = this.addAttributeName(params.attribute)
+    const startValuePlaceholder = this.addAttributeValue(params.start)
+    const endValuePlaceholder = this.addAttributeValue(params.end)
+    const expression = []
+    expression.push("AND", attributePlaceholder, "BETWEEN", startValuePlaceholder, "AND", endValuePlaceholder)
     this.addStatement(expression.join(" "))
   }
 }
