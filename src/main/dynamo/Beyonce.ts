@@ -1,25 +1,22 @@
-import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
-import { captureAWSClient } from "aws-xray-sdk"
-import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
-import { groupModelsByType } from "./groupModelsByType"
-import { PartitionAndSortKey, PartitionKey, PartitionKeyAndSortKeyPrefix } from "./keys"
-import { batchGetItems } from "./operations/batchGetItems"
-import { batchWriteItems } from "./operations/batchWriteItems"
-import { deleteItem } from "./operations/deleteItem"
-import { getItem } from "./operations/getItem"
-import { putItem } from "./operations/putItem"
-import { transactWriteItems } from "./operations/transactWriteItems"
-import { updateItem } from "./operations/updateItem"
-import { QueryBuilder } from "./QueryBuilder"
-import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
-import { Table } from "./Table"
-import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
-import { updateItemProxy } from "./updateItemProxy"
-import { decryptOrPassThroughItem, encryptOrPassThroughItem, MaybeEncryptedItem } from "./util"
+import {DynamoDB} from "aws-sdk"
+import {captureAWSClient} from "aws-xray-sdk"
+import {UpdateItemExpressionBuilder} from "./expressions/UpdateItemExpressionBuilder"
+import {groupModelsByType} from "./groupModelsByType"
+import {PartitionAndSortKey, PartitionKey, PartitionKeyAndSortKeyPrefix} from "./keys"
+import {batchGetItems} from "./operations/batchGetItems"
+import {batchWriteItems} from "./operations/batchWriteItems"
+import {deleteItem} from "./operations/deleteItem"
+import {getItem} from "./operations/getItem"
+import {putItem} from "./operations/putItem"
+import {transactWriteItems} from "./operations/transactWriteItems"
+import {updateItem} from "./operations/updateItem"
+import {QueryBuilder} from "./QueryBuilder"
+import {ParallelScanConfig, ScanBuilder} from "./ScanBuilder"
+import {Table} from "./Table"
+import {ExtractKeyType, GroupedModels, TaggedModel} from "./types"
+import {updateItemProxy} from "./updateItemProxy"
 
 export interface Options {
-  jayz?: JayZ
   xRayTracingEnabled?: boolean
   consistentReads?: boolean
 }
@@ -42,7 +39,6 @@ export interface ScanOptions {
  */
 export class Beyonce {
   private client: DynamoDB.DocumentClient
-  private jayz?: JayZ
   private consistentReads: boolean
 
   constructor(private table: Table<string, string>, dynamo: DynamoDB, options: Options = {}) {
@@ -50,10 +46,6 @@ export class Beyonce {
     if (options.xRayTracingEnabled) {
       // hack per: https://github.com/aws/aws-xray-sdk-node/issues/23#issuecomment-509745488
       captureAWSClient((this.client as any).service)
-    }
-
-    if (options.jayz !== undefined) {
-      this.jayz = options.jayz
     }
 
     if (options.consistentReads !== undefined) {
@@ -67,27 +59,16 @@ export class Beyonce {
   async get<T extends TaggedModel>(key: PartitionAndSortKey<T>, options: GetOptions = {}): Promise<T | undefined> {
     const consistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
     const { item } = await getItem({ table: this.table, client: this.client, key, consistentRead })
-
-    if (item) {
-      const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
-      return maybeDecryptedItem as T
-    }
+    return item as T;
   }
 
   /** Write an item into Dynamo */
   async put<T extends TaggedModel>(item: T): Promise<void> {
-    const maybeEncryptedItem = await this.maybeEncryptItem(item)
-    await putItem({ table: this.table, client: this.client, item: maybeEncryptedItem })
+    await putItem({ table: this.table, client: this.client, item: item })
   }
 
-  /** Performs a (partial) update on an existing item in Dynamo.
-   *  Partial updates do not work with JayZ encryption and this method
-   *  will throw an error if you attempt to use it with JayZ enabled.
-   */
+  /** Performs a (partial) update on an existing item in Dynamo.*/
   async update<T extends TaggedModel>(key: PartitionAndSortKey<T>, updateFunc: (lens: T) => void): Promise<T> {
-    if (this.jayz) {
-      throw new Error("You can't perform partial updates on items with JayZ encryption enabled")
-    }
 
     const expBuilder = new UpdateItemExpressionBuilder()
     const proxy = updateItemProxy<T>(expBuilder)
@@ -101,7 +82,6 @@ export class Beyonce {
       keyConditionExpression,
       updateExpression: expBuilder.build()
     })
-
     return item
   }
 
@@ -154,9 +134,7 @@ export class Beyonce {
     unprocessedDeletes: PartitionAndSortKey<T>[]
   }> {
     const { putItems = [], deleteItems = [] } = params
-    const maybeEncryptedPutPromises = putItems.map((item) => this.maybeEncryptItem(item))
-    const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
-    return await batchWriteItems({ table: this.table, client: this.client, putItems: maybeEncryptedItems, deleteItems })
+    return await batchWriteItems({ table: this.table, client: this.client, putItems: putItems, deleteItems })
   }
 
   /**
@@ -171,18 +149,18 @@ export class Beyonce {
     deleteItems?: PartitionAndSortKey<T>[]
   }): Promise<void> {
     const { clientRequestToken, putItems = [], deleteItems = [] } = params
-    const maybeEncryptedPutPromises = putItems.map(async ({ failIfNotUnique, ...item }) => {
+    const putPromises = putItems.map(async ({ failIfNotUnique, ...item }) => {
       return {
-        item: await this.maybeEncryptItem(item as T),
+        item: item as T,
         failIfNotUnique
       }
     })
-    const maybeEncryptedItems = await Promise.all(maybeEncryptedPutPromises)
+    const putPromisesItems = await Promise.all(putPromises)
     await transactWriteItems({
       table: this.table,
       client: this.client,
       clientRequestToken,
-      putItems: maybeEncryptedItems,
+      putItems: putPromisesItems,
       deleteItems
     })
   }
@@ -191,14 +169,13 @@ export class Beyonce {
     key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>,
     options: QueryOptions = {}
   ): QueryBuilder<T> {
-    const { table, jayz } = this
+    const { table } = this
     const useConsistentRead = options.consistentRead !== undefined ? options.consistentRead : this.consistentReads
 
     return new QueryBuilder<T>({
       db: this.client,
       table,
       key,
-      jayz: jayz,
       consistentRead: useConsistentRead
     })
   }
@@ -208,13 +185,12 @@ export class Beyonce {
     gsiKey: PartitionKey<T>,
     options: QueryOptions = {}
   ): QueryBuilder<T> {
-    const { table, jayz } = this
+    const { table } = this
     return new QueryBuilder<T>({
       db: this.client,
       table,
       gsiName,
       gsiKey,
-      jayz,
       consistentRead: options.consistentRead
     })
   }
@@ -223,7 +199,6 @@ export class Beyonce {
     return new ScanBuilder<T>({
       db: this.client,
       table: this.table,
-      jayz: this.jayz,
       ...options
     })
   }
@@ -242,15 +217,9 @@ export class Beyonce {
     })
 
     const jsonItemPromises = items.map(async (item) => {
-      const maybeDecryptedItem = await decryptOrPassThroughItem(this.jayz, item)
-      return maybeDecryptedItem as ExtractKeyType<T>
+      return item as ExtractKeyType<T>
     })
 
     return { items: await Promise.all(jsonItemPromises), unprocessedKeys }
-  }
-
-  private async maybeEncryptItem<T extends TaggedModel>(item: T): Promise<MaybeEncryptedItem<T>> {
-    const { jayz, table } = this
-    return await encryptOrPassThroughItem(jayz, item, table.getEncryptionBlacklist())
   }
 }

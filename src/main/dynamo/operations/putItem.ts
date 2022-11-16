@@ -1,9 +1,9 @@
 import { TaggedModel } from "../types"
-import { MaybeEncryptedItem } from "../util"
+import { MaybeItem } from "../util"
 import { BaseParams } from "./BaseParams"
 
 export interface PutItemParams<T extends TaggedModel> extends BaseParams {
-  item: MaybeEncryptedItem<T>
+  item: MaybeItem<T>
 }
 
 export async function putItem<T extends TaggedModel>(params: PutItemParams<T>): Promise<void> {

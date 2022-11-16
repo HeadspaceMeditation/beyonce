@@ -1,4 +1,3 @@
-import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { ready } from "libsodium-wrappers"
@@ -15,7 +14,6 @@ interface TableQueryConfig<T extends TaggedModel> {
   db: DynamoDB.DocumentClient
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
-  jayz?: JayZ
   consistentRead?: boolean
 }
 
@@ -24,7 +22,6 @@ interface GSIQueryConfig<T extends TaggedModel> {
   table: Table
   gsiName: string
   gsiKey: PartitionKey<T>
-  jayz?: JayZ
   consistentRead?: boolean
 }
 
@@ -52,7 +49,6 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         Limit: pageSize
       }),
       (query) => this.config.db.query(query).promise(),
-      this.config.jayz
     )
 
     return groupAllPages(iterator, this.modelTags)
@@ -69,7 +65,6 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
         Limit: pageSize
       }),
       (query) => this.config.db.query(query).promise(),
-      this.config.jayz
     )
 
     await ready

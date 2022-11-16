@@ -1,8 +1,5 @@
-import { DataKeyProvider, JayZ } from "@ginger.io/jay-z"
-import crypto from "crypto"
-import { crypto_kdf_KEYBYTES, randombytes_buf } from "libsodium-wrappers"
 import { aMusicianWithTwoSongs, ModelType, Musician, MusicianModel, Song, SongModel } from "./models"
-import { createBeyonce, createDynamoDB, createJayZ, create25Songs, setup } from "./util"
+import { create25Songs, setup } from "./util"
 
 describe("Beyonce.scan", () => {
   it("should return empty arrays when no models found during scan", async () => {
@@ -38,104 +35,22 @@ describe("Beyonce.scan", () => {
   })
 })
 
-describe("Beyonce.scan with JayZ", () => {
-  it("should return empty arrays when no models found when querying", async () => {
-    const jayz = await createJayZ()
-    await testEmptyScan(jayz)
-  })
 
-  it("should filter items during scan", async () => {
-    const jayz = await createJayZ()
-    await testScanWithFilter(jayz)
-  })
-
-  it("should paginate scan results", async () => {
-    const jayz = await createJayZ()
-    await testScanWithPaginatedResults(jayz)
-  })
-
-  it("should filter paginated scan results", async () => {
-    const jayz = await createJayZ()
-    await testScanWithFilteredPaginatedResults(jayz)
-  })
-
-  it("should scan with multiple attribute filters", async () => {
-    const jayz = await createJayZ()
-    await testScanWithCombinedAttributeFilters(jayz)
-  })
-
-  it("should scan with a user specified limit", async () => {
-    const jayz = await createJayZ()
-    await testScanWithLimit(jayz)
-  })
-
-  it("should parallel scan", async () => {
-    const jayz = await createJayZ()
-    await testParallelScan(jayz)
-  })
-
-  it("should not stop the iterator if an error occurs", async () => {
-    const jayz = await createJayZ()
-    // Given some songs encrypted correctly with JayZ
-    const db = await setup(jayz)
-    await create25Songs(db)
-
-    // And one last song that is encrypted incorrectly (e.g. with a different key)
-    const oneLastSong: Song = SongModel.create({
-      musicianId: "1",
-      id: "bad-song",
-      title: `Bad song`,
-      mp3: crypto.randomBytes(100_000)
-    })
-
-    const keyProvider: DataKeyProvider = {
-      generateDataKey: async () => ({
-        dataKey: randombytes_buf(crypto_kdf_KEYBYTES),
-        encryptedDataKey: randombytes_buf(crypto_kdf_KEYBYTES)
-      }),
-
-      decryptDataKey: async (key) => key
-    }
-
-    const badBeyonce = createBeyonce(createDynamoDB(), new JayZ({ keyProvider }))
-
-    await badBeyonce.put(oneLastSong)
-
-    // Then we should still page through all the results, but collect the errors
-    const songs: Song[] = []
-    const errors: Error[] = []
-    for await (const results of badBeyonce.scan<Song>().iterator()) {
-      songs.push(...results.items.song)
-      if (results.errors) {
-        errors.push(...results.errors)
-      }
-    }
-
-    expect(songs.length).toEqual(25)
-    expect(errors).toEqual([new Error("wrong secret key for the given ciphertext")])
-  })
-
-  it("should return undefined cursor when there are no more records to scan", async () => {
-    const jayz = await createJayZ()
-    await testScanWithPaginatedResultsReturnUndefinedCursor(jayz)
-  })
-})
-
-async function testEmptyScan(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testEmptyScan() {
+  const db = await setup()
   const result = await db.scan().exec()
   expect(result).toEqual({ musician: [], song: [] })
 }
 
-async function testScanWithPaginatedResults(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithPaginatedResults() {
+  const db = await setup()
   const songs = await create25Songs(db)
   const results = await db.scan().exec()
   expect(results.song.length).toEqual(songs.length)
 }
 
-async function testScanWithFilteredPaginatedResults(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithFilteredPaginatedResults() {
+  const db = await setup()
   const songs = await create25Songs(db)
   const musician = MusicianModel.create({
     id: "zz-top",
@@ -160,8 +75,8 @@ async function testScanWithFilteredPaginatedResults(jayZ?: JayZ) {
   expect(songsProcessed.length).toEqual(0)
 }
 
-async function testParallelScan(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testParallelScan() {
+  const db = await setup()
   const songs = await create25Songs(db)
 
   const segment1 = db
@@ -185,8 +100,8 @@ async function testParallelScan(jayZ?: JayZ) {
   expect(results.length).toEqual(songs.length)
 }
 
-async function testScanWithFilter(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithFilter() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -195,8 +110,8 @@ async function testScanWithFilter(jayZ?: JayZ) {
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
-async function testScanWithCombinedAttributeFilters(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithCombinedAttributeFilters() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -212,8 +127,8 @@ async function testScanWithCombinedAttributeFilters(jayZ?: JayZ) {
   expect(result).toEqual({ musician: [musician], song: [song1, song2] })
 }
 
-async function testScanWithLimit(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithLimit() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -232,8 +147,8 @@ async function testScanWithLimit(jayZ?: JayZ) {
   expect(response2.items).toEqual({ musician: [], song: [song1] })
 }
 
-async function testScanWithPaginatedResultsReturnUndefinedCursor(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testScanWithPaginatedResultsReturnUndefinedCursor() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 

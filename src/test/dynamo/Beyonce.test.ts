@@ -1,4 +1,3 @@
-import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import crypto from "crypto"
 import { Beyonce } from "../../main/dynamo/Beyonce"
@@ -13,7 +12,7 @@ import {
   SongModel,
   table
 } from "./models"
-import { createJayZ, setup } from "./util"
+import { setup } from "./util"
 
 describe("Beyonce", () => {
   // Without encryption
@@ -199,8 +198,7 @@ describe("Beyonce", () => {
   })
 
   it("should cancel the transaction if matching record exists when failIfNotUnique is true on put", async () => {
-    const jayZ = await createJayZ()
-    const db = await setup(jayZ)
+    const db = await setup()
     const [musician, song1] = aMusicianWithTwoSongs()
     await db.batchWriteWithTransaction({ putItems: [musician, song1] })
 
@@ -230,86 +228,10 @@ describe("Beyonce", () => {
   it("should write multiple items at once ", async () => {
     await testBatchWrite()
   })
-
-  // With JayZ encryption
-  it("should put and retrieve an item using pk + sk with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndRetrieveItem(jayZ)
-  })
-
-  it("should put and retrieve an item with an undefined field with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndRetrieveItemWithUndefinedField(jayZ)
-  })
-
-  it("should put and retrieve a model with a compound partition key with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndRetrieveCompoundPartitionKey(jayZ)
-  })
-
-  it("should put and retrieve a model with a compound sort key", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndRetrieveCompoundSortKey(jayZ)
-  })
-
-  it("should put and delete an item using pk + sk with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndDeleteItem(jayZ)
-  })
-
-  it("should put and delete in the same transaction with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndDeleteItemInTransaction(jayZ)
-  })
-
-  it("should batchGet items with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testBatchGet(jayZ)
-  })
-
-  it("should batchGet items with jayZ: with duplicate keys", async () => {
-    const jayZ = await createJayZ()
-    await testBatchGetWithDuplicateKeys(jayZ)
-  })
-
-  it("should batchGet more than 100 items by chunking requests with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testChunkedBatchGet(jayZ)
-  })
-
-  it("should return empty arrays when no items found during batchGet with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testEmptyBatchGet(jayZ)
-  })
-
-  it("should query GSI by model with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testGSIByModel(jayZ)
-  })
-
-  it("should query inverted index GSI by name with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testInvertedIndexGSI(jayZ)
-  })
-
-  it("should write multiple items at once in a transaction with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testBatchWriteWithTransaction(jayZ)
-  })
-
-  it("should write multiple items at once with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testBatchWrite(jayZ)
-  })
-
-  it("should write multiple items with empty fields at once with jayZ", async () => {
-    const jayZ = await createJayZ()
-    await testPutAndRetrieveForItemWithEmptyFields(jayZ)
-  })
 })
 
-async function testPutAndRetrieveItem(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndRetrieveItem() {
+  const db = await setup()
   const [musician, _, __] = aMusicianWithTwoSongs()
   await db.put(musician)
 
@@ -317,8 +239,8 @@ async function testPutAndRetrieveItem(jayZ?: JayZ) {
   expect(result).toEqual(musician)
 }
 
-async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndRetrieveForItemWithEmptyFields() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   song1.genre = undefined
   song2.genre = null
@@ -329,8 +251,8 @@ async function testPutAndRetrieveForItemWithEmptyFields(jayZ?: JayZ) {
   expect(await db.get(SongModel.key({ musicianId: musician.id, id: song2.id }))).toEqual(song2)
 }
 
-async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndRetrieveItemWithUndefinedField() {
+  const db = await setup()
   const musician = MusicianModel.create({
     id: "1",
     name: "Bob Marley",
@@ -345,8 +267,8 @@ async function testPutAndRetrieveItemWithUndefinedField(jayZ?: JayZ) {
   expect(result).toEqual(musician)
 }
 
-async function testPutAndDeleteItem(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndDeleteItem() {
+  const db = await setup()
   const [musician, _, __] = aMusicianWithTwoSongs()
   await db.put(musician)
 
@@ -357,8 +279,8 @@ async function testPutAndDeleteItem(jayZ?: JayZ) {
   expect(await db.get(key)).toEqual(undefined)
 }
 
-async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndDeleteItemInTransaction() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1] })
 
@@ -372,7 +294,7 @@ async function testPutAndDeleteItemInTransaction(jayZ?: JayZ) {
   expect(await db.get(SongModel.key({ musicianId: song1.musicianId, id: song1.id }))).toEqual(undefined)
 }
 
-async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
+async function testPutAndRetrieveCompoundPartitionKey() {
   interface Person {
     model: "person"
     first: string
@@ -382,7 +304,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
 
   const PersonModel = table.model<Person>("person").partitionKey("Person", "first", "last").sortKey("Person", "sortKey")
 
-  const db = await setup(jayZ)
+  const db = await setup()
   const model = PersonModel.create({
     first: "Bob",
     last: "Smith",
@@ -395,7 +317,7 @@ async function testPutAndRetrieveCompoundPartitionKey(jayZ?: JayZ) {
   expect(result).toEqual(model)
 }
 
-async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
+async function testPutAndRetrieveCompoundSortKey() {
   interface LineItem {
     model: "lineItem"
     orderId: string
@@ -408,7 +330,7 @@ async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
     .partitionKey("OrderId", "orderId")
     .sortKey("LineItem", "id", "timestamp")
 
-  const db = await setup(jayZ)
+  const db = await setup()
   const model = LineItemModel.create({
     id: "l1",
     orderId: "o1",
@@ -420,8 +342,8 @@ async function testPutAndRetrieveCompoundSortKey(jayZ?: JayZ) {
   expect(result).toEqual(model)
 }
 
-async function testBatchGet(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testBatchGet() {
+  const db = await setup()
 
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
@@ -443,8 +365,8 @@ async function testBatchGet(jayZ?: JayZ) {
   expect(results.unprocessedKeys).toEqual([])
 }
 
-async function testBatchGetWithDuplicateKeys(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testBatchGetWithDuplicateKeys() {
+  const db = await setup()
 
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
@@ -467,8 +389,8 @@ async function testBatchGetWithDuplicateKeys(jayZ?: JayZ) {
   expect(results.unprocessedKeys).toEqual([])
 }
 
-async function testChunkedBatchGet(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testChunkedBatchGet() {
+  const db = await setup()
   const mp3 = crypto.randomBytes(1)
   const songs: Song[] = [...Array(150).keys()].map((songId) =>
     SongModel.create({
@@ -528,8 +450,8 @@ async function testBatchGetWithUnprocessedKeys() {
   expect(retrievedSongs.length).toEqual(50)
 }
 
-async function testEmptyBatchGet(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testEmptyBatchGet() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   const results = await db.batchGet({
     keys: [
@@ -545,8 +467,8 @@ async function testEmptyBatchGet(jayZ?: JayZ) {
   })
 }
 
-async function testGSIByModel(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testGSIByModel() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -555,8 +477,8 @@ async function testGSIByModel(jayZ?: JayZ) {
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
-async function testInvertedIndexGSI(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testInvertedIndexGSI() {
+  const db = await setup()
 
   const santana = MusicianModel.create({
     id: "1",
@@ -601,8 +523,8 @@ async function testInvertedIndexGSI(jayZ?: JayZ) {
   expect(songs).toEqual([santanasSong, slashesSong])
 }
 
-async function testBatchWriteWithTransaction(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testBatchWriteWithTransaction() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 
@@ -615,8 +537,8 @@ async function testBatchWriteWithTransaction(jayZ?: JayZ) {
   })
 }
 
-async function testBatchWrite(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testBatchWrite() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.put(song2)
   await db.batchWrite({

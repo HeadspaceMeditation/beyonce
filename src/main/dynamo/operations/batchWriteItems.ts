@@ -2,11 +2,11 @@ import { DynamoDB } from "aws-sdk"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
 import { UnprocessedKeyCollector } from "../UnprocessedKeyCollector"
-import { MaybeEncryptedItem } from "../util"
+import { MaybeItem } from "../util"
 import { BaseParams } from "./BaseParams"
 
 export interface BatchWriteItemParams<T extends TaggedModel> extends BaseParams {
-  putItems?: MaybeEncryptedItem<T>[]
+  putItems?: MaybeItem<T>[]
   deleteItems?: PartitionAndSortKey<T>[]
 }
 

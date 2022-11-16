@@ -1,7 +1,5 @@
-import { DataKey, DataKeyProvider, FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import crypto from "crypto"
-import { crypto_kdf_KEYBYTES, from_base64, randombytes_buf, ready, to_base64 } from "libsodium-wrappers"
 import { Beyonce } from "../../main/dynamo/Beyonce"
 import { Song, SongModel, table } from "./models"
 
@@ -11,7 +9,7 @@ const isRunningOnCI = process.env.CI_BUILD_ID !== undefined
 // see https://documentation.codeship.com/pro/builds-and-configuration/services/#container-networking
 const endpoint = isRunningOnCI ? `http://dynamodb:${port}` : `http://localhost:${port}`
 
-export async function setup(jayz?: JayZ): Promise<Beyonce> {
+export async function setup(): Promise<Beyonce> {
   const { tableName } = table
   const client = createDynamoDB()
 
@@ -24,7 +22,7 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
   await client.createTable(table.asCreateTableInput("PAY_PER_REQUEST")).promise()
 
-  return createBeyonce(client, jayz)
+  return createBeyonce(client)
 }
 
 export function createDynamoDB(): DynamoDB {
@@ -34,20 +32,13 @@ export function createDynamoDB(): DynamoDB {
   })
 }
 
-export function createBeyonce(db: DynamoDB, jayz?: JayZ): Beyonce {
-  return new Beyonce(table, db, { jayz })
-}
-
-export async function createJayZ(dataKeyProvider?: DataKeyProvider): Promise<JayZ> {
-  const keyProvider = dataKeyProvider ? dataKeyProvider : await FixedDataKeyProvider.forLibsodium()
-  const jayz = new JayZ({ keyProvider })
-  await jayz.ready
-  return jayz
+export function createBeyonce(db: DynamoDB): Beyonce {
+  return new Beyonce(table, db)
 }
 
 // DynamoDB has a 400kb Item limit w/ a 1MB response size limit
 // Thus 25 song items comprise at least 100kb * 25 = ~2.5MB of data
-// i.e. at least 3 pages. Note that data encrypted with JayZ is significantly larger
+// i.e. at least 3 pages
 const mp3 = crypto.randomBytes(100_000)
 const songs: Song[] = [...Array(25).keys()].map((songId) =>
   SongModel.create({
@@ -67,34 +58,4 @@ export async function create25Songs(db: Beyonce): Promise<Song[]> {
     db.batchWriteWithTransaction({ putItems: songs.slice(15) })
   ])
   return songs
-}
-
-/** A DataKey Provider that adds a short randomized delay (0 - 10ms) on generate / decrypt operations
- *  This is useful for testing as it allows us to force out of order promise resolution
- */
-export async function createRandomDelayDataKeyProvider(): Promise<RandomDelayDataKeyProvider> {
-  await ready
-  const key = to_base64(randombytes_buf(crypto_kdf_KEYBYTES))
-  return new RandomDelayDataKeyProvider(key)
-}
-
-class RandomDelayDataKeyProvider implements DataKeyProvider {
-  constructor(private dataKey: string) {}
-
-  async generateDataKey(): Promise<DataKey> {
-    await this.randomDelay()
-    return {
-      encryptedDataKey: from_base64(this.dataKey),
-      dataKey: from_base64(this.dataKey)
-    }
-  }
-
-  async decryptDataKey(encryptedDataKey: Uint8Array): Promise<Uint8Array> {
-    await this.randomDelay()
-    return encryptedDataKey
-  }
-
-  private async randomDelay(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, Math.ceil(Math.random() * 10)))
-  }
 }

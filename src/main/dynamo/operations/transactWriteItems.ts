@@ -2,12 +2,12 @@ import { DynamoDB } from "aws-sdk"
 import { v4 as generateUUID } from "uuid"
 import { PartitionAndSortKey } from "../keys"
 import { TaggedModel } from "../types"
-import { MaybeEncryptedItem } from "../util"
+import { MaybeItem } from "../util"
 import { BaseParams } from "./BaseParams"
 
 export interface TransactWriteItemParams<T extends TaggedModel> extends BaseParams {
   clientRequestToken?: string
-  putItems?: { item: MaybeEncryptedItem<T>; failIfNotUnique?: boolean }[]
+  putItems?: { item: MaybeItem<T>; failIfNotUnique?: boolean }[]
   deleteItems?: PartitionAndSortKey<T>[]
 }
 
