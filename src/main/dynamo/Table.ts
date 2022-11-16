@@ -3,19 +3,22 @@ import { GSI, GSIBuilder } from "./GSI"
 import { Model, PartitionKeyBuilder } from "./Model"
 import { Partition } from "./Partition"
 import { TaggedModel } from "./types"
+import { DelimiterType } from "../codegen/types";
 
 export class Table<PK extends string = string, SK extends string = string> {
   readonly tableName: string
   readonly partitionKeyName: PK
   readonly sortKeyName: SK
+  readonly delimiter: DelimiterType
   private modelTags: string[] = []
   private encryptionBlacklist: Set<string>
   private gsis: GSI<string, string, any>[] = []
 
-  constructor(config: { name: string; partitionKeyName: PK; sortKeyName: SK; encryptionBlacklist?: string[] }) {
+  constructor(config: { name: string; delimiter: DelimiterType, partitionKeyName: PK; sortKeyName: SK; encryptionBlacklist?: string[] }) {
     this.tableName = config.name
     this.partitionKeyName = config.partitionKeyName
     this.sortKeyName = config.sortKeyName
+    this.delimiter = config.delimiter
 
     this.encryptionBlacklist = new Set([
       "model",

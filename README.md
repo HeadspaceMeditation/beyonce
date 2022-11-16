@@ -72,7 +72,17 @@ tables:
 
 Beyonce expects you to specify your partition and sort keys using arrays, e.g. `[Author, $id]`. The first element in this example is interpreted as a string literal, while the second substitutes the value of a specific model instance's `id` field. In addition, Beyonce prefixes partition keys with the `partitionKeyPrefix` set on the Beyonce "partition" configured your the YAML file.
 
-In our example above, we set the `Author` partiion's `partitionKeyPrefix` to `"Author"` and the `Author` model's `partitionKey` field to `[$id]`. Thus the full partition key at runtime is `Author-$id` (Beyonce uses `-` as a delimiter).
+In our example above, we set the `Author` partiion's `partitionKeyPrefix` to `"Author"` and the `Author` model's `partitionKey` field to `[$id]`. Thus the full partition key at runtime is `Author-$id` (Beyonce uses `-` as a delimiter by default, you can override the implementation by passing in delimiter key in table definition).
+Supported values for delimiter: "-", "#"
+```YAML
+tables:
+  Library:
+    delimiter: "#"
+    models:
+     ...
+    partitions:
+      ...
+```
 
 If you'd like to form a composite partition or sort key using multiple model fields, that is supported as well, e.g. `[$id, $name]`.
 

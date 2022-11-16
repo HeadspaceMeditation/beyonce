@@ -65,9 +65,10 @@ export function generateCode(yamlData: string): string {
 function toTables(config: YAMLFile): Table[] {
   const tables: Table[] = []
 
-  Object.entries(config.tables).forEach(([name, { models, partitions, gsis }]) => {
+  Object.entries(config.tables).forEach(([name, { delimiter, models, partitions, gsis }]) => {
     const table: Table = {
       name,
+      delimiter: delimiter || "-",
       partitionKeyName: "pk",
       sortKeyName: "sk",
       partitions: buildPartitions(name, models, partitions),

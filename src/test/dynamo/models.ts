@@ -2,6 +2,7 @@ import { Table } from "../../main/dynamo/Table"
 
 export const table = new Table({
   name: "TestTable",
+  delimiter: "-",
   partitionKeyName: "pk",
   sortKeyName: "sk"
 })
