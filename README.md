@@ -12,9 +12,6 @@ Beyonce's features include:
   When you `get`, `batchGet` or `query`, the result types are automatically inferred. And when you apply filters on your
   `query` the attribute names are automatically type-checked.
 
-- **Application-level encryption**. Beyonce _loves_ [Jay-Z](https://github.com/ginger-io/jay-z) and supports him out of the box. Combine them into
-  the power couple they deserve to be, and every non-key, non-index attribute on your models will be automatically encrypted _before_ you send it to Dynamo. This grants an additional layer of security beyond just enabling AWS's DynamoDB server-side-enryption option (which you should do too).
-
 ## Usage
 
 ### 1. Install
@@ -423,36 +420,6 @@ new Beyonce(table, dynamo, { consistentReads: true })
 ```
 
 **Note**: When you enable consistentReads on a Beyonce instance, you can override it on a per-operation basis by setting the method level `consistentRead` option.
-
-## Encryption
-
-Beyonce integrates with [Jay-Z](https://github.com/ginger-io/jay-z) to enable transparent application-layer encryption
-out of the box using KMS with just a few additional lines of code:
-
-```TypeScript
-import { KMS } from "aws-sdk"
-import { KMSDataKeyProvider, JayZ } from "@ginger.io/jay-z"
-
-// Given a dynamo client
-const dynamo =  new DynamoDB({endpoint: "...", region: "..."})
-
-// Get yourself a JayZ
-const kmsKeyId = "..." // the KMS key id or arn you want to use
-const keyProvider = new KMSDataKeyProvider(kmsKeyId, new KMS())
-const jayZ = new JayZ({ keyProvider })
-
-// And give him to Beyonce (because she runs this relationship)
-const beyonce = new Beyonce(
-  LibraryTable,
-  dynamo,
-  { jayz }
-)
-```
-
-### Important note on Querying with Jay-Z enabled
-
-Because Jay-Z performs encryption at the application level, DynamoDB query operations
-occur _before_ decryption. Put plainly, this means you _can't_ filter `.query` calls using any attribute that isn't a partition or sort key.
 
 ## Things beyonce should do, but doesn't (yet)
 

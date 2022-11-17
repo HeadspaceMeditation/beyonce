@@ -1,10 +1,8 @@
-import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { CompositeError } from "../../CompositeError"
 import { groupModelsByType } from "../groupModelsByType"
 import { GroupedModels, TaggedModel } from "../types"
-import { decryptOrPassThroughItem } from "../util"
 import { InternalIteratorOptions } from "./types"
 
 export type RawDynamoDBPage = {
@@ -38,7 +36,6 @@ export async function* pagedIterator<T, U extends TaggedModel>(
   options: InternalIteratorOptions,
   buildOperation: (opts: InternalIteratorOptions) => T,
   executeOperation: (op: T) => Promise<RawDynamoDBPage>,
-  jayz?: JayZ
 ): AsyncGenerator<PageResults<U>, PageResults<U>> {
   let pendingOperation: T | undefined = buildOperation(options)
   let lastEvaluatedKey = options.lastEvaluatedKey
@@ -60,8 +57,7 @@ export async function* pagedIterator<T, U extends TaggedModel>(
       const itemsToDecrypt = response.Items ?? []
       const itemPromises = itemsToDecrypt.map(async (item) => {
         try {
-          const maybeDecryptedItem = await decryptOrPassThroughItem(jayz, item)
-          return { item: maybeDecryptedItem as U }
+          return { item: item as U }
         } catch (error) {
           return { error }
         }

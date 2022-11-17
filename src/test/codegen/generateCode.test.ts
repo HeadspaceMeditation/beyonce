@@ -23,8 +23,7 @@ export const LibraryTable = new Table({
   name: "Library",
   delimiter: "-",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id"]
+  sortKeyName: "sk"
 })
 
 export enum ModelType {
@@ -80,8 +79,7 @@ export const LibraryTable = new Table({
   name: "Library",
   delimiter: "-",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "authorId"]
+  sortKeyName: "sk"
 })
 
 export enum ModelType {
@@ -150,8 +148,7 @@ export const LibraryTable = new Table({
   name: "Library",
   delimiter: "#",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "authorId"]
+  sortKeyName: "sk"
 })
 
 export enum ModelType {
@@ -226,16 +223,14 @@ export const LibraryTable = new Table({
   name: "Library",
   delimiter: "-",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "userId"]
+  sortKeyName: "sk"
 })
 
 export const MusicTable = new Table({
   name: "Music",
   delimiter: "-",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "musicianId"]
+  sortKeyName: "sk"
 })
 
 export enum ModelType {
@@ -269,47 +264,6 @@ export type Model = Author | Musician
 
 export const AuthorsPartition = LibraryTable.partition([AuthorModel])
 export const MusiciansPartition = MusicTable.partition([MusicianModel])
-`)
-})
-
-it("should generate table, add partition and sort key to encryption blacklist", () => {
-  const result = generateCode(`
-tables:
-  Library:
-    models:
-      Author:
-        id: string
-        name: string
-      
-      Book:
-        id: string
-        name: string
-
-    partitions:
-      Authors:
-        partitionKeyPrefix: Author
-        models: 
-          Author:
-            partitionKey: [$id]
-            sortKey: [Author, $id]
-
-          Book:
-            partitionKey: [$id]
-            sortKey: [Book, $id]
-
-    gsis:
-      modelById:
-        partitionKey: $model
-        sortKey: $id
-`)
-
-  expect(result).toContain(`export const LibraryTable = new Table({
-  name: "Library",
-  delimiter: "-",
-  partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "model"]
-})
 `)
 })
 
@@ -473,8 +427,7 @@ export const ComplexLibraryTable = new Table({
   name: "ComplexLibrary",
   delimiter: "#",
   partitionKeyName: "pk",
-  sortKeyName: "sk",
-  encryptionBlacklist: ["id", "name"]
+  sortKeyName: "sk"
 })
 
 export enum ModelType {

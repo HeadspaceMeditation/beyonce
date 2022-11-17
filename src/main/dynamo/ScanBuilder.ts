@@ -1,4 +1,3 @@
-import { JayZ } from "@ginger.io/jay-z"
 import { DynamoDB } from "aws-sdk"
 import { DocumentClient } from "aws-sdk/clients/dynamodb"
 import { ready } from "libsodium-wrappers"
@@ -13,7 +12,6 @@ import { GroupedModels, TaggedModel } from "./types"
 interface ScanConfig<T extends TaggedModel> {
   db: DynamoDB.DocumentClient
   table: Table
-  jayz?: JayZ
   consistentRead?: boolean
   parallel?: ParallelScanConfig
 }
@@ -41,7 +39,6 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T
         Limit: pageSize
       }),
       (input) => this.config.db.scan(input).promise(),
-      this.config.jayz
     )
 
     return groupAllPages(iterator, this.modelTags)
@@ -58,7 +55,6 @@ export class ScanBuilder<T extends TaggedModel> extends QueryExpressionBuilder<T
         Limit: pageSize
       }),
       (input) => this.config.db.scan(input).promise(),
-      this.config.jayz
     )
 
     await ready

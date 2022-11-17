@@ -1,5 +1,3 @@
-import { JayZ } from "@ginger.io/jay-z"
-import { ready } from "libsodium-wrappers"
 import {
   aMusicianWithTwoSongs,
   aSong,
@@ -10,7 +8,7 @@ import {
   Song,
   SongModel
 } from "./models"
-import { createJayZ, create25Songs, setup, createRandomDelayDataKeyProvider } from "./util"
+import { create25Songs, setup } from "./util"
 
 describe("Beyonce.query", () => {
   it("should return empty arrays when no models found when querying", async () => {
@@ -71,95 +69,21 @@ describe("Beyonce.query", () => {
   })
 })
 
-describe("Beyonce.query with JayZ", () => {
-  it("should return empty arrays when no models found when querying", async () => {
-    const jayz = await createJayZ()
-    await testEmptyQuery(jayz)
-  })
-
-  it("should set consistent read on queries", async () => {
-    const jayz = await createJayZ()
-    const db = await setup(jayz)
-    const query = await (db as any)
-      .query(MusicianModel.partitionKey({ id: "musician-1" }), {
-        consistentRead: true
-      })
-      .createQueryInput({})
-
-    expect(query).toMatchObject({
-      ConsistentRead: true
-    })
-  })
-
-  it("should query for only single type of model", async () => {
-    const jayz = await createJayZ()
-    await testQueryForSingleTypeOfModel(jayz)
-  })
-
-  it("should filter items when querying", async () => {
-    const jayz = await createJayZ()
-    await testQueryWithFilter(jayz)
-  })
-
-  it("should paginate query results", async () => {
-    const jayz = await createJayZ()
-    await testQueryWithPaginatedResults(jayz)
-  })
-
-  it("should paginate query results in sorted order when data key provider resolves promises out of order", async () => {
-    // We use a key provider here with a random delay to simulate decryption promises resolving
-    // out of order when processing (ordered) results returned from Dynamo
-    const keyProvider = await createRandomDelayDataKeyProvider()
-    const jayz = await createJayZ(keyProvider)
-    await testQueryWithSortedPaginatedResults(jayz)
-  })
-
-  it("should filter and paginate query results", async () => {
-    const jayz = await createJayZ()
-    await testPaginatedQueryWithFilter(jayz)
-  })
-
-  it("should query with multiple attribute filters", async () => {
-    const jayz = await createJayZ()
-    await testQueryWithCombinedAttributeFilters(jayz)
-  })
-
-  it("should set maxRecordsToProcess", async () => {
-    const jayz = await createJayZ()
-    await testQueryWithLimit(jayz)
-  })
-
-  it("should return undefined cursor when there are no more records to query", async () => {
-    const jayz = await createJayZ()
-    await testPaginatedQueryReturnUndefinedCursor(jayz)
-  })
-
-  it("should find the highest sort key", async () => {
-    const jayz = await createJayZ()
-    await testQueryWithReverseAndLimit(jayz)
-  })
-
-  it("should put and retrieve multiple items using just pk", async () => {
-    const jayz = await createJayZ()
-    await testPutAndRetrieveMultipleItems(jayz)
-  })
-})
-
-async function testEmptyQuery(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testEmptyQuery() {
+  const db = await setup()
   const result = await db.query(MusicianPartition.key({ id: "foo-1" })).exec()
   expect(result).toEqual({ musician: [], song: [] })
 }
 
-async function testQueryWithPaginatedResults(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithPaginatedResults() {
+  const db = await setup()
   const songs = await create25Songs(db)
   const results = await db.query(MusicianPartition.key({ id: "1" })).exec()
   expect(results.song.length).toEqual(songs.length)
 }
 
-async function testQueryWithSortedPaginatedResults(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithSortedPaginatedResults() {
+  const db = await setup()
   const song1 = aSong({ musicianId: "1", id: `${new Date("1/1/2000").toISOString()}` })
   const song2 = aSong({ musicianId: "1", id: `${new Date("1/2/2000").toISOString()}` })
   const song3 = aSong({ musicianId: "1", id: `${new Date("1/3/2000").toISOString()}` })
@@ -176,8 +100,8 @@ async function testQueryWithSortedPaginatedResults(jayZ?: JayZ) {
   expect(results.value.items.song).toEqual([song5, song4, song3, song2, song1])
 }
 
-async function testQueryWithFilter(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithFilter() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -189,8 +113,8 @@ async function testQueryWithFilter(jayZ?: JayZ) {
   expect(result).toEqual({ musician: [], song: [song1, song2] })
 }
 
-async function testPaginatedQueryWithFilter(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPaginatedQueryWithFilter() {
+  const db = await setup()
   await create25Songs(db)
   const musician = MusicianModel.create({
     id: "1",
@@ -216,8 +140,8 @@ async function testPaginatedQueryWithFilter(jayZ?: JayZ) {
   expect(songsProcessed.length).toEqual(0)
 }
 
-async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryForSingleTypeOfModel() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -226,8 +150,8 @@ async function testQueryForSingleTypeOfModel(jayZ?: JayZ) {
   expect(result).toEqual({ song: [song1, song2] })
 }
 
-async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithCombinedAttributeFilters() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -246,8 +170,8 @@ async function testQueryWithCombinedAttributeFilters(jayZ?: JayZ) {
   })
 }
 
-async function testQueryWithLimit(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithLimit() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
   const key = MusicianPartition.key({ id: musician.id })
@@ -278,8 +202,8 @@ async function testQueryWithLimit(jayZ?: JayZ) {
   expect(response3.cursor).toEqual(undefined)
 }
 
-async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPaginatedQueryReturnUndefinedCursor() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(musician), db.put(song1), db.put(song2)])
 
@@ -305,8 +229,8 @@ async function testPaginatedQueryReturnUndefinedCursor(jayZ?: JayZ) {
   expect(response2.cursor).toBeUndefined()
 }
 
-async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testQueryWithReverseAndLimit() {
+  const db = await setup()
   const [_, song1, song2] = aMusicianWithTwoSongs()
   await Promise.all([db.put(song1), db.put(song2)])
 
@@ -319,8 +243,8 @@ async function testQueryWithReverseAndLimit(jayZ?: JayZ) {
   expect(value.items).toEqual({ musician: [], song: [song2] })
 }
 
-async function testPutAndRetrieveMultipleItems(jayZ?: JayZ) {
-  const db = await setup(jayZ)
+async function testPutAndRetrieveMultipleItems() {
+  const db = await setup()
   const [musician, song1, song2] = aMusicianWithTwoSongs()
   await db.batchWriteWithTransaction({ putItems: [musician, song1, song2] })
 

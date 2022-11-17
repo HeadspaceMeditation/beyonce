@@ -11,22 +11,13 @@ export class Table<PK extends string = string, SK extends string = string> {
   readonly sortKeyName: SK
   readonly delimiter: DelimiterType
   private modelTags: string[] = []
-  private encryptionBlacklist: Set<string>
   private gsis: GSI<string, string, any>[] = []
 
-  constructor(config: { name: string; delimiter: DelimiterType, partitionKeyName: PK; sortKeyName: SK; encryptionBlacklist?: string[] }) {
+  constructor(config: { name: string; delimiter: DelimiterType, partitionKeyName: PK; sortKeyName: SK }) {
     this.tableName = config.name
     this.partitionKeyName = config.partitionKeyName
     this.sortKeyName = config.sortKeyName
     this.delimiter = config.delimiter
-
-    this.encryptionBlacklist = new Set([
-      "model",
-      "__jayz__metadata",
-      this.partitionKeyName,
-      this.sortKeyName,
-      ...(config.encryptionBlacklist ?? [])
-    ])
   }
 
   model<T extends TaggedModel>(modelType: T["model"]): PartitionKeyBuilder<T> {
@@ -44,12 +35,6 @@ export class Table<PK extends string = string, SK extends string = string> {
 
   registerGSI(gsi: GSI<string, string, any>) {
     this.gsis.push(gsi)
-    this.encryptionBlacklist.add(gsi.partitionKeyName)
-    this.encryptionBlacklist.add(gsi.sortKeyName)
-  }
-
-  getEncryptionBlacklist(): Set<string> {
-    return this.encryptionBlacklist
   }
 
   getModelTags(): string[] {
