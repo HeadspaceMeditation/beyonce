@@ -1,12 +1,13 @@
 {
   "name": "dynamo-builder",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Type-safe DynamoDB query builder for TypeScript. Designed with single-table architecture in mind.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "beyonce": "dist/codegen/cli.js"
   },
+  "keywords": ["dynamodb", "query", "builder", "typesafe", "dynamodb-ts"],
   "files": [
     "./dist",
     "./src"
