@@ -68,13 +68,13 @@ export async function* pagedIterator<T, U extends TaggedModel>(
         if (item) {
           items.push(item)
         } else if (error) {
-          errors.push(error)
+          errors.push(error as Error)
         }
       })
 
       yield { items, lastEvaluatedKey, errors }
     } catch (error) {
-      errors.push(error)
+      errors.push(error as Error)
       yield { items: [], lastEvaluatedKey, errors }
     }
   }

@@ -62,7 +62,7 @@ export async function transactWriteItems<T extends TaggedModel>(params: Transact
     await response.promise()
   } catch (e) {
     if (transactionCancellationReasons) {
-      throw new Error(`${e.message}. Cancellation Reasons: ${JSON.stringify(transactionCancellationReasons)}`)
+      throw new Error(`${(e as Error).message}. Cancellation Reasons: ${JSON.stringify(transactionCancellationReasons)}`)
     } else {
       throw e
     }
