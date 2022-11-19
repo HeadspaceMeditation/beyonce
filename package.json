@@ -12,7 +12,8 @@
     "./src"
   ],
   "repository": {
-    "url": "git@github.com:skarode96/dynamo-builder.git"
+    "type": "git",
+    "url": "https://github.com/skarode96/dynamo-builder.git"
   },
   "dependencies": {
     "aws-sdk": "^2.853.0",
