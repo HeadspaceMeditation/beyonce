@@ -1,5 +1,5 @@
 {
-  "name": "dynamodb-builder",
+  "name": "dynamo-builder",
   "version": "0.0.1",
   "description": "Type-safe DynamoDB query builder for TypeScript. Designed with single-table architecture in mind.",
   "main": "dist/index.js",
