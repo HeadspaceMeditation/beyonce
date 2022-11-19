@@ -1,4 +1,5 @@
 # dynamo-builder
+![example workflow](https://github.com/skarode96/dynamo-builder/actions/workflows/release.yml/badge.svg)
 
 A type-safe DynamoDB query builder for TypeScript.
 This library is inspired by Beyonce's  [library](https://www.npmjs.com/package/@ginger.io/beyonce?activeTab=readme)
