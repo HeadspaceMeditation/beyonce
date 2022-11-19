@@ -1,6 +1,6 @@
 {
-  "name": "@ginger.io/beyonce",
-  "version": "0.0.66",
+  "name": "dynamodb-builder",
+  "version": "0.0.1",
   "description": "Type-safe DynamoDB query builder for TypeScript. Designed with single-table architecture in mind.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,6 +39,6 @@
     "prepare": "npm run build",
     "test": "jest --runInBand"
   },
-  "author": "Ginger",
+  "author": "Sameer Karode",
   "license": "Apache 2.0"
 }
