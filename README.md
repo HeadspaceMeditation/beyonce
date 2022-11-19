@@ -1,14 +1,16 @@
-# Beyonce
+# dynamo-builder
 
 A type-safe DynamoDB query builder for TypeScript.
+This library is inspired by Beyonce's  [library](https://www.npmjs.com/package/@ginger.io/beyonce?activeTab=readme)
+and extends the functionality further giving client the ability to configure table partition keys schema design
 
-Beyonce's features include:
+Features include:
 
-- **Low boilerplate**. Define your tables, partitions, indexes and models in YAML and Beyonce codegens TypeScript definitions for you.
+- **Low boilerplate**. Define your tables, partitions, indexes and models in YAML and the codegens TypeScript definitions for you.
 
-- **Store heterogeneous models in the same table**. Unlike most DynamoDB libraries, Beyonce doesn't force you into a 1 model per table paradigm. It supports storing related models in the same table partition, which allows you to "precompute joins" and retrieve those models with a single roundtrip query to the db.
+- **Store heterogeneous models in the same table**. Unlike most DynamoDB libraries, this doesn't force you into a 1 model per table paradigm. It supports storing related models in the same table partition, which allows you to "precompute joins" and retrieve those models with a single roundtrip query to the db.
 
-- **Type-safe API**. Beyonce's API is type-safe. It's aware of which models live under your partition and sort keys (even for global secondary indexes).
+- **Type-safe API**. dynamo-builder's API is type-safe. It's aware of which models live under your partition and sort keys (even for global secondary indexes).
   When you `get`, `batchGet` or `query`, the result types are automatically inferred. And when you apply filters on your
   `query` the attribute names are automatically type-checked.
 
@@ -16,7 +18,7 @@ Beyonce's features include:
 
 ### 1. Install
 
-First install beyonce - `npm install @ginger.io/beyonce`
+First install dynamo-builder - `npm install dynamo-builder`
 
 ### 2. Define your models
 
@@ -44,12 +46,12 @@ tables:
     # To do that, we need a specific Author and all their Books to live under the same partition key.
     # How about we use "Author-$id" as the partition key? Great, let's go with that.
 
-    # Beyonce calls a group of models that share the same partition key a "patition".
+    # dynamo-builder calls a group of models that share the same partition key a "patition".
     # Let's define one now, and name it "Authors"
     partitions:
       Authors:
 
-        # All Beyonce partition keys are prefixed (to help you avoid collisions)
+        # All dynamo-builder partition keys are prefixed (to help you avoid collisions)
         # We said above we want our final partition key to be "Author-$id",
         # so we set: "Author" as our prefix here
         partitionKeyPrefix: Author
@@ -67,9 +69,9 @@ tables:
 
 #### A note on `partitionKey` and `sortKey` syntax
 
-Beyonce expects you to specify your partition and sort keys using arrays, e.g. `[Author, $id]`. The first element in this example is interpreted as a string literal, while the second substitutes the value of a specific model instance's `id` field. In addition, Beyonce prefixes partition keys with the `partitionKeyPrefix` set on the Beyonce "partition" configured your the YAML file.
+dynamo-builder expects you to specify your partition and sort keys using arrays, e.g. `[Author, $id]`. The first element in this example is interpreted as a string literal, while the second substitutes the value of a specific model instance's `id` field. In addition, it prefixes partition keys with the `partitionKeyPrefix` set on the "partition" configured your the YAML file.
 
-In our example above, we set the `Author` partiion's `partitionKeyPrefix` to `"Author"` and the `Author` model's `partitionKey` field to `[$id]`. Thus the full partition key at runtime is `Author-$id` (Beyonce uses `-` as a delimiter by default, you can override the implementation by passing in delimiter key in table definition).
+In our example above, we set the `Author` partiion's `partitionKeyPrefix` to `"Author"` and the `Author` model's `partitionKey` field to `[$id]`. Thus the full partition key at runtime is `Author-$id` (it uses `-` as a delimiter by default, you can override the implementation by passing in delimiter key in table definition).
 Supported values for delimiter: "-", "#"
 ```YAML
 tables:
@@ -101,7 +103,7 @@ tables:
         sortKey: $id # same here
 ```
 
-**Note**: Beyonce currently assumes that your GSI indexes project _all_ model attributes, which will
+**Note**: library currently assumes that your GSI indexes project _all_ model attributes, which will
 be reflected in the return types of your queries.
 
 #### External types
@@ -119,7 +121,7 @@ Which transforms into `import { Address } from "author/address"`
 
 ### 3. Codegen TypeScript classes for your models, partition keys and sort keys
 
-`npx beyonce --in src/models.yaml --out src/generated/models.ts`
+`npx dynamo-builder --in src/models.yaml --out src/generated/models.ts`
 
 ### 4. Create your DynamoDB table(s)
 
@@ -138,7 +140,7 @@ Now you can write partition-aware, type safe queries with abandon:
 #### Get yourself a Beyonce
 
 ```TypeScript
-import { Beyonce } from "@ginger.io/beyonce"
+import { Beyonce } from "dynamo-builder"
 import { DynamoDB } from "aws-sdk"
 import { LibraryTable } from "generated/models"
 
