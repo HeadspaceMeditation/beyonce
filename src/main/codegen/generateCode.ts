@@ -34,7 +34,7 @@ export function generateCode(yamlData: string): string {
   const taggedUnion = generateTaggedUnion(models)
   const gsis = generateGSIs(tableDefs)
 
-  const imports = new Set([`import { Table } from "@ginger.io/beyonce"`])
+  const imports = new Set([`import { Table } from "dynamo-builder"`])
   modelInterfaces.imports.forEach((_) => imports.add(_))
 
   const code = `

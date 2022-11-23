@@ -17,7 +17,7 @@ tables:
             sortKey: [Author, $id]
 `)
 
-  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
 
 export const LibraryTable = new Table({
   name: "Library",
@@ -73,7 +73,7 @@ tables:
             sortKey: [Book, $id]
 `)
 
-  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
 
 export const LibraryTable = new Table({
   name: "Library",
@@ -142,7 +142,7 @@ tables:
             sortKey: [Book, $id]
 `)
 
-  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
 
 export const LibraryTable = new Table({
   name: "Library",
@@ -217,7 +217,7 @@ tables:
             sortKey: [Musician, $musicianId]
 `)
 
-  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
 
 export const LibraryTable = new Table({
   name: "Library",
@@ -421,7 +421,7 @@ tables:
             sortKey: [Author, $id, $name]
 `)
 
-  expect(result).toEqual(`import { Table } from "@ginger.io/beyonce"
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
 
 export const ComplexLibraryTable = new Table({
   name: "ComplexLibrary",
