@@ -6,7 +6,7 @@ A type-safe DynamoDB query builder for TypeScript.
 This library is inspired by Beyonce's  [library](https://www.npmjs.com/package/@ginger.io/beyonce?activeTab=readme)
 and extends the functionality further giving client the ability to configure table partition keys schema design
 
-Features include:
+Features included in this library:
 
 - **Low boilerplate**. Define your tables, partitions, indexes and models in YAML and the codegens TypeScript definitions for you.
 
