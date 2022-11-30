@@ -3,3 +3,7 @@ node_modules/
 **/.DS_Store
 **/.swp
 .idea/
+
+# Avoiding committing some local test files
+test_model.yaml
+test_output.ts

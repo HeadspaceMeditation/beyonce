@@ -183,6 +183,204 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
 `)
 })
 
+it("should generate a tables with non-string partition key", () => {
+  const result = generateCode(`
+tables:
+  Library:
+    delimiter: "#"
+    models:
+      Author:
+        id: number
+        name: string
+      
+      Book:
+        id: number
+        authorId: string
+        name: string
+
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
+`)
+
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  delimiter: "#",
+  partitionKeyName: "pk",
+  sortKeyName: "sk"
+})
+
+export enum ModelType {
+  Author = "Author",
+  Book = "Book"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: number
+  name: string
+}
+
+export interface Book {
+  model: ModelType.Book
+  id: number
+  authorId: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
+
+export const BookModel = LibraryTable.model<Book>(ModelType.Book)
+  .partitionKey("Author", "authorId")
+  .sortKey("Book", "id")
+
+export type Model = Author | Book
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
+`)
+})
+
+it("should throw error on generating a model with an unsupported partition key type", () => {
+  expect(() => generateCode(`
+tables:
+  Library:
+    delimiter: "#"
+    models:
+      Author:
+        id: unknown
+        name: string
+      
+      Book:
+        id: number
+        authorId: string
+        name: string
+
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
+`)).toThrow("A key with type unknown is not allowed. DynamoDB keys must be of type 'string' or 'number'");
+})
+
+it("should throw error on generating a model with an unsupported sort key type", () => {
+  expect(() => generateCode(`
+tables:
+  Library:
+    delimiter: "#"
+    models:
+      Author:
+        id: string
+        name: unknown
+      
+      Book:
+        id: string
+        authorId: string
+        name: string
+
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $name]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
+`)).toThrow("A key with type unknown is not allowed. DynamoDB keys must be of type 'string' or 'number'");
+})
+
+it("should generate without errors when a non-key field is using a type not supported as a key", () => {
+  const result = generateCode(`
+tables:
+  Library:
+    delimiter: "#"
+    models:
+      Author:
+        id: number
+        name: string
+        otherField: unknown
+      
+      Book:
+        id: number
+        authorId: string
+        name: string
+
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+
+          Book:
+            partitionKey: [$authorId]
+            sortKey: [Book, $id]
+`)
+
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  delimiter: "#",
+  partitionKeyName: "pk",
+  sortKeyName: "sk"
+})
+
+export enum ModelType {
+  Author = "Author",
+  Book = "Book"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: number
+  name: string
+  otherField: unknown
+}
+
+export interface Book {
+  model: ModelType.Book
+  id: number
+  authorId: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
+
+export const BookModel = LibraryTable.model<Book>(ModelType.Book)
+  .partitionKey("Author", "authorId")
+  .sortKey("Book", "id")
+
+export type Model = Author | Book
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel, BookModel])
+`)
+})
+
 it("should generate multiple tables with simple models", () => {
   const result = generateCode(`
 tables:
