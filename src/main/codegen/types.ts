@@ -10,7 +10,8 @@ export type TableDefinition = {
   models: {
     [modelName: string]: ModelDefinition
   }
-
+  partitionKeyName: string,
+  sortKeyName: string
   partitions: {
     [partitionName: string]: PartitionDefinition
   }

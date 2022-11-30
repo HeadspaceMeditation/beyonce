@@ -10,6 +10,9 @@ import { generateTables } from "./generateTables"
 import { generateTaggedUnion } from "./generateTaggedUnion"
 import { Model, Partition, PartitionDefinition, Table, TableDefinition, YAMLFile } from "./types"
 
+const DEFAULT_PK_COLUMN_NAME = "pk";
+const DEFAULT_SK_COLUMN_NAME = "sk";
+
 export function generateCode(yamlData: string): string {
   const config = parseYaml<YAMLFile>(yamlData)
   const tableDefs = toTables(config)
@@ -65,12 +68,13 @@ export function generateCode(yamlData: string): string {
 function toTables(config: YAMLFile): Table[] {
   const tables: Table[] = []
 
-  Object.entries(config.tables).forEach(([name, { delimiter, models, partitions, gsis }]) => {
+  Object.entries(config.tables).forEach(([name, { partitionKeyName, sortKeyName, delimiter, models, partitions, gsis }]) => {
+
     const table: Table = {
       name,
       delimiter: delimiter || "-",
-      partitionKeyName: "pk",
-      sortKeyName: "sk",
+      partitionKeyName: partitionKeyName || DEFAULT_PK_COLUMN_NAME,
+      sortKeyName: sortKeyName || DEFAULT_SK_COLUMN_NAME,
       partitions: buildPartitions(name, models, partitions),
       gsis: []
     }
