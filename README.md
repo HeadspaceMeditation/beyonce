@@ -30,7 +30,8 @@ Define your `tables`, `models` and `partitions` in YAML:
 tables:
   # We have a single DynamoDB Table named "Library".
   Library:
-
+    partitionKeyName: pk #pk is the default value of partitionKeyName of the table 
+    sortKeyName: sk #sk is the default value of sortKeyName of the table 
     # Let's add two models to our Library table: Author and Book.
     models:
       Author:

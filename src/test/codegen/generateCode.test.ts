@@ -46,6 +46,54 @@ export const AuthorsPartition = LibraryTable.partition([AuthorModel])
 `)
 })
 
+it("should generate a table with pk and sk column name passed", () => {
+  const result = generateCode(`
+tables:
+  Library:
+    partitionKeyName: partitionKey
+    sortKeyName: sortKey
+    models:
+      Author:
+        id: string
+        name: string 
+    partitions:
+      Authors:
+        partitionKeyPrefix: Author
+        models:
+          Author:
+            partitionKey: [$id]
+            sortKey: [Author, $id]
+`)
+
+  expect(result).toEqual(`import { Table } from "dynamo-builder"
+
+export const LibraryTable = new Table({
+  name: "Library",
+  delimiter: "-",
+  partitionKeyName: "partitionKey",
+  sortKeyName: "sortKey"
+})
+
+export enum ModelType {
+  Author = "Author"
+}
+
+export interface Author {
+  model: ModelType.Author
+  id: string
+  name: string
+}
+
+export const AuthorModel = LibraryTable.model<Author>(ModelType.Author)
+  .partitionKey("Author", "id")
+  .sortKey("Author", "id")
+
+export type Model = Author
+
+export const AuthorsPartition = LibraryTable.partition([AuthorModel])
+`)
+})
+
 it("should generate two models", () => {
   const result = generateCode(`
 tables:
