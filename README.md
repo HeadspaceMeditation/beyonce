@@ -12,7 +12,7 @@ Beyonce's features include:
   When you `get`, `batchGet` or `query`, the result types are automatically inferred. And when you apply filters on your
   `query` the attribute names are automatically type-checked.
 
-- **Application-level encryption**. Beyonce _loves_ [Jay-Z](https://github.com/ginger-io/jay-z) and supports him out of the box. Combine them into
+- **Application-level encryption**. Beyonce _loves_ [Jay-Z](https://github.com/HeadspaceMeditation/jay-z) and supports him out of the box. Combine them into
   the power couple they deserve to be, and every non-key, non-index attribute on your models will be automatically encrypted _before_ you send it to Dynamo. This grants an additional layer of security beyond just enabling AWS's DynamoDB server-side-enryption option (which you should do too).
 
 ## Usage
@@ -416,7 +416,7 @@ new Beyonce(table, dynamo, { consistentReads: true })
 
 ## Encryption
 
-Beyonce integrates with [Jay-Z](https://github.com/ginger-io/jay-z) to enable transparent application-layer encryption
+Beyonce integrates with [Jay-Z](https://github.com/HeadspaceMeditation/jay-z) to enable transparent application-layer encryption
 out of the box using KMS with just a few additional lines of code:
 
 ```TypeScript
