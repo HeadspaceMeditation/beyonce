@@ -255,10 +255,10 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@ginger.io/jay-z@0.0.14":
-  version "0.0.14"
-  resolved "https://registry.yarnpkg.com/@ginger.io/jay-z/-/jay-z-0.0.14.tgz#c3e85260f9031c17dcb72135924bbac8ad4cbd44"
-  integrity sha512-GIR1j7jaZJ8iNwj8gJQHrOXcLlOjCaVMviLji4QtJUOTnmrO+9C+IYsOrd282z098zIm5MfVCJEwBOYTKSrfNA==
+"@ginger.io/jay-z@0.0.16":
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/@ginger.io/jay-z/-/jay-z-0.0.16.tgz#7a24dfd85f28e400572f5503f572a276ee05b490"
+  integrity sha512-NCwjjykoxIg/Xfo8qGTexbJhUq6q4cTfwGwI2KVgDJbHrclOsofvHwQA4nl39020y0KMVVwVBKUNywMC+G06NQ==
   dependencies:
     aws-sdk "^2.853.0"
     fast-json-stable-stringify "^2.1.0"
