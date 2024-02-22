@@ -1,6 +1,5 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
-import { DocumentClient } from "aws-sdk/clients/dynamodb"
+import { DynamoDBDocumentClient, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb"
 import { ready } from "libsodium-wrappers"
 import { QueryExpressionBuilder } from "./expressions/QueryExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
@@ -12,7 +11,7 @@ import { Table } from "./Table"
 import { GroupedModels, TaggedModel } from "./types"
 
 interface TableQueryConfig<T extends TaggedModel> {
-  db: DynamoDB.DocumentClient
+  db: DynamoDBDocumentClient
   table: Table
   key: PartitionKey<T> | PartitionKeyAndSortKeyPrefix<T>
   jayz?: JayZ
@@ -20,7 +19,7 @@ interface TableQueryConfig<T extends TaggedModel> {
 }
 
 interface GSIQueryConfig<T extends TaggedModel> {
-  db: DynamoDB.DocumentClient
+  db: DynamoDBDocumentClient
   table: Table
   gsiName: string
   gsiKey: PartitionKey<T>
@@ -44,14 +43,14 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
 
   async exec(): Promise<GroupedModels<T>> {
     const query = this.createQueryInput({ lastEvaluatedKey: undefined })
-    const iterator = pagedIterator<DocumentClient.QueryInput, T>(
+    const iterator = pagedIterator<QueryCommandInput, T>(
       { lastEvaluatedKey: undefined },
       ({ lastEvaluatedKey, pageSize }) => ({
         ...query,
         ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
-      (query) => this.config.db.query(query).promise(),
+      (query) => this.config.db.send(new QueryCommand(query)),
       this.config.jayz
     )
 
@@ -61,14 +60,14 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
   async *iterator(options: IteratorOptions = {}): PaginatedIteratorResults<T> {
     const iteratorOptions = toInternalIteratorOptions(options)
     const query = this.createQueryInput(iteratorOptions)
-    const iterator = pagedIterator<DocumentClient.QueryInput, T>(
+    const iterator = pagedIterator<QueryCommandInput, T>(
       iteratorOptions,
       ({ lastEvaluatedKey, pageSize }) => ({
         ...query,
         ExclusiveStartKey: lastEvaluatedKey,
         Limit: pageSize
       }),
-      (query) => this.config.db.query(query).promise(),
+      (query) => this.config.db.send(new QueryCommand(query)),
       this.config.jayz
     )
 
@@ -88,7 +87,7 @@ export class QueryBuilder<T extends TaggedModel> extends QueryExpressionBuilder<
     }
   }
 
-  private createQueryInput(options: InternalIteratorOptions): DynamoDB.DocumentClient.QueryInput {
+  private createQueryInput(options: InternalIteratorOptions): QueryCommandInput {
     if (isTableQuery(this.config)) {
       const { table, consistentRead } = this.config
       const keyCondition = this.buildKeyConditionForTable(this.config)

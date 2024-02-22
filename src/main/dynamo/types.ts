@@ -1,6 +1,7 @@
 import { Model } from "./Model"
 import { PartitionAndSortKey } from "./keys"
 
+export type Key = Record<string, string>
 export type ExtractFields<T> = T extends Model<infer U, any, any> ? U : never
 export type TaggedModel = Record<string, any> & { model: string }
 

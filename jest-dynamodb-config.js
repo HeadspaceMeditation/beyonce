@@ -12,8 +12,10 @@ module.exports = async () => {
     port,
     clientConfig: {
       endpoint,
-      sslEnabled: false,
-      region: "local",
+      credentials: {
+        accessKeyId: "foo",
+        secretAccessKey: "baz",
+      },
     },
     options: ["-inMemory"],
     tables: [],

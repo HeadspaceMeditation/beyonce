@@ -1,4 +1,5 @@
-import { DynamoDB } from "aws-sdk"
+import { DynamoDBDocumentClient, BatchGetCommand } from "@aws-sdk/lib-dynamodb"
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
 import { PartitionAndSortKey } from "../keys"
 import { Table } from "../Table"
 import { TaggedModel } from "../types"
@@ -7,13 +8,13 @@ import { BaseParams } from "./BaseParams"
 
 export interface BatchGetItemsParams<T extends PartitionAndSortKey<TaggedModel>> extends BaseParams {
   table: Table<string, string>
-  client: DynamoDB.DocumentClient
+  client: DynamoDBDocumentClient
   keys: T[]
   consistentRead?: boolean
 }
 
 export interface BatchGetItemsResult<T extends PartitionAndSortKey<TaggedModel>> {
-  items: DynamoDB.DocumentClient.AttributeMap[]
+  items: Record<string, NativeAttributeValue>[]
   unprocessedKeys: T[]
 }
 
@@ -23,20 +24,18 @@ export async function batchGetItems<T extends PartitionAndSortKey<TaggedModel>>(
 ): Promise<BatchGetItemsResult<T>> {
   const { table, client, consistentRead } = params
   const { tableName } = table
-  const results = await client
-    .batchGet({
+  const results = await client.send(new BatchGetCommand({
       RequestItems: {
         [tableName]: {
           ConsistentRead: consistentRead,
           Keys: mapToKeysAndRemoveDuplicate(params.keys, table)
         }
       }
-    })
-    .promise()
+    }))
 
   const unprocessedKeys = new UnprocessedKeyCollector(table, params.keys)
   if (results.UnprocessedKeys && results.UnprocessedKeys[tableName]) {
-    results.UnprocessedKeys[tableName].Keys.forEach((key) => unprocessedKeys.add(key))
+    results.UnprocessedKeys[tableName].Keys?.forEach((key) => unprocessedKeys.add(key))
   }
 
   if (results.Responses && results.Responses[tableName]) {

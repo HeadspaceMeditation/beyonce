@@ -1,5 +1,5 @@
 import { DataKey, DataKeyProvider, FixedDataKeyProvider, JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
+import { DynamoDB, ListTablesCommand } from "@aws-sdk/client-dynamodb"
 import crypto from "crypto"
 import { crypto_kdf_KEYBYTES, from_base64, randombytes_buf, ready, to_base64 } from "libsodium-wrappers"
 import { Beyonce } from "../../main/dynamo/Beyonce"
@@ -17,12 +17,12 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 
   // DynamoDB Local runs as an external http server, so we need to clear
   // the table from previous test runs
-  const { TableNames: tables } = await client.listTables().promise()
+  const { TableNames: tables } = await client.send(new ListTablesCommand({}))
   if (tables !== undefined && tables.indexOf(tableName) !== -1) {
-    await client.deleteTable({ TableName: tableName }).promise()
+    await client.deleteTable({ TableName: tableName })
   }
 
-  await client.createTable(table.asCreateTableInput("PAY_PER_REQUEST")).promise()
+  await client.createTable(table.asCreateTableInput("PAY_PER_REQUEST"))
 
   return createBeyonce(client, jayz)
 }
@@ -30,7 +30,12 @@ export async function setup(jayz?: JayZ): Promise<Beyonce> {
 export function createDynamoDB(): DynamoDB {
   return new DynamoDB({
     endpoint,
-    region: "us-west-2" // silly, but still need to specify region for LocalDynamo
+    tls: false,
+    region: "local-env",
+    credentials: {
+      accessKeyId: "foo",
+      secretAccessKey: "baz",
+    },
   })
 }
 

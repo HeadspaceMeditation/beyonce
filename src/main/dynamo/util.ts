@@ -1,4 +1,5 @@
 import { EncryptedJayZItem, JayZ } from "@ginger.io/jay-z"
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
 
 export type MaybeEncryptedItem<T> = EncryptedJayZItem<T & Record<string, string>, string> | (T & Record<string, string>)
 
@@ -28,6 +29,26 @@ export async function decryptOrPassThroughItem(
     await jayz.ready
     return jayz.decryptItem(item as EncryptedJayZItem<any, any>)
   } else {
-    return item
+    return formatDynamoDBItem(item)
   }
+}
+
+/**
+ * The DynamoDB v3 lib returns items with values that are UInt8Array instead of Buffer, so this function
+ * converts those values to Buffers.
+ */
+export function formatDynamoDBItem<T extends Record<string, NativeAttributeValue>>(
+  item: T
+): T {
+  const formattedItem: Record<string, NativeAttributeValue> = {}
+
+  Object.entries(item).forEach(([key, value]) => {
+    if (value instanceof Uint8Array) {
+      formattedItem[key] = Buffer.from(value)
+    } else {
+      formattedItem[key] = value
+    }
+  })
+
+  return formattedItem as T
 }

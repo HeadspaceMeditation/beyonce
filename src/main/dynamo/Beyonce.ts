@@ -1,5 +1,6 @@
 import { JayZ } from "@ginger.io/jay-z"
-import { DynamoDB } from "aws-sdk"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { captureAWSClient } from "aws-xray-sdk"
 import { UpdateItemExpressionBuilder } from "./expressions/UpdateItemExpressionBuilder"
 import { groupModelsByType } from "./groupModelsByType"
@@ -16,7 +17,7 @@ import { ParallelScanConfig, ScanBuilder } from "./ScanBuilder"
 import { Table } from "./Table"
 import { ExtractKeyType, GroupedModels, TaggedModel } from "./types"
 import { updateItemProxy } from "./updateItemProxy"
-import { decryptOrPassThroughItem, encryptOrPassThroughItem, MaybeEncryptedItem } from "./util"
+import { decryptOrPassThroughItem, encryptOrPassThroughItem, formatDynamoDBItem, MaybeEncryptedItem } from "./util"
 
 export interface Options {
   jayz?: JayZ
@@ -41,12 +42,14 @@ export interface ScanOptions {
  * does auto mapping between JSON <=> DynamoDB Items
  */
 export class Beyonce {
-  private client: DynamoDB.DocumentClient
+  private client: DynamoDBDocumentClient
   private jayz?: JayZ
   private consistentReads: boolean
 
   constructor(private table: Table<string, string>, dynamo: DynamoDB, options: Options = {}) {
-    this.client = new DynamoDB.DocumentClient({ service: dynamo })
+    this.client = DynamoDBDocumentClient.from(dynamo, {
+      marshallOptions: { removeUndefinedValues: true }
+    })
     if (options.xRayTracingEnabled) {
       // hack per: https://github.com/aws/aws-xray-sdk-node/issues/23#issuecomment-509745488
       captureAWSClient((this.client as any).service)
@@ -139,7 +142,8 @@ export class Beyonce {
     const items: ExtractKeyType<T>[] = []
     const unprocessedKeys: T[] = []
     results.forEach((result) => {
-      items.push(...result.items)
+      const formattedItems = result.items.map(item => item ? formatDynamoDBItem(item) : item)
+      items.push(...formattedItems)
       unprocessedKeys.push(...result.unprocessedKeys)
     })
 
