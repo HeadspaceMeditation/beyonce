@@ -1,5 +1,5 @@
 dynamodb:
-  image: amazon/dynamodb-local
+  image: amazon/dynamodb-local:1.22.0
 
 beyonce:
   build: .

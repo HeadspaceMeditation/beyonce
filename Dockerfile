@@ -1,5 +1,5 @@
 # Needed for DynamoDB Local, which is used for unit tests
-FROM openjdk:15-alpine3.11
+FROM amazoncorretto:20-alpine3.18
 
 # And our own stuff goes here
 WORKDIR /usr/app
