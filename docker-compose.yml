@@ -9,5 +9,7 @@ services:
     build: .
     depends_on:
       - dynamodb
+    environment:
+      - CI=${CI}
     volumes:
       - .:/usr/app

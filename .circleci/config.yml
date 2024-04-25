@@ -26,5 +26,5 @@ jobs:
           name: build
           command: docker-compose run beyonce /bin/sh -c "yarn install --immutable && yarn build"
       - run:
-          name: build
+          name: test
           command: docker-compose run beyonce /bin/sh -c "yarn test"
