@@ -7,9 +7,7 @@ orbs:
 executors:
   node:
     docker:
-      # Note: this is deprecated with no replacement:
-      # https://discuss.circleci.com/t/legacy-convenience-image-deprecation/41034#deprecated-images-3
-      - image: circleci/dynamodb:11-jdk-oracle
+      - image: amazon/dynamodb-local:1.22.0
 
 workflows:
   build:
