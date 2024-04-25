@@ -7,6 +7,8 @@ orbs:
 executors:
   node:
     docker:
+      # Note: this is deprecated with no replacement:
+      # https://discuss.circleci.com/t/legacy-convenience-image-deprecation/41034#deprecated-images-3
       - image: circleci/dynamodb:11-jdk-oracle
 
 workflows:
@@ -30,4 +32,4 @@ jobs:
           command: yarn run build
       - run:
           name: test
-          command: yarn run test --maxWorkers=2
+          command: yarn test
