@@ -1,5 +1,5 @@
 module.exports = async () => {
-  const isRunningOnCI = process.env.CI_BUILD_ID !== undefined
+  const isRunningOnCI = process.env.CI
   const port = 8000
 
   // When running in the CI env, we run Dynamo in a Docker container. And the host must match the service name defined in codeship-services.yml
