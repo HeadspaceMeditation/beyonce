@@ -23,7 +23,7 @@ jobs:
       - run:
           name: Install tar utility
           command: |
-            yum install -y tar gzip
+            sudo yum install -y tar gzip
       - node/install:
           install-yarn: true
       - node/install-packages:
