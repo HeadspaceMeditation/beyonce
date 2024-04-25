@@ -25,7 +25,7 @@ export async function groupAllPages<T extends TaggedModel>(
   const results: T[] = []
   for await (const { items, errors } of iterator) {
     if (errors.length > 0) {
-      throw new CompositeError("Error(s) encountered trying to process interator page", errors)
+      throw new CompositeError("Error(s) encountered trying to process iterator page", errors)
     }
 
     results.push(...items)

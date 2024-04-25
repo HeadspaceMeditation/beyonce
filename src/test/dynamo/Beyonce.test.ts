@@ -519,7 +519,7 @@ async function testBatchGetWithUnprocessedKeys() {
     keys: songs.map((s) => SongModel.key({ id: s.id, musicianId: s.musicianId }))
   })
 
-  // So we have some leftover to retreive
+  // So we have some leftover to retrieve
   expect(results1.unprocessedKeys.length).toBeGreaterThan(0)
 
   // And then if we do 1 more batchGet, we should get all of them
