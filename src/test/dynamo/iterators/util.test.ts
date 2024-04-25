@@ -18,7 +18,7 @@ describe("iterator utils", () => {
     expect(lastEvaluatedKey).toEqual({ pk: "Bob", sk: "Marley" })
   })
 
-  it("shoud not deserialize an undefined cursor", () => {
+  it("should not deserialize an undefined cursor", () => {
     expect(maybeDeserializeCursor()).toEqual(undefined)
   })
 })

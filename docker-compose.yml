@@ -1,0 +1,15 @@
+---
+version: "3.8"
+services:
+  dynamodb:
+    # We have to stay on v1 until the jest-dynamodb package supports v2:
+    # https://github.com/shelfio/jest-dynamodb/issues/212
+    image: amazon/dynamodb-local:1.22.0
+  beyonce:
+    build: .
+    depends_on:
+      - dynamodb
+    environment:
+      - CI=${CI}
+    volumes:
+      - .:/usr/app

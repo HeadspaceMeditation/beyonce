@@ -13,7 +13,7 @@ Beyonce's features include:
   `query` the attribute names are automatically type-checked.
 
 - **Application-level encryption**. Beyonce _loves_ [Jay-Z](https://github.com/HeadspaceMeditation/jay-z) and supports him out of the box. Combine them into
-  the power couple they deserve to be, and every non-key, non-index attribute on your models will be automatically encrypted _before_ you send it to Dynamo. This grants an additional layer of security beyond just enabling AWS's DynamoDB server-side-enryption option (which you should do too).
+  the power couple they deserve to be, and every non-key, non-index attribute on your models will be automatically encrypted _before_ you send it to Dynamo. This grants an additional layer of security beyond just enabling AWS's DynamoDB server-side-encryption option (which you should do too).
 
 ## Usage
 
@@ -47,7 +47,7 @@ tables:
     # To do that, we need a specific Author and all their Books to live under the same partition key.
     # How about we use "Author-$id" as the partition key? Great, let's go with that.
 
-    # Beyonce calls a group of models that share the same partition key a "patition".
+    # Beyonce calls a group of models that share the same partition key a "partition".
     # Let's define one now, and name it "Authors"
     partitions:
       Authors:
@@ -166,7 +166,7 @@ await beyonce.put(author)
 const author = await beyonce.get(AuthorModel.key({ id: "1" }))
 ```
 
-Note: the key `prefix` ("Author" from our earlier example) will be automatically appeneded.
+Note: the key `prefix` ("Author" from our earlier example) will be automatically appended.
 
 ### Update
 
@@ -454,7 +454,7 @@ When using DynamoDB, you often want to "pre-compute" joins by sticking a set of 
 This allows for retrieving related records using a single query instead of N.
 
 Unfortunately most existing DynamoDB libraries, like [DynamoDBMapper](https://github.com/awslabs/dynamodb-data-mapper-js), don't support this
-use case as they follow the SQL convention sticking each model into a separte table.
+use case as they follow the SQL convention sticking each model into a separate table.
 
 For example, we might want to fetch an `Author` + all their `Book`s in a single query. And we'd accomplish that by sticking both models
 under the same partition key - e.g. `author-${id}`.

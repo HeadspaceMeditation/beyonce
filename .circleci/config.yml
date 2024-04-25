@@ -1,0 +1,30 @@
+---
+version: 2.1
+
+executors:
+  node:
+    docker:
+      - image: amazon/dynamodb-local:1.22.0
+
+workflows:
+  build:
+    jobs:
+      - build
+
+jobs:
+  build:
+    working_directory: ~/beyonce
+    machine:
+      image: ubuntu-2204:current
+      docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker build
+          command: docker-compose build dynamodb beyonce
+      - run:
+          name: build
+          command: docker-compose run beyonce /bin/sh -c "yarn install --immutable && yarn build"
+      - run:
+          name: test
+          command: docker-compose run beyonce /bin/sh -c "yarn test"

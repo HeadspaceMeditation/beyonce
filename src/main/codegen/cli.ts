@@ -11,7 +11,7 @@ if (argv.in !== undefined && argv.out !== undefined) {
   generateFile(inputFile, outputFile)
   process.exit(0)
 } else {
-  console.error("Usage: codgen --in ./src/models.yaml --out ./src/generated/models.ts")
+  console.error("Usage: codegen --in ./src/models.yaml --out ./src/generated/models.ts")
   process.exit(1)
 }
 
