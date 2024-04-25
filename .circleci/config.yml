@@ -1,9 +1,6 @@
 ---
 version: 2.1
 
-orbs:
-  node: circleci/node@5
-
 executors:
   node:
     docker:
@@ -17,21 +14,17 @@ workflows:
 jobs:
   build:
     working_directory: ~/beyonce
-    executor: node
+    machine:
+      image: ubuntu-2204:current
+      docker_layer_caching: true
     steps:
       - checkout
       - run:
-          name: Install tar utility
-          command: |
-            sudo yum install -y tar gzip
-      - node/install:
-          install-yarn: true
-      - node/install-packages:
-          pkg-manager: yarn
-          include-branch-in-cache-key: false
+          name: Docker build
+          command: docker-compose build dynamodb beyonce
       - run:
           name: build
-          command: yarn run build
+          command: docker-compose run beyonce /bin/sh -c "yarn install --immutable && yarn build"
       - run:
-          name: test
-          command: yarn test
+          name: build
+          command: docker-compose run beyonce /bin/sh -c "yarn test"
