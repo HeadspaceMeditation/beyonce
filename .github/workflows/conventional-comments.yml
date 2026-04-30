@@ -1,0 +1,11 @@
+name: "Conventional Comments"
+
+on:
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  conventional-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: HeadspaceMeditation/hs-conventional-comments-action@v1
